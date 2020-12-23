@@ -11,7 +11,7 @@ pub struct Window{
 
 pub fn stack(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
 
-    let master_width: u32=screen_width*((master_width_factor * 10.0) as u32)/10;
+    let master_width: u32=screen_width*((master_width_factor * 100.0) as u32)/100;
 
     let master=Window{
         x: 0,
