@@ -13,6 +13,7 @@ fn main() {
 
     let mut node_tree:Vec<layout::Window>=Vec::new();
 
+    // The default layout is stack
     node_tree=layout::stack(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height);
 
     for window in node_tree {
