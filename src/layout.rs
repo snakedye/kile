@@ -25,6 +25,7 @@ pub fn stack(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, mast
         return node_tree;
     }
 
+
     let master=Window{
         x: 0,
         y: 0,
@@ -32,7 +33,7 @@ pub fn stack(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, mast
         height: screen_height,
     };
 
-    let slave=Window{
+    let mut slave=Window{
         x: master_width,
         y: 0,
         width: screen_width-master_width,
@@ -48,6 +49,8 @@ pub fn stack(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, mast
         }
         else {
             node_tree.push(slave);
+            slave.height-=(i-1)*30;
+            slave.y+=(i-1)*30;
         }
     }
 
@@ -114,3 +117,46 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
 }
 
+pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
+
+    let views:u32=(client_count as f32).sqrt().ceil() as u32;
+
+    let master_view:u32= if views*views != client_count {
+        1
+    } else { 0 };
+
+    let mut window=Window{
+        x:0,
+        y:0,
+        width: screen_width/views,
+        height:0,
+    };
+
+    let clients:u32=client_count-((views-master_view)*(views-master_view));
+
+    for i in 0..views {
+
+        window.x=window.width*i;
+
+        if i < views-master_view {
+            for w in 0..views-master_view {
+                window.height=screen_height/(views-master_view);
+                window.y=window.height*w;
+                node_tree.push(window);
+            }
+
+        } else {
+
+            for w in 0..clients {
+                window.height=screen_height/clients;
+                window.y=window.height*w;
+                node_tree.push(window);
+            }
+
+        }
+
+    }
+
+    node_tree
+
+}

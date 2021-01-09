@@ -1,5 +1,5 @@
 [package]
-name = "river"
+name = "rivertiler"
 version = "0.1.0"
 authors = ["bryan <snakedye@protonmail.com>"]
 edition = "2018"
