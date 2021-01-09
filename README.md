@@ -8,6 +8,6 @@
 
 # rivergrid - `rivertiler grid`
 
-![hive](img/hive.png)
+![hive](img/grid.png)
 
 I've not yet implemented mod-master-count and master_width_factor.
