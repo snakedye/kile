@@ -133,23 +133,25 @@ pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
     let slave_view_width:u32=(screen_width-master_view_width)/(views-1);
 
     let mut window=Window{
-        x:0,
+        x:screen_width,
         y:0,
-        width: slave_view_width,
+        width: 0,
         height:0,
     };
 
-    let clients:u32=client_count-((views-master_view)*(views-master_view));
+    let master_clients:u32=client_count-((views-master_view)*(views-master_view));
 
     for i in 0..views {
 
-        window.x=window.width*i;
-
         if i < views-master_view {
+            if master_view==0 && i==views-1 {
+                window.width=master_view_width;
+            } else {
+                window.width=slave_view_width;
+            }
+            window.x-=window.width;
+
             for w in 0..views-master_view {
-                if master_view==0 && i==views-1 {
-                    window.width=master_view_width;
-                }
                 window.height=screen_height/(views-master_view);
                 window.y=window.height*w;
                 node_tree.push(window);
@@ -157,9 +159,11 @@ pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
         } else {
 
-            for w in 0..clients {
-                window.width=master_view_width;
-                window.height=screen_height/clients;
+            window.width=master_view_width;
+            window.x-=window.width;
+
+            for w in 0..master_clients {
+                window.height=screen_height/master_clients;
                 window.y=window.height*w;
                 node_tree.push(window);
             }
