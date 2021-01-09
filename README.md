@@ -10,4 +10,4 @@
 
 ![hive](img/grid.png)
 
-I've not yet implemented mod-master-count and master_width_factor.
+I've not yet implemented ~~mod-master-count~~ and master_width_factor.
