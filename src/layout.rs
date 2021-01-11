@@ -63,7 +63,7 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
     let branch_count: u32=(client_count-1)/2;
 
     if client_count<3 {
-        node_tree=stack(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height);
+        node_tree=grid(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height);
         return node_tree
     } else {
 
