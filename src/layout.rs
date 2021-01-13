@@ -229,16 +229,18 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
     for i in 0..client_count {
 
         if i < master_count  {
+            window.y+=window.height;
             window.width=master_width;
-            window.height= if i != 0 {
-                screen_height/master_count
-            } else { (screen_height/master_count)+(screen_height%(screen_height/master_count)) };
-            window.y=window.height*i;
+            if i == master_count-1 {
+                window.height= (screen_height/master_count)+(screen_height%(screen_height/master_count));
+            } else {
+                window.height= screen_height/master_count;
+            }
         } else {
             if master_count!=0 {
                 window.x=master_width;
             }
-             if i != master_count {
+            if i != master_count {
                 window.y+=window.height;
                 window.height=screen_height/slave_count;
             } else {
