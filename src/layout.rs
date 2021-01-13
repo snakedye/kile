@@ -197,7 +197,7 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
         screen_width*((master_width_factor * 100.0) as u32)/100
     } else { screen_width };
 
-    let slave_width:u32= if master_count > 1 {
+    let slave_width:u32= if master_count >= 1 {
         screen_width-master_width
     } else { screen_width };
 
