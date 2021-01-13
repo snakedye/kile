@@ -81,6 +81,9 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
             height: screen_height,
         };
 
+        let left_client_height:u32=screen_height/branch_count;
+        let right_client_height:u32=screen_height/(client_count-branch_count-1);
+
         let mut left_count:u32=0;
         let mut right_count:u32=0;
 
@@ -93,17 +96,27 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
             }
             else {
                 if left_count<branch_count {
-                    slave.x=0;
-                    slave.height=screen_height/branch_count;
-                    slave.y=left_count*slave.height;
+                    slave.height= if left_count < branch_count-1 {
+                        left_client_height
+                    } else { left_client_height+(screen_height%left_client_height) };
 
                     node_tree.push(slave);
+
+                    slave.y+=slave.height;
                     left_count+=1;
                 }
                 else {
                     slave.x=master_width+((screen_width-master_width)/2);
-                    slave.height=screen_height/(client_count-branch_count-1);
-                    slave.y=right_count*slave.height;
+
+                    slave.height= if right_count!=1 {
+                        right_client_height
+                    } else { right_client_height+(screen_height%right_client_height) };
+
+                    if right_count==0 {
+                       slave.y=0;
+                    } else {
+                       slave.y+=slave.height;
+                    };
 
                     node_tree.push(slave);
                     right_count+=1;
@@ -153,6 +166,12 @@ pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
             for w in 0..views-master_view {
                 window.height=screen_height/(views-master_view);
                 window.y=window.height*w;
+
+                if window.height+window.y > screen_height {
+                    window.height-=screen_height%window.height;
+                } else if window.height+window.y < screen_height {
+                    window.height+=screen_height%window.height;
+                }
                 node_tree.push(window);
             }
 
@@ -165,6 +184,12 @@ pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
             for w in 0..master_clients {
                 window.height=screen_height/master_clients;
                 window.y=window.height*w;
+
+                if window.height+window.y > screen_height {
+                    window.height-=screen_height%window.height;
+                } else if window.height+window.y < screen_height {
+                    window.height+=screen_height%window.height;
+                }
                 node_tree.push(window);
             }
 
@@ -197,7 +222,7 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
         screen_width*((master_width_factor * 100.0) as u32)/100
     } else { screen_width };
 
-    let slave_width:u32= if master_count > 1 {
+    let slave_width:u32= if master_count >= 1 {
         screen_width-master_width
     } else { screen_width };
 
@@ -205,15 +230,22 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
         if i < master_count  {
             window.width=master_width;
-            window.height=screen_height/master_count;
+            window.height= if i != 0 {
+                screen_height/master_count
+            } else { (screen_height/master_count)+(screen_height%(screen_height/master_count)) };
             window.y=window.height*i;
         } else {
             if master_count!=0 {
                 window.x=master_width;
             }
+             if i != master_count {
+                window.y+=window.height;
+                window.height=screen_height/slave_count;
+            } else {
+                window.height=(screen_height/slave_count)+(screen_height%(screen_height/slave_count));
+                window.y=0;
+            }
             window.width=slave_width;
-            window.height=screen_height/slave_count;
-            window.y=window.height*(i-master_count);
         }
 
         node_tree.push(window);
