@@ -257,3 +257,47 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
     node_tree
 
 }
+
+pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
+
+    let master_width: u32=screen_width*((master_width_factor * 1000.0) as u32)/1000;
+
+    let mut window=Window{
+        x:0,
+        y:0,
+        width:screen_width,
+        height:screen_height,
+    };
+
+    for i in 0..client_count {
+        if i > 0 && client_count > 1 {
+
+            if i%2==0 {
+                // window.y+=window.height;
+                window.height/=2;
+                node_tree[(i-1) as usize].height=window.height;
+                window.y+=window.height;
+            } else {
+                // window.x+=window.width;
+                window.width/=2;
+                if i > 2 {
+                    node_tree[(i-1) as usize].width=window.width;
+                    window.x+=window.width;
+                } else {
+                    node_tree[(i-1) as usize].width=master_width;
+                    window.width=screen_width-master_width;
+                    window.x+=master_width;
+                }
+            }
+
+        } else if client_count > master_count {
+
+            window.width=master_width;
+        }
+
+        node_tree.push(window);
+
+    }
+
+    node_tree
+}
