@@ -13,43 +13,29 @@ pub fn stack(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, mast
 
     let master_width: u32=screen_width*((master_width_factor * 100.0) as u32)/100;
 
-    if client_count<2 {
-        let fullscreen=Window{
-            x: 0,
-            y: 0,
-            width: screen_width,
-            height: screen_height,
-        };
-
-        node_tree.push(fullscreen);
-        return node_tree;
-    }
-
-    let master=Window{
+    let mut window=Window{
         x: 0,
         y: 0,
-        width: master_width,
-        height: screen_height,
-    };
-
-    let mut slave=Window{
-        x: master_width,
-        y: 0,
-        width: screen_width-master_width,
+        width: screen_width,
         height: screen_height,
     };
 
     for i in 1..client_count+1 {
-        if i == master_count {
-            node_tree.push(master);
+        if master_count < client_count && i == master_count {
+            window.x=0;
+            window.y=0;
+            window.width=master_width;
+            node_tree.push(window);
         }
-        else if (master_count < 1 || master_count > client_count) && i == 1 {
-            node_tree.push(master);
+        else if client_count > 1 {
+            window.width=screen_width-master_width;
+            window.x=master_width;
+            node_tree.push(window);
+            window.height-=30;
+            window.y+=30;
         }
         else {
-            node_tree.push(slave);
-            slave.height-=30;
-            slave.y+=30;
+            node_tree.push(window);
         }
     }
 
@@ -63,62 +49,61 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
     let branch_count: u32=(client_count-1)/2;
 
     if client_count<3 {
-        node_tree=grid(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height);
+        node_tree=stack(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height);
         return node_tree
     } else {
 
-        let mut slave=Window{
+        let mut window=Window{
             x: 0,
             y: 0,
-            width: (screen_width-master_width)/2,
-            height: screen_height/branch_count,
-        };
-
-        let master=Window{
-            x: (screen_width-master_width)/2,
-            y: 0,
-            width: master_width,
+            width: screen_width,
             height: screen_height,
         };
 
         let left_client_height:u32=screen_height/branch_count;
+        let left_client_width:u32=(screen_width-master_width)/2;
+
         let right_client_height:u32=screen_height/(client_count-branch_count-1);
+        let right_client_width:u32=screen_width-left_client_width-master_width;
 
         let mut left_count:u32=0;
         let mut right_count:u32=0;
 
         for i in 1..client_count+1 {
-            if i==master_count {
-                node_tree.push(master);
-            }
-            else if (master_count < 1 || master_count > client_count) && i == 1 {
-                node_tree.push(master);
+            if master_count>0 && i == master_count {
+                window.x=left_client_width;
+                window.y=0;
+                window.width=master_width;
+                window.height=screen_height;
+                node_tree.push(window);
             }
             else {
                 if left_count<branch_count {
-                    slave.height= if left_count < branch_count-1 {
+                    window.x=0;
+                    window.width=left_client_width;
+                    window.height= if left_count < branch_count {
                         left_client_height
                     } else { left_client_height+(screen_height%left_client_height) };
 
-                    node_tree.push(slave);
-
-                    slave.y+=slave.height;
+                    window.y=window.height*left_count;
+                    node_tree.push(window);
                     left_count+=1;
                 }
                 else {
-                    slave.x=master_width+((screen_width-master_width)/2);
+                    window.width=right_client_width;
+                    window.x=master_width+left_client_width;
 
-                    slave.height= if right_count!=1 {
+                    window.height= if right_count>1 {
                         right_client_height
                     } else { right_client_height+(screen_height%right_client_height) };
 
                     if right_count==0 {
-                       slave.y=0;
+                       window.y=0;
                     } else {
-                       slave.y+=slave.height;
+                       window.y=window.height*right_count;
                     };
 
-                    node_tree.push(slave);
+                    node_tree.push(window);
                     right_count+=1;
                 }
             }
@@ -129,7 +114,7 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
 }
 
-pub fn grid(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
+pub fn grid(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
 
     let views:u32=(client_count as f32).sqrt().ceil() as u32;
 
@@ -258,7 +243,7 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
 }
 
-pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
+pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
 
     let master_width: u32=screen_width*((master_width_factor * 1000.0) as u32)/1000;
 
@@ -273,15 +258,13 @@ pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, ma
         if i > 0 && client_count > 1 {
 
             if i%2==0 {
-                // window.y+=window.height;
                 window.height/=2;
-                node_tree[(i-1) as usize].height=window.height;
+                node_tree[(i-1) as usize].height-=window.height;
                 window.y+=window.height;
             } else {
-                // window.x+=window.width;
-                window.width/=2;
                 if i > 2 {
-                    node_tree[(i-1) as usize].width=window.width;
+                    window.width/=2;
+                    node_tree[(i-1) as usize].width-=window.width;
                     window.x+=window.width;
                 } else {
                     node_tree[(i-1) as usize].width=master_width;
@@ -290,7 +273,7 @@ pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, ma
                 }
             }
 
-        } else if client_count > master_count {
+        } else if client_count > 1 {
 
             window.width=master_width;
         }

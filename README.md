@@ -1,3 +1,5 @@
+it's on the AUR btw.
+
 `rivertiler tab`
 
 ![tab](img/tab.png)
@@ -13,3 +15,7 @@
 `rivertiler left`
 
 ![hive](img/left.png)
+
+`rivertiler dwindle`
+
+![hive](img/dwindle.png)
