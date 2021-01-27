@@ -114,11 +114,7 @@ pub fn hive(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
 }
 
-pub fn grid(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
-
-    let views:u32=(client_count as f32).sqrt().ceil() as u32;
-
-    let master_view:u32= if views*views != client_count {
+pub fn grid(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> { let views:u32=(client_count as f32).sqrt().ceil() as u32; let master_view:u32= if views*views != client_count {
         1
     } else { 0 };
 
@@ -243,7 +239,7 @@ pub fn left(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, maste
 
 }
 
-pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32) -> Vec<Window> {
+pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, master_count:u32, master_width_factor:f32, screen_width:u32, screen_height:u32, incrementor:u32) -> Vec<Window> {
 
     let master_width: u32=screen_width*((master_width_factor * 1000.0) as u32)/1000;
 
@@ -254,23 +250,60 @@ pub fn dwindle(mut node_tree:Vec<Window>, client_count:u32, _master_count:u32, m
         height:screen_height,
     };
 
+    let mut invert_y:u32;
+    let mut invert_x:u32;
+
+    match master_count {
+        2u32 => {
+            invert_y=1;
+            invert_x=0;
+        }
+        3u32 => {
+            invert_y=1;
+            invert_x=1;
+        }
+        4u32 => {
+            invert_y=0;
+            invert_x=1;
+        }
+        _ => {
+            invert_y=0;
+            invert_x=0;
+        },
+    }
+
     for i in 0..client_count {
         if i > 0 && client_count > 1 {
 
             if i%2==0 {
                 window.height/=2;
                 node_tree[(i-1) as usize].height-=window.height;
-                window.y+=window.height;
+                if invert_y%2==0 {
+                    window.y+=window.height;
+                }
+                else {
+                    node_tree[(i-1) as usize].y+=window.height;
+                }
+
+                invert_y+=incrementor;
             } else {
                 if i > 2 {
                     window.width/=2;
                     node_tree[(i-1) as usize].width-=window.width;
-                    window.x+=window.width;
+                    if invert_x%2==0 {
+                        window.x+=window.width;
+                    }
+                    else {
+                        node_tree[(i-1) as usize].x+=window.width;
+                    }
+
                 } else {
                     node_tree[(i-1) as usize].width=master_width;
                     window.width=screen_width-master_width;
                     window.x+=master_width;
                 }
+
+                invert_x+=incrementor;
             }
 
         } else if client_count > 1 {

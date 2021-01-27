@@ -26,7 +26,8 @@ fn main() {
         "hive" => node_tree=layout::hive(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height),
         "grid" => node_tree=layout::grid(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height),
         "left" => node_tree=layout::left(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height),
-        "dwindle" => node_tree=layout::dwindle(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height),
+        "dwindle" => node_tree=layout::dwindle(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height, 2),
+        "fibo" => node_tree=layout::dwindle(node_tree, client_count, master_count, master_width_factor, screen_width, screen_height, 1),
         _ => {
             println!("{} isn't a valid layout", layout);
             std::process::exit(0);

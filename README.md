@@ -1,4 +1,4 @@
-it's on the AUR btw.
+The layout generator is on the AUR under the name of `rivertiler-git`
 
 `rivertiler tab`
 
@@ -19,3 +19,7 @@ it's on the AUR btw.
 `rivertiler dwindle`
 
 ![hive](img/dwindle.png)
+
+`rivertiler fibo`
+
+It's a subset of dwindle. Generates a Fibonacci like layout.
