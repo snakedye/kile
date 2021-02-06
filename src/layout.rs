@@ -35,8 +35,8 @@ pub fn centered_master(mut window_tree:Vec<basic::Frame>, output:basic::Frame, c
         }
         _=> {
             let main_frame:Vec<basic::Frame>=basic::vertical(main_tree, 3, 2, master_factor, output);
-            window_tree=basic::horizontal(window_tree, (client_count-master_count)/2, 0, master_factor, main_frame[0]);
             window_tree=basic::tab(window_tree, master_count, main_frame[1]);
+            window_tree=basic::horizontal(window_tree, (client_count-master_count)/2, 0, master_factor, main_frame[0]);
             window_tree=basic::dwindle(window_tree, client_count-master_count-((client_count-master_count)/2), 0, main_frame[2]);
         }
     };
