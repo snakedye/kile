@@ -99,7 +99,7 @@ pub fn vertical(mut frame_tree:Vec<Frame>, client_count:u32, master_count:u32, m
 
 }
 
-pub fn dwindle(mut frame_tree:Vec<Frame>, client_count:u32, output:Frame) -> Vec<Frame> {
+pub fn dwindle(mut frame_tree:Vec<Frame>, client_count:u32, modi:u32, output:Frame) -> Vec<Frame> {
 
     let mut frame:Frame=output;
 
@@ -107,7 +107,7 @@ pub fn dwindle(mut frame_tree:Vec<Frame>, client_count:u32, output:Frame) -> Vec
         let mut index=frame_tree.len();
         if i > 0 && index > 0 {
             index-=1;
-            if i%2!=0 {
+            if (i+modi)%2!=0 {
                 frame.h/=2;
                 frame_tree[(index) as usize].h-=frame.h;
                 frame.y+=frame.h;

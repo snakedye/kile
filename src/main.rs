@@ -27,7 +27,6 @@ fn main() {
         "center" => window_tree=layout::centered_master(window_tree,output, client_count, master_count, master_width_factor),
         "magic" => window_tree=layout::magic_master(window_tree,output, client_count, master_count, master_width_factor),
         "nested" => window_tree=layout::nested(window_tree,output, client_count, master_count, master_width_factor),
-        "dwindle" => window_tree=layout::dwindle(window_tree,output, client_count, master_count, master_width_factor),
         _ => {
             println!("{} isn't a valid layout", layout);
             std::process::exit(0);
