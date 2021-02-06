@@ -1,25 +1,13 @@
+Rivertiler has been entirely rewritten. I've only left a few important layouts and other as demos. It is much easier to combine multiple layouts into one. I plan to document it eventually.
+
 The layout generator is on the AUR under the name of `rivertiler-git`
 
-`rivertiler tab`
-
-![tab](img/tab.png)
-
-`rivertiler hive`
-
-![hive](img/hive.png)
-
-`rivertiler grid`
-
-![hive](img/grid.png)
+`rivertiler center`
 
 `rivertiler left`
 
-![hive](img/left.png)
-
 `rivertiler dwindle`
 
-![hive](img/dwindle.png)
+`rivertiler nested`
 
-`rivertiler fibo`
-
-It's a subset of dwindle. Generates a Fibonacci like layout.
+`rivertiler magic`
