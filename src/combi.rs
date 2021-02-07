@@ -25,24 +25,24 @@ pub fn chosen_layout(layout:&str,mut window_tree:Vec<basic::Frame>, output:basic
 pub fn combi(layouts:Vec<&str>,mut window_tree:Vec<basic::Frame>, output:basic::Frame, mut client_count:u32, master_count:u32, master_factor:f32) -> Vec<basic::Frame> {
 
     let main_tree:Vec<basic::Frame>=Vec::new();
-    let default_client_count:u32=client_count/layouts.len() as u32;
+    let default_client_count:u32=client_count/(layouts.len()-1) as u32;
 
-    let main_frame:Vec<basic::Frame>=if client_count <= layouts.len() as u32 {
-        basic::vertical(main_tree.clone(), client_count, 1, master_factor, output)
+    let main_frame:Vec<basic::Frame>=if client_count < layouts.len() as u32 {
+        chosen_layout(layouts[0],main_tree.clone(), output, client_count, 1, master_factor)
     } else {
-        basic::vertical(main_tree.clone(), layouts.len() as u32, 1, master_factor, output)
+        chosen_layout(layouts[0],main_tree.clone(), output, (layouts.len()-1) as u32, 1, master_factor)
     };
 
     for i in 0..main_frame.len() {
         let chosen_count:u32;
-        if i == 0 && layouts.len() > 1 {
+        if i == 0 && layouts.len() > 2 && master_count > 0 {
             chosen_count=master_count;
-            window_tree=chosen_layout(layouts[i],window_tree, main_frame[i], chosen_count, 1, master_factor);
+            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, master_factor);
         } else {
             chosen_count= if i < main_frame.len()-1 {
                 default_client_count
             } else { client_count };
-            window_tree=chosen_layout(layouts[i],window_tree, main_frame[i], chosen_count, 1, master_factor);
+            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, master_factor);
         }
 
         client_count-=chosen_count;

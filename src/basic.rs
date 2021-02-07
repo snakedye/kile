@@ -42,21 +42,20 @@ pub fn horizontal(mut frame_tree:Vec<Frame>, client_count:u32, master_count:u32,
 
     let slave_height:u32= if master_count > 0 && client_count > 1 {
         (output.h-master_height)/(client_count-1)
-    } else if master_count < 1 {
+    } else if master_count < 1 && client_count > 0 {
         (output.h-master_height)/(client_count)
     } else { output.h };
 
     for i in 0..client_count {
         
         if client_count > 1 {
-            frame.h= if master_count > 0 && i == master_count-1 {
+            frame.h= if i+1==master_count {
                 master_height
             } else if i < client_count-1 {
-                (output.h-master_height)/client_count
-            } else { 
-                slave_height+(output.h%slave_height)
-                // output.h-frame.h*i 
-            };
+                slave_height
+            } else {
+                output.y+output.h-frame.y
+            }
         }
         frame_tree.push(frame);
         frame.y+=frame.h;
@@ -76,7 +75,7 @@ pub fn vertical(mut frame_tree:Vec<Frame>, client_count:u32, master_count:u32, m
 
     let slave_width:u32= if master_count > 0 && client_count > 1 {
         (output.w-master_width)/(client_count-1)
-    } else if master_count < 1 {
+    } else if master_count < 1 && client_count > 0 {
         (output.w-master_width)/(client_count)
     } else { output.w };
 
@@ -85,10 +84,10 @@ pub fn vertical(mut frame_tree:Vec<Frame>, client_count:u32, master_count:u32, m
         if client_count > 1 {
             frame.w= if i+1==master_count {
                 master_width
-            } else if i < client_count {
+            } else if i < client_count-1 {
                 slave_width
             } else {
-                slave_width+(output.w%slave_width)
+                output.x+output.w-frame.x
             }
         }
         frame_tree.push(frame);

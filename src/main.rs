@@ -10,7 +10,7 @@ fn main() {
 
     let mut client_count:u32=0;
     let mut master_count:u32=0;
-    let mut master_width_factor:f32=0.5;
+    let mut master_width_factor:f32=0.1;
     let mut screen_width:u32=0;
     let mut screen_height:u32=0;
 
