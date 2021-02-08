@@ -1,7 +1,6 @@
 # A tiling layout generator for river
 
 ## How do I generate layouts?
----
 
 rivertiler comes with 5 layouts hardcoded:
 
@@ -37,7 +36,6 @@ the multiplier factor and master count and return a vector of frame. You can mak
 a completely independant layout (without using other layouts) or use the one already made to generate new one.
 
 ## Building
----
 #### Arch
 It is available on the AUR under the name of `rivertiler-git`.
 #### Manual
@@ -48,7 +46,6 @@ cargo build --release
 ```
 
 ## Contributing
----
 If you made a layout that isn't possible through command line arguments feel
 free to make a PR.
 
@@ -58,7 +55,6 @@ free to make a PR.
 - Layouts **must** fill the given frame
 
 ## TO-DOs
----
 
 [ ] Provide more integration with river-options
 
