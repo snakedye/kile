@@ -56,7 +56,7 @@ free to make a PR.
 
 ## TO-DOs
 
-[ ] Provide more integration with river-options
+- [ ] Provide more integration with river-options
 
-[ ] Cooler stuff when river's layout protocol gets updated
+- [ ] Cooler stuff when river's layout protocol gets updated
 
