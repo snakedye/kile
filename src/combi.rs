@@ -10,7 +10,6 @@ pub fn chosen_layout(layout:&str,mut window_tree:Vec<basic::Frame>, output:basic
         "dwindle_mod"=> window_tree=basic::dwindle(window_tree,client_count, 1, output),
         "left"=> window_tree=layout::master_stack(window_tree,output, client_count, master_count, master_factor),
         "center"=> window_tree=layout::centered_master(window_tree,output, client_count, master_count, master_factor),
-        "magic"=> window_tree=layout::magic_master(window_tree,output, client_count, master_count, master_factor),
         "nested"=> window_tree=layout::nested(window_tree,output, client_count, master_count, master_factor),
         _ => {
             println!("{} isn't a valid layout", layout);

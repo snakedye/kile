@@ -16,7 +16,6 @@ fn main() {
 
     for i in 1..args.len() {
         if i <= args.len()-6 {
-            // println!("layout: {}", args[i]);
             layouts.push(&args[i]);
         } else {
             let index=i-layouts.len()-1;

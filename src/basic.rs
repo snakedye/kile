@@ -1,5 +1,3 @@
-// Layouts for river
-
 #[derive(Copy, Clone)]
 pub struct Frame{
     pub x: u32,
