@@ -2,7 +2,7 @@
 
 ## How do I generate layouts?
 
-rivertiler comes with 5 layouts hardcoded:
+rivertiler comes with theses layouts hardcoded:
 
 - tab
 - left
