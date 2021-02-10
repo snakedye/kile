@@ -35,12 +35,12 @@ pub fn combi(layouts:Vec<&str>,mut window_tree:Vec<basic::Frame>, output:basic::
         let chosen_count:u32;
         if i == 0 && layouts.len() > 2 && master_count > 0 {
             chosen_count=master_count;
-            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, master_factor);
+            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, 0.5);
         } else {
             chosen_count= if i < main_frame.len()-1 {
                 default_client_count
             } else { client_count };
-            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, master_factor);
+            window_tree=chosen_layout(layouts[i+1],window_tree, main_frame[i], chosen_count, 1, 0.5);
         }
 
         client_count-=chosen_count;

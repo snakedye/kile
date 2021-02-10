@@ -21,8 +21,18 @@ fn main() {
             let index=i-layouts.len()-1;
             match index {
                 0usize=>client_count=args[i].parse().unwrap(),
-                1usize=>master_count=args[i].parse().unwrap(),
-                2usize=>master_width_factor=args[i].parse().unwrap(),
+                1usize=>{
+                    let candidate:u32=args[i].parse().unwrap();
+                    master_count= if candidate >= client_count || candidate < 1 {
+                        1
+                    } else { candidate };
+                }
+                2usize=>{
+                    let candidate:f32=args[i].parse().unwrap();
+                    master_width_factor= if candidate > 1.0 || candidate < 0.0 {
+                        0.5
+                    } else { candidate };
+                }
                 3usize=>screen_width=args[i].parse().unwrap(),
                 4usize=>screen_height=args[i].parse().unwrap(),
                 _ => {
@@ -47,3 +57,4 @@ fn main() {
         println!("{} {} {} {}", window.x, window.y, window.w, window.h);
     }
 }
+
