@@ -1,4 +1,4 @@
-# A tiling layout generator for river
+# A tiling layout generator for [river](https://github.com/ifreund/river)
 
 ## How do I generate layouts?
 
