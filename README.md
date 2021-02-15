@@ -22,11 +22,17 @@ A frame is basically a partition of the screen.
 `rivertiler vertical horizontal horizontal`
 - This will generate a master and stack layout practically identical to `rivertile left`.
 
-`rivertiler horizontal vertical vertical`
-- This will generate a vertical split layout on the top frame and the bottom one.
+![rivertiler vertical horizontal horizontal](/img/1.png)
+
+`rivertiler dwindle_mod dwindle horizontal tab`
+- This will generate a dwindle_mod layout with three frames that takes the entire screen,
+the first frame has a dwindle layout, the second a horizontal split layout and
+the thrid a tabbed layout.
+
+![rivertiler dwindle_mod dwindle horizontal tab](/img/2.png)
 
 ## More epic layouts
-The more complicated layouts are inside src/layout.rs.
+The more complicated layouts are inside src/custom.rs.
 
 Ideally you would never need to edit the source code but I don't plan to provide the ability
 to generate nested layouts inside nested layout inside... from the command line.
@@ -49,9 +55,12 @@ cargo build --release
 If you made a layout that isn't possible through command line arguments feel
 free to make a PR.
 
+This project will probably change a lot. Today it might a layout generator, tomorrow it might
+a flying steno alien thingy!
+
 ####  Guidelines:
-- Simple layouts that do not require others should go in src/basic.rs
-- Those that require others or call other functions should go in src/layout.rs
+- Simple layouts that do not require others should go in src/layout.rs
+- Those that require others or call other functions should go in src/custom.rs
 - Layouts **must** fill the given frame
 
 ## TO-DOs

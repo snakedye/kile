@@ -1,56 +1,60 @@
-use std::env;
-mod basic;
+mod base;
 mod layout;
-mod combi;
+mod custom;
+
+use std::env;
+use crate::base::Frame;
 
 fn main() {
 
-    let args: Vec<String> = env::args().collect(); // arguments vector
-    let mut layouts: Vec<&str> = Vec::new(); // layout vector
-
+    let args: Vec<String> = env::args().collect();
+    let mut layouts: Vec<&str> = Vec::new();
     let mut client_count:u32=0;
-    let mut master_count:u32=0;
-    let mut master_width_factor:f32=0.1;
-    let mut screen_width:u32=0;
-    let mut screen_height:u32=0;
+    let mut main_count:u32=0;
+    let mut main_factor:f32=0.0;
+    let mut width:u32=0;
+    let mut height:u32=0;
 
     for i in 1..args.len() {
         if i <= args.len()-6 {
             layouts.push(&args[i]);
         } else {
-            let index=i-layouts.len()-1;
+            let index=i-layouts.len();
             match index {
-                0usize=>client_count=args[i].parse().unwrap(),
-                1usize=>{
-                    let candidate:u32=args[i].parse().unwrap();
-                    master_count= if candidate >= client_count || candidate < 1 {
-                        1
-                    } else { candidate };
-                }
+                1usize=>client_count=args[i].parse().unwrap(),
                 2usize=>{
-                    let candidate:f32=args[i].parse().unwrap();
-                    master_width_factor= if candidate > 1.0 || candidate < 0.0 {
-                        0.5
-                    } else { candidate };
+                    let arg:u32=args[i].parse().unwrap();
+                    main_count= if arg < 1 {
+                        1
+                    } else if arg >= client_count {
+                        client_count
+                    } else { arg };
                 }
-                3usize=>screen_width=args[i].parse().unwrap(),
-                4usize=>screen_height=args[i].parse().unwrap(),
-                _ => {
-                    println!("Too much arguments");
-                    std::process::exit(0);
+                3usize=>{
+                    let arg:f32=args[i].parse().unwrap();
+                    main_factor= if arg < 0.0 {
+                        0.0
+                    } else if arg > 1.0 {
+                        1.0
+                    } else { arg };
                 }
+                4usize=>width=args[i].parse().unwrap(),
+                5usize=>height=args[i].parse().unwrap(),
+                _ => std::process::exit(0),
             }
         }
     }
 
-    let mut window_tree:Vec<basic::Frame>=Vec::new();
+    check(client_count, main_count, main_factor, width, height);
 
-    let output:basic::Frame=basic::new_frame(0,0,screen_width,screen_height);
+    let mut window_tree:Vec<Frame>=Vec::new();
+
+    let output:Frame=base::new_frame(0,0,width,height, base::State::Free);
 
     if layouts.len() > 1 {
-        window_tree=combi::combi(layouts, window_tree, output, client_count, master_count, master_width_factor);
+        window_tree=custom::combi(layouts, window_tree, output, client_count, main_count, main_factor);
     } else {
-        window_tree=combi::chosen_layout(layouts[0], window_tree, output, client_count, master_count, master_width_factor);
+        window_tree=custom::chosen_layout(layouts[0], window_tree, output, client_count, main_count, main_factor);
     }
 
     for window in window_tree {
@@ -58,3 +62,9 @@ fn main() {
     }
 }
 
+fn check(client_count:u32, main_count:u32, main_factor:f32, width:u32, height:u32) {
+    if client_count==0 || main_count==0 || main_factor==0.0 || width==0 || height==0 {
+        println!("Invalid arguments");
+        std::process::exit(0);
+    }
+}
