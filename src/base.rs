@@ -1,46 +1,64 @@
 use crate::layout::layout;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
+pub enum Layout {
+    Vertical,
+    Horizontal,
+    Tab,
+    Full,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum State {
+    Main,
+    Slave
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Frame{
     pub x: u32,
     pub y: u32,
     pub w: u32,
     pub h: u32,
     pub main_count: u32,
+    pub main_index: u32,
     pub main_factor: f32,
     pub client_count: u32,
-    pub layout: Layout,
-}
-
-// Defines the layout of a frame
-#[derive(Copy, Clone)]
-pub enum Layout {
-    vertical,
-    horizontal,
-    tab,
-    full,
+    pub state: State,
+    pub layout: Layout
 }
 
 impl Frame {
-    fn new(x: u32,y: u32,w: u32,h: u32,client_count: u32,main_count: u32,main_factor: f32) -> Frame {
+    pub fn new(x:u32,y:u32,w:u32,h:u32,client_count:u32,main_count:u32,main_index:u32,main_factor:f32,state:State,layout:Layout) -> Frame {
         return { Frame {
             x: x,
             y: y,
             w: w,
             h: h,
-            main_count: u32,
-            main_factor: f32,
-            client_count: u32,
-            layout: full,
+            client_count: client_count,
+            main_count: main_count,
+            main_index: main_index,
+            main_factor: main_factor,
+            state: state,
+            layout: layout,
         }}
     }
-    fn generate(window_tree:Vec<Frame>,&self) -> Vec<Frame> {
-        layout(window_tree,&self)
+    pub fn copy(&self) -> Frame {
+        *self
     }
-    fn set_layout(&self, layout:Layout) {
-        *self.layout = layout;
+    pub fn generate(&self,window_tree:Vec<Frame>) -> Vec<Frame> {
+        layout(&self,window_tree)
     }
-    fn set_client_count(&self, client_count:u32) {
-        *self.client_count = client_count;
-    }
+    // pub fn set_layout(mut self, layout:Layout) {
+    //     self.layout = layout;
+    // }
+    // pub fn set_client_count(mut self, client_count:u32) {
+    //     self.client_count = client_count;
+    // }
+    // pub fn set_main_count(mut self, main_count:u32) {
+    //     self.main_count = main_count;
+    // }
+    // pub fn set_main_factor(mut self, main_factor:f32) {
+    //     self.main_factor = main_factor;
+    // }
 }

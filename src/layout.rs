@@ -1,16 +1,19 @@
 use crate::base::Frame;
+use crate::base::Layout;
+use crate::base::State;
 
-pub fn layout(frame_tree:Vec<Frame>,self:&Frame) -> Vec<Frame> {
+pub fn layout(chosen:&Frame, mut frame_tree:Vec<Frame>) -> Vec<Frame> {
 
-    let client_count:u32=self.client_count;
-    let main_count:u32=self.main_count;
-    let main_factor:f32=self.main_factor;
-    let layout:Layout=self.layout;
+    let client_count:u32=chosen.client_count;
+    let main_index:u32=chosen.main_index;
+    let main_count:u32=chosen.main_count;
+    let main_factor:f32=chosen.main_factor;
+    let layout:Layout=chosen.layout;
 
-    let mut frame:Frame:copy();
+    let mut frame:Frame=chosen.copy();
 
     match layout {
-        tab => {
+        Layout::Tab => {
             for _i in 0..client_count {
                 frame_tree.push(frame);
                 if client_count > 1 {
@@ -19,68 +22,70 @@ pub fn layout(frame_tree:Vec<Frame>,self:&Frame) -> Vec<Frame> {
                 }
             }
         }
-        vertical => {
-            let master_height:u32= if main_count > 0 {
-                self.h*((main_factor * 100.0) as u32)/(50*client_count)
+        Layout::Horizontal => {
+            let master_height:u32= if frame.state == State::Main {
+                chosen.h*((main_factor * 100.0) as u32)/(50*client_count)
             } else { 0 };
 
-            let slave_height:u32= if main_count > 0 && client_count > 1 {
-                (self.h-master_height)/(client_count-1)
-            } else if main_count < 1 && client_count > 0 {
-                (self.h-master_height)/(client_count)
-            } else { self.h };
+            let slave_height:u32= if frame.state == State::Main && client_count > 1 {
+                (chosen.h-master_height)/(client_count-1)
+            } else if frame.state == State::Slave && client_count > 0 {
+                (chosen.h-master_height)/(client_count)
+            } else { chosen.h };
 
             for i in 0..client_count {
                 
                 if client_count > 1 {
-                    frame.h= if i+1==main_count {
+                    frame.h=if i==main_index && frame.state == State::Main {
                         master_height
                     } else if i < client_count-1 {
                         slave_height
                     } else {
-                        self.y+self.h-frame.y
+                        chosen.y+chosen.h-frame.y
                     }
                 }
                 frame_tree.push(frame);
                 frame.y+=frame.h;
            }
         }
-        horizontal => {
-            let master_width:u32= if main_count > 0 {
-                self.w*((main_factor * 100.0) as u32)/(50*client_count)
+        Layout::Vertical => {
+            let master_width:u32=if frame.state == State::Main {
+                chosen.w*((main_factor * 100.0) as u32)/(50*client_count)
             } else { 0 };
 
-            let slave_width:u32= if main_count > 0 && client_count > 1 {
-                (self.w-master_width)/(client_count-1)
-            } else if main_count < 1 && client_count > 0 {
-                (self.w-master_width)/(client_count)
-            } else { self.w };
+            let slave_width:u32= if frame.state == State::Main && client_count > 1 {
+                (chosen.w-master_width)/(client_count-1)
+            } else if frame.state == State::Slave && client_count > 0 {
+                (chosen.w-master_width)/(client_count)
+            } else { chosen.w };
 
             for i in 0..client_count {
                 
                 if client_count > 1 {
-                    frame.w= if i+1==main_count {
+                    frame.w=if i==main_index && frame.state == State::Main {
                         master_width
                     } else if i < client_count-1 {
                         slave_width
                     } else {
-                        self.x+self.w-frame.x
+                        chosen.x+chosen.w-frame.x
                     }
                 }
                 frame_tree.push(frame);
                 frame.x+=frame.w;
            }
         }
-        full => {
+        Layout::Full => {
             for _i in 0..client_count {
-                frame_tree.push(self);
+                frame_tree.push(frame);
             }
         }
         _ => {
-            println!("{} isn't a valid layout", layout);
+            println!("{:?} isn't a valid layout", layout);
             std::process::exit(0);
         }
     }
+
+    frame_tree[main_index as usize].state = State::Main;
 
     frame_tree
 }

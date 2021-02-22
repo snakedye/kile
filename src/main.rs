@@ -5,6 +5,7 @@ mod custom;
 use std::env;
 use crate::base::Frame;
 use crate::base::Layout;
+use crate::base::State;
 
 fn main() {
 
@@ -50,7 +51,9 @@ fn main() {
 
     let mut window_tree:Vec<Frame>=Vec::new();
 
-    let output:Frame=Frame:new(0,0,width,height,client_count, main_count, main_factor,layouts[0]);
+    let output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Main,Layout::Full);
+
+    window_tree=custom::master_stack(window_tree, output);
 
     for window in window_tree {
         println!("{} {} {} {}", window.x, window.y, window.w, window.h);
