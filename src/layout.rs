@@ -1,108 +1,86 @@
 use crate::base::Frame;
 
-pub fn tab(mut frame_tree:Vec<Frame>, frame:Frame, client_count:u32) -> Vec<Frame> {
+pub fn layout(frame_tree:Vec<Frame>,self:&Frame) -> Vec<Frame> {
 
-    let mut window:Frame=frame;
+    let client_count:u32=self.client_count;
+    let main_count:u32=self.main_count;
+    let main_factor:f32=self.main_factor;
+    let layout:Layout=self.layout;
 
-    for _i in 0..client_count {
-        frame_tree.push(window);
-        if client_count > 1 {
-            window.h-=30;
-            window.y+=30;
-        }
-    }
+    let mut frame:Frame:copy();
 
-    frame_tree
-}
-
-pub fn horizontal(mut frame_tree:Vec<Frame>, output:Frame, client_count:u32, main_count:u32, main_factor:f32) -> Vec<Frame> {
-
-    let mut frame:Frame=output;
-
-    let master_height:u32= if main_count > 0 {
-        output.h*((main_factor * 100.0) as u32)/(50*client_count)
-    } else { 0 };
-
-    let slave_height:u32= if main_count > 0 && client_count > 1 {
-        (output.h-master_height)/(client_count-1)
-    } else if main_count < 1 && client_count > 0 {
-        (output.h-master_height)/(client_count)
-    } else { output.h };
-
-    for i in 0..client_count {
-        
-        if client_count > 1 {
-            frame.h= if i+1==main_count {
-                master_height
-            } else if i < client_count-1 {
-                slave_height
-            } else {
-                output.y+output.h-frame.y
+    match layout {
+        tab => {
+            for _i in 0..client_count {
+                frame_tree.push(frame);
+                if client_count > 1 {
+                    frame.h-=30;
+                    frame.y+=30;
+                }
             }
         }
-        frame_tree.push(frame);
-        frame.y+=frame.h;
-   }
+        vertical => {
+            let master_height:u32= if main_count > 0 {
+                self.h*((main_factor * 100.0) as u32)/(50*client_count)
+            } else { 0 };
 
-    frame_tree
+            let slave_height:u32= if main_count > 0 && client_count > 1 {
+                (self.h-master_height)/(client_count-1)
+            } else if main_count < 1 && client_count > 0 {
+                (self.h-master_height)/(client_count)
+            } else { self.h };
 
-}
-
-pub fn vertical(mut frame_tree:Vec<Frame>, output:Frame, client_count:u32, main_count:u32, main_factor:f32) -> Vec<Frame> {
-
-    let mut frame:Frame=output;
-
-    let master_width:u32= if main_count > 0 {
-        output.w*((main_factor * 100.0) as u32)/(50*client_count)
-    } else { 0 };
-
-    let slave_width:u32= if main_count > 0 && client_count > 1 {
-        (output.w-master_width)/(client_count-1)
-    } else if main_count < 1 && client_count > 0 {
-        (output.w-master_width)/(client_count)
-    } else { output.w };
-
-    for i in 0..client_count {
-        
-        if client_count > 1 {
-            frame.w= if i+1==main_count {
-                master_width
-            } else if i < client_count-1 {
-                slave_width
-            } else {
-                output.x+output.w-frame.x
-            }
-        }
-        frame_tree.push(frame);
-        frame.x+=frame.w;
-   }
-
-    frame_tree
-
-}
-
-pub fn dwindle(mut frame_tree:Vec<Frame>, output:Frame, client_count:u32, modi:u32) -> Vec<Frame> {
-
-    let mut frame:Frame=output;
-
-    for i in 0..client_count {
-        let mut index=frame_tree.len();
-        if i > 0 && index > 0 {
-            index-=1;
-            if (i+modi)%2!=0 {
-                frame.h/=2;
-                frame_tree[(index) as usize].h-=frame.h;
+            for i in 0..client_count {
+                
+                if client_count > 1 {
+                    frame.h= if i+1==main_count {
+                        master_height
+                    } else if i < client_count-1 {
+                        slave_height
+                    } else {
+                        self.y+self.h-frame.y
+                    }
+                }
+                frame_tree.push(frame);
                 frame.y+=frame.h;
-            } else {
-                frame.w/=2;
-                frame_tree[index as usize].w-=frame.w;
+           }
+        }
+        horizontal => {
+            let master_width:u32= if main_count > 0 {
+                self.w*((main_factor * 100.0) as u32)/(50*client_count)
+            } else { 0 };
+
+            let slave_width:u32= if main_count > 0 && client_count > 1 {
+                (self.w-master_width)/(client_count-1)
+            } else if main_count < 1 && client_count > 0 {
+                (self.w-master_width)/(client_count)
+            } else { self.w };
+
+            for i in 0..client_count {
+                
+                if client_count > 1 {
+                    frame.w= if i+1==main_count {
+                        master_width
+                    } else if i < client_count-1 {
+                        slave_width
+                    } else {
+                        self.x+self.w-frame.x
+                    }
+                }
+                frame_tree.push(frame);
                 frame.x+=frame.w;
+           }
+        }
+        full => {
+            for _i in 0..client_count {
+                frame_tree.push(self);
             }
         }
-
-        frame_tree.push(frame);
+        _ => {
+            println!("{} isn't a valid layout", layout);
+            std::process::exit(0);
+        }
     }
 
     frame_tree
 }
-

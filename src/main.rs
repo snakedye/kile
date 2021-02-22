@@ -4,6 +4,7 @@ mod custom;
 
 use std::env;
 use crate::base::Frame;
+use crate::base::Layout;
 
 fn main() {
 
@@ -40,7 +41,7 @@ fn main() {
                 }
                 4usize=>width=args[i].parse().unwrap(),
                 5usize=>height=args[i].parse().unwrap(),
-                _ => std::process::exit(0),
+                _ => {},
             }
         }
     }
@@ -49,13 +50,7 @@ fn main() {
 
     let mut window_tree:Vec<Frame>=Vec::new();
 
-    let output:Frame=base::new_frame(0,0,width,height, base::State::Free);
-
-    if layouts.len() > 1 {
-        window_tree=custom::combi(layouts, window_tree, output, client_count, main_count, main_factor);
-    } else {
-        window_tree=custom::chosen_layout(layouts[0], window_tree, output, client_count, main_count, main_factor);
-    }
+    let output:Frame=Frame:new(0,0,width,height,client_count, main_count, main_factor,layouts[0]);
 
     for window in window_tree {
         println!("{} {} {} {}", window.x, window.y, window.w, window.h);

@@ -1,0 +1,2 @@
+in ultra short explanantion: You setup a display and a registry. You give the registry callback function, a listener. the registry will call the listener for every global object. you compare the objects name and if you want it, you bind it. objects you bind that way include seats, outputs, river-status-manager-v1, xdg-shell, etc. Usually, global objects are used to bind scoped objects. With the
+02:15 <leon-p> river-status-manager-v1 you can bind a river-output-status-v1 for a wl_output. these objects also have listeners 
