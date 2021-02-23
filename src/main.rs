@@ -47,22 +47,22 @@ fn main() {
         }
     }
 
-    check(client_count, main_count, main_factor, width, height);
 
     let mut window_tree:Vec<Frame>=Vec::new();
 
-    let output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Main,Layout::Full);
+    let mut output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Main,Layout::Full);
 
-    window_tree=custom::master_stack(window_tree, output);
+    output.validate();
+
+    if layouts.len() > 1 {
+        custom::combi(&mut window_tree, layouts, output);
+    } else {
+        output.set_layout(layouts[0]);
+        output.generate(&mut window_tree);
+    }
 
     for window in window_tree {
         println!("{} {} {} {}", window.x, window.y, window.w, window.h);
     }
 }
 
-fn check(client_count:u32, main_count:u32, main_factor:f32, width:u32, height:u32) {
-    if client_count==0 || main_count==0 || main_factor==0.0 || width==0 || height==0 {
-        println!("Invalid arguments");
-        std::process::exit(0);
-    }
-}

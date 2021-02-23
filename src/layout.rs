@@ -1,8 +1,9 @@
 use crate::base::Frame;
 use crate::base::Layout;
 use crate::base::State;
+use crate::custom;
 
-pub fn layout(chosen:&Frame, mut frame_tree:Vec<Frame>) -> Vec<Frame> {
+pub fn layout(chosen:&Frame, frame_tree:&mut Vec<Frame>) {
 
     let client_count:u32=chosen.client_count;
     let main_index:u32=chosen.main_index;
@@ -15,7 +16,7 @@ pub fn layout(chosen:&Frame, mut frame_tree:Vec<Frame>) -> Vec<Frame> {
     match layout {
         Layout::Tab => {
             for _i in 0..client_count {
-                frame_tree.push(frame);
+                (*frame_tree).push(frame);
                 if client_count > 1 {
                     frame.h-=30;
                     frame.y+=30;
@@ -39,12 +40,15 @@ pub fn layout(chosen:&Frame, mut frame_tree:Vec<Frame>) -> Vec<Frame> {
                     frame.h=if i==main_index && frame.state == State::Main {
                         master_height
                     } else if i < client_count-1 {
+                        frame.set_state(State::Slave);
                         slave_height
                     } else {
+                        frame.set_state(State::Slave);
                         chosen.y+chosen.h-frame.y
                     }
                 }
-                frame_tree.push(frame);
+
+                (*frame_tree).push(frame);
                 frame.y+=frame.h;
            }
         }
@@ -65,27 +69,26 @@ pub fn layout(chosen:&Frame, mut frame_tree:Vec<Frame>) -> Vec<Frame> {
                     frame.w=if i==main_index && frame.state == State::Main {
                         master_width
                     } else if i < client_count-1 {
+                        frame.set_state(State::Slave);
                         slave_width
                     } else {
+                        frame.set_state(State::Slave);
                         chosen.x+chosen.w-frame.x
                     }
                 }
-                frame_tree.push(frame);
+                (*frame_tree).push(frame);
                 frame.x+=frame.w;
            }
         }
+        Layout::Dwindle => {
+            custom::dwindle(frame_tree, *chosen, 1);
+        }
         Layout::Full => {
             for _i in 0..client_count {
-                frame_tree.push(frame);
+                (*frame_tree).push(frame);
             }
-        }
-        _ => {
-            println!("{:?} isn't a valid layout", layout);
-            std::process::exit(0);
         }
     }
 
-    frame_tree[main_index as usize].state = State::Main;
-
-    frame_tree
+    // frame_tree[main_index as usize].state = State::Main;
 }
