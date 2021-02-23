@@ -50,7 +50,7 @@ fn main() {
 
     let mut window_tree:Vec<Frame>=Vec::new();
 
-    let mut output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Main,Layout::Full);
+    let mut output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Slave,Layout::Full);
 
     output.validate();
 

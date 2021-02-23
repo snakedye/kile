@@ -15,7 +15,6 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
 
     match layout {
         Layout::Tab => {
-            frame.set_state(State::Slave);
             for _i in 0..client_count {
                 (*frame_tree).push(frame);
                 if client_count > 1 {
@@ -25,11 +24,11 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
             }
         }
         Layout::Horizontal => {
-            let master_height:u32= if frame.state == State::Main {
+            let master_height:u32=if main_count>0 {
                 view.h*((main_factor * 100.0) as u32)/(50*client_count)
             } else { 0 };
 
-            let slave_height:u32= if frame.state == State::Main && client_count > 1 {
+            let slave_height:u32= if main_count>0 && client_count > 1 {
                 (view.h-master_height)/(client_count-1)
             } else if frame.state == State::Slave && client_count > 0 {
                 (view.h-master_height)/(client_count)
@@ -38,13 +37,12 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
             for i in 0..client_count {
                 
                 if client_count > 1 {
-                    frame.h=if i==main_index && frame.state == State::Main {
+                    frame.h=if i==main_index {
+                        frame.set_state(State::Main);
                         master_height
                     } else if i < client_count-1 {
-                        frame.set_state(State::Slave);
                         slave_height
                     } else {
-                        frame.set_state(State::Slave);
                         view.y+view.h-frame.y
                     }
                 }
@@ -54,11 +52,11 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
            }
         }
         Layout::Vertical => {
-            let master_width:u32=if frame.state == State::Main {
+            let master_width:u32=if main_count>0 {
                 view.w*((main_factor * 100.0) as u32)/(50*client_count)
             } else { 0 };
 
-            let slave_width:u32= if frame.state == State::Main && client_count > 1 {
+            let slave_width:u32= if main_count>0 && client_count > 1 {
                 (view.w-master_width)/(client_count-1)
             } else if frame.state == State::Slave && client_count > 0 {
                 (view.w-master_width)/(client_count)
@@ -67,16 +65,16 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
             for i in 0..client_count {
                 
                 if client_count > 1 {
-                    frame.w=if i==main_index && frame.state == State::Main {
+                    frame.w=if i==main_index {
+                        frame.set_state(State::Main);
                         master_width
                     } else if i < client_count-1 {
-                        frame.set_state(State::Slave);
                         slave_width
                     } else {
-                        frame.set_state(State::Slave);
                         view.x+view.w-frame.x
                     }
                 }
+
                 (*frame_tree).push(frame);
                 frame.x+=frame.w;
            }
@@ -84,8 +82,10 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
         Layout::Dwindle => {
             custom::dwindle(frame_tree, *view, 1);
         }
+        Layout::Center => {
+            custom::center(frame_tree, *view);
+        }
         Layout::Full => {
-            frame.set_state(State::Slave);
             for _i in 0..client_count {
                 (*frame_tree).push(frame);
             }

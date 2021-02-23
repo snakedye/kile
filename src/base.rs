@@ -5,6 +5,7 @@ pub enum Layout {
     Vertical,
     Horizontal,
     Dwindle,
+    Center,
     Tab,
     Full,
 }
@@ -53,10 +54,11 @@ impl Frame {
     pub fn set_layout(&mut self, layout:&str) {
         match layout {
             "tab" => (*self).layout=Layout::Tab,
-            "vertical" => (*self).layout=Layout::Vertical,
-            "horizontal" => (*self).layout=Layout::Horizontal,
-            "dwindle" => (*self).layout=Layout::Dwindle,
-            "full" => (*self).layout=Layout::Full,
+            "ver" => (*self).layout=Layout::Vertical,
+            "hor" => (*self).layout=Layout::Horizontal,
+            "cen" => (*self).layout=Layout::Center,
+            "dwd" => (*self).layout=Layout::Dwindle,
+            "ful" => (*self).layout=Layout::Full,
             _ => {
                 println!("{} isn't a valid layout", layout);
                 std::process::exit(0);
@@ -71,6 +73,11 @@ impl Frame {
             (*self).main_count = main_count;
         }
     }
+    pub fn set_main_index(&mut self, main_index:u32) {
+        if main_index < self.client_count {
+            (*self).main_index = main_index;
+        }
+    }
     pub fn set_main_factor(&mut self, main_factor:f32) {
         if main_factor > 0.0 && main_factor < 1.0 {
             (*self).main_factor = main_factor;
@@ -80,7 +87,7 @@ impl Frame {
         (*self).state = state;
     }
     pub fn validate(&self) {
-        if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count > self.client_count || self.main_factor == 0.0 {
+        if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count >= self.client_count || self.main_factor == 0.0 {
             println!("Invalid arguments");
             std::process::exit(0);
         }
