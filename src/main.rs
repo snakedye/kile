@@ -28,7 +28,7 @@ fn main() {
                     let arg:u32=args[i].parse().unwrap();
                     main_count= if arg < 1 {
                         1
-                    } else if arg >= client_count {
+                    } else if arg > client_count {
                         client_count
                     } else { arg };
                 }

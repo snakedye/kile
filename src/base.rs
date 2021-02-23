@@ -67,18 +67,22 @@ impl Frame {
         (*self).client_count = client_count;
     }
     pub fn set_main_count(&mut self, main_count:u32) {
-        (*self).main_count = main_count;
+        if main_count > 0 && main_count < self.client_count {
+            (*self).main_count = main_count;
+        }
+    }
+    pub fn set_main_factor(&mut self, main_factor:f32) {
+        if main_factor > 0.0 && main_factor < 1.0 {
+            (*self).main_factor = main_factor;
+        }
     }
     pub fn set_state(&mut self, state:State) {
         (*self).state = state;
     }
-    pub fn validate(&mut self) {
-        if (*self).w == 0 || (*self).h == 0 ||(*self).client_count == 0 || (*self).main_factor == 0.0 {
+    pub fn validate(&self) {
+        if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count > self.client_count || self.main_factor == 0.0 {
             println!("Invalid arguments");
             std::process::exit(0);
         }
     }
-    // pub fn set_main_factor(mut self, main_factor:f32) {
-    //     self.main_factor = main_factor;
-    // }
 }
