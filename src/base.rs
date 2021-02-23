@@ -69,7 +69,7 @@ impl Frame {
         (*self).client_count = client_count;
     }
     pub fn set_main_count(&mut self, main_count:u32) {
-        if main_count > 0 && main_count < self.client_count {
+        if main_count >= 0 && main_count < self.client_count {
             (*self).main_count = main_count;
         }
     }
@@ -85,6 +85,12 @@ impl Frame {
     }
     pub fn set_state(&mut self, state:State) {
         (*self).state = state;
+    }
+    pub fn set_main(&mut self) {
+        (*self).state = State::Main;
+    }
+    pub fn set_slave(&mut self) {
+        (*self).state = State::Slave;
     }
     pub fn validate(&self) {
         if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count >= self.client_count || self.main_factor == 0.0 {
