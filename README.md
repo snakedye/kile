@@ -4,13 +4,11 @@
 
 rivertiler comes with theses layouts hardcoded:
 
+- ver
+- hor
 - tab
-- left
-- center
-- dwindle
-- vertical
-- horizontal
-- dwindle_mod
+- cen
+- dwd
 
 If you pass only one of this layouts to rivertiler, it will generate it. If you pass more,
 the first argument is used to initialise the main frame were the following are generated.
@@ -19,27 +17,46 @@ The main frame will have the same amount of sub frames as the number of argument
 A frame is basically a partition of the screen.
 
 #### Exemples:
-`rivertiler vertical horizontal horizontal`
-- This will generate a master and stack layout practically identical to `rivertile left`.
+`rivertiler ver hor hor`
 
 ![rivertiler vertical horizontal horizontal](/img/1.png)
 
 `rivertiler dwindle_mod dwindle horizontal tab`
-- This will generate a dwindle_mod layout with three frames that takes the entire screen,
-the first frame has a dwindle layout, the second a horizontal split layout and
-the thrid a tabbed layout.
 
 ![rivertiler dwindle_mod dwindle horizontal tab](/img/2.png)
 
 ## More epic layouts
-The more complicated layouts are inside src/custom.rs.
+This is probably submit to change but here's how it works.
 
-Ideally you would never need to edit the source code but I don't plan to provide the ability
-to generate nested layouts inside nested layout inside... from the command line.
+All windows, the output and views where layouts are generated are frames. A frame looks like this :
+```rust
+pub struct Frame{
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+    pub main_count: u32,
+    pub main_index: u32,
+    pub main_factor: f32,
+    pub client_count: u32,
+    pub state: State,
+    pub layout: Layout
+}
+```
+The layout generator only ouypuys the geometry at the end but all theses fields can be used to create your own layout.
 
-Layouts take a `Frame`, a vector of `Frame`, along with some other information like the window count,
-the multiplier factor and master count and return a vector of frame. You can make
-a completely independant layout (without using other layouts) or use the one already made to generate new one.
+The default layouts have a defined behaviour with some fields:
+- x : the frame's x coordinate
+- y : the frame's y coordinate
+- w : the frame's x width
+- h : the frame's height
+- main_count : the number of clients in the frame
+- main_index : the index of the main frame
+- state : the state of a frame, if it's main or slave
+- layout : the layout of the Frame
+
+If you want to see more concrete example of layout, there are some in custom.
+Imo it's easier to let the premade one do the heavy lifting (like center).
 
 ## Building
 #### Arch
@@ -59,8 +76,7 @@ This project will probably change a lot. Today it might a layout generator, tomo
 a flying steno alien thingy!
 
 ####  Guidelines:
-- Simple layouts that do not require others should go in src/layout.rs
-- Those that require others or call other functions should go in src/custom.rs
+- All custom layouts are in src/custom.rs
 - Layouts **must** fill the given frame
 
 ## TO-DOs

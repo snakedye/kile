@@ -13,9 +13,9 @@ pub fn dwindle(window_tree:&mut Vec<Frame>, mut output:Frame, modi:u32) {
             output
         } else { buffer[buffer.len()-1] };
         if (i+modi)%2==0{
-            current.set_layout("hor");
-        } else {
             current.set_layout("ver");
+        } else {
+            current.set_layout("hor");
         }
         current.set_slave();
         current.set_client_count(if i<client_count-1 {
