@@ -16,14 +16,10 @@ The main frame will have the same amount of sub frames as the number of argument
 
 A frame is basically a partition of the screen.
 
-#### Exemples:
+#### Exemple:
 `rivertiler ver hor hor`
 
 ![rivertiler vertical horizontal horizontal](/img/1.png)
-
-`rivertiler dwindle_mod dwindle horizontal tab`
-
-![rivertiler dwindle_mod dwindle horizontal tab](/img/2.png)
 
 ## More epic layouts
 This is probably submit to change but here's how it works.
