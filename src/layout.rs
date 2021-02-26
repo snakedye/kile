@@ -84,6 +84,9 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
         Layout::Dwindle => {
             custom::dwindle(frame_tree, *view, 1);
         }
+        Layout::DwindleMod => {
+            custom::dwindle(frame_tree, *view, 0);
+        }
         Layout::Center => {
             custom::center(frame_tree, *view);
         }

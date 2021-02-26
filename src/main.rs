@@ -4,56 +4,37 @@ mod custom;
 
 use std::env;
 use crate::base::Frame;
-use crate::base::Layout;
-use crate::base::State;
 
 fn main() {
 
     let args: Vec<String> = env::args().collect();
     let mut layouts: Vec<&str> = Vec::new();
-    let mut client_count:u32=0;
-    let mut main_count:u32=0;
-    let mut main_factor:f32=0.0;
-    let mut width:u32=0;
-    let mut height:u32=0;
+    let mut output:Frame=Frame::new();
 
     for i in 1..args.len() {
-        if i <= args.len()-6 {
+        if i <= args.len()-7 {
             layouts.push(&args[i]);
         } else {
             let index=i-layouts.len();
             match index {
-                1usize=>client_count=args[i].parse().unwrap(),
-                2usize=>{
-                    let arg:u32=args[i].parse().unwrap();
-                    main_count= if arg < 1 {
-                        1
-                    } else if arg > client_count {
-                        client_count
-                    } else { arg };
-                }
+                2usize=>output.set_client_count(args[i].parse::<u32>().unwrap()),
                 3usize=>{
-                    let arg:f32=args[i].parse().unwrap();
-                    main_factor= if arg < 0.0 {
-                        0.0
-                    } else if arg > 1.0 {
-                        1.0
-                    } else { arg };
+                    output.set_main_count(args[i].parse::<u32>().unwrap());
+                    let main_index=args[i-2].parse::<i32>().unwrap();
+                    if main_index > 0 {output.set_main_index(main_index as u32)}
                 }
-                4usize=>width=args[i].parse().unwrap(),
-                5usize=>height=args[i].parse().unwrap(),
+                4usize=>output.set_main_factor(args[i].parse::<f32>().unwrap()),
+                5usize=>output.w=args[i].parse::<u32>().unwrap(),
+                6usize=>output.h=args[i].parse::<u32>().unwrap(),
                 _ => {},
             }
         }
     }
 
-
-    let mut window_tree:Vec<Frame>=Vec::new();
-
-    let mut output:Frame=Frame::new(0,0,width,height,client_count,main_count,0,main_factor,State::Slave,Layout::Full);
-
+    output.fix();
     output.validate();
 
+    let mut window_tree:Vec<Frame>=Vec::new();
     if layouts.len() > 1 {
         custom::combi(&mut window_tree, layouts, output);
     } else {

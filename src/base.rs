@@ -5,6 +5,7 @@ pub enum Layout {
     Vertical,
     Horizontal,
     Dwindle,
+    DwindleMod,
     Center,
     Tab,
     Full,
@@ -31,18 +32,18 @@ pub struct Frame{
 }
 
 impl Frame {
-    pub fn new(x:u32,y:u32,w:u32,h:u32,client_count:u32,main_count:u32,main_index:u32,main_factor:f32,state:State,layout:Layout) -> Frame {
+    pub fn new() -> Frame {
         return { Frame {
-            x: x,
-            y: y,
-            w: w,
-            h: h,
-            client_count: client_count,
-            main_count: main_count,
-            main_index: main_index,
-            main_factor: main_factor,
-            state: state,
-            layout: layout,
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+            client_count: 0,
+            main_count: 0,
+            main_index: 0,
+            main_factor: 0.0,
+            state: State::Slave,
+            layout: Layout::Full,
         }}
     }
     pub fn copy(&self) -> Frame {
@@ -58,6 +59,7 @@ impl Frame {
             "hor" => (*self).layout=Layout::Horizontal,
             "cen" => (*self).layout=Layout::Center,
             "dwd" => (*self).layout=Layout::Dwindle,
+            "dwm" => (*self).layout=Layout::DwindleMod,
             "ful" => (*self).layout=Layout::Full,
             _ => {
                 println!("{} isn't a valid layout", layout);
@@ -69,9 +71,7 @@ impl Frame {
         (*self).client_count = client_count;
     }
     pub fn set_main_count(&mut self, main_count:u32) {
-        if main_count >= 0 && main_count < self.client_count {
-            (*self).main_count = main_count;
-        }
+        (*self).main_count = main_count;
     }
     pub fn set_main_index(&mut self, main_index:u32) {
         if main_index < self.client_count {
@@ -83,17 +83,22 @@ impl Frame {
             (*self).main_factor = main_factor;
         }
     }
-    pub fn set_state(&mut self, state:State) {
-        (*self).state = state;
-    }
     pub fn set_main(&mut self) {
         (*self).state = State::Main;
     }
     pub fn set_slave(&mut self) {
         (*self).state = State::Slave;
     }
+    pub fn fix(&mut self) {
+        if self.main_index >= self.client_count && self.client_count > 0 {
+            (*self).main_index = self.client_count-1;
+        }
+        if self.main_count >= self.client_count && self.client_count > 0 {
+            (*self).main_count = self.client_count-1;
+        }
+    }
     pub fn validate(&self) {
-        if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count >= self.client_count || self.main_factor == 0.0 {
+        if self.w == 0 || self.h == 0 || self.client_count == 0 || self.main_count > self.client_count || self.main_factor == 0.0 {
             println!("Invalid arguments");
             std::process::exit(0);
         }
