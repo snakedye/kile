@@ -9,6 +9,7 @@ rivertiler comes with theses layouts hardcoded:
 - tab
 - cen
 - dwd
+- dwm
 
 If you pass only one of this layouts to rivertiler, it will generate it. If you pass more,
 the first argument is used to initialise the main frame were the following are generated.
@@ -17,7 +18,7 @@ The main frame will have the same amount of sub frames as the number of argument
 A frame is basically a partition of the screen.
 
 #### Exemple:
-`rivertiler ver hor hor`
+`rivertiler ver hor hor 0`
 
 ![rivertiler vertical horizontal horizontal](/img/1.png)
 
@@ -52,7 +53,7 @@ The default layouts have a defined behaviour with some fields:
 - layout : the layout of the Frame
 
 If you want to see more concrete example of layout, there are some in custom.
-Imo it's easier to let the premade one do the heavy lifting (like center).
+Imo it's easier to let the premade one do the heavy lifting (like cen).
 
 ## Building
 #### Arch
