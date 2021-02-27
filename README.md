@@ -28,12 +28,12 @@ pub struct Frame{
     pub y: u32,
     pub w: u32,
     pub h: u32,
-    pub main_count: u32,
-    pub main_index: u32,
-    pub main_factor: f32,
-    pub client_count: u32,
-    pub state: State,
-    pub layout: Layout
+    main_count: u32,
+    main_index: u32,
+    main_factor: f32,
+    client_count: u32,
+    state: State,
+    layout: Layout
 }
 ```
 The layout generator only outpuys the geometry at the end but all theses fields can be used to create your own layout.
