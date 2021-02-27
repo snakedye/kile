@@ -40,8 +40,10 @@ pub fn layout(view:&mut Frame, frame_tree:&mut Vec<Frame>) {
                         frame.set_main();
                         master_height
                     } else if i < client_count-1 {
+                        frame.set_slave();
                         slave_height
                     } else {
+                        frame.set_slave();
                         view.y+view.h-frame.y
                     }
                 }
@@ -69,8 +71,10 @@ pub fn layout(view:&mut Frame, frame_tree:&mut Vec<Frame>) {
                         frame.set_main();
                         master_width
                     } else if i < client_count-1 {
+                        frame.set_slave();
                         slave_width
                     } else {
+                        frame.set_slave();
                         view.x+view.w-frame.x
                     }
                 }
