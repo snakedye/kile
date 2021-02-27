@@ -35,7 +35,7 @@ pub fn combi(window_tree:&mut Vec<Frame>, layouts:Vec<&str>, mut output:Frame) {
 
         main_tree[i as usize].set_layout(layouts[(i+1) as usize]);
 
-        if output.is_main() && output.get_main_count()!=0 {
+        if main_tree[i as usize].is_main() && output.get_main_count()!=0 {
 
             main_tree[i as usize].set_client_count(main_count);
         } else if output.get_client_count() > 1 {
