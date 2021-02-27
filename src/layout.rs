@@ -1,15 +1,14 @@
-use crate::base::Frame;
-use crate::base::Layout;
-use crate::base::State;
-use crate::custom;
+use crate::frame::Frame;
+use crate::frame::Layout;
+use crate::custom::dwindle;
 
-pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
+pub fn layout(view:&mut Frame, frame_tree:&mut Vec<Frame>) {
 
-    let client_count:u32=view.client_count;
-    let main_index:u32=view.main_index;
-    let main_count:u32=view.main_count;
-    let main_factor:f32=view.main_factor;
-    let layout:Layout=view.layout;
+    let client_count:u32=view.get_client_count();
+    let main_index:u32=view.get_main_index();
+    let main_count:u32=view.get_main_count();
+    let main_factor:f32=view.get_main_factor();
+    let layout:Layout=view.get_layout();
 
     let mut frame:Frame=view.copy();
 
@@ -59,7 +58,7 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
 
             let slave_width:u32= if main_count>0 && client_count > 1 {
                 (view.w-master_width)/(client_count-1)
-            } else if frame.state == State::Slave && client_count > 0 {
+            } else if client_count > 0 {
                 (view.w-master_width)/(client_count)
             } else { view.w };
 
@@ -82,13 +81,10 @@ pub fn layout(view:&Frame, frame_tree:&mut Vec<Frame>) {
            }
         }
         Layout::Dwindle => {
-            custom::dwindle(frame_tree, *view, 1);
+            dwindle::dwindle(frame_tree, *view, 1);
         }
         Layout::DwindleMod => {
-            custom::dwindle(frame_tree, *view, 0);
-        }
-        Layout::Center => {
-            custom::center(frame_tree, *view);
+            dwindle::dwindle(frame_tree, *view, 0);
         }
         Layout::Full => {
             for _i in 0..client_count {

@@ -1,14 +1,13 @@
-use crate::layout::layout;
+use super::layout::layout;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Layout {
-    Vertical,
-    Horizontal,
-    Dwindle,
-    DwindleMod,
-    Center,
     Tab,
     Full,
+    Dwindle,
+    Vertical,
+    Horizontal,
+    DwindleMod,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -23,12 +22,12 @@ pub struct Frame{
     pub y: u32,
     pub w: u32,
     pub h: u32,
-    pub main_count: u32,
-    pub main_index: u32,
-    pub main_factor: f32,
-    pub client_count: u32,
-    pub state: State,
-    pub layout: Layout
+    main_count: u32,
+    main_index: u32,
+    main_factor: f32,
+    client_count: u32,
+    state: State,
+    layout: Layout
 }
 
 impl Frame {
@@ -41,7 +40,7 @@ impl Frame {
             client_count: 0,
             main_count: 0,
             main_index: 0,
-            main_factor: 0.0,
+            main_factor: 0.5,
             state: State::Slave,
             layout: Layout::Full,
         }}
@@ -49,15 +48,14 @@ impl Frame {
     pub fn copy(&self) -> Frame {
         *self
     }
-    pub fn generate(&self,window_tree:&mut Vec<Frame>) {
-        layout(&self,window_tree);
+    pub fn generate(&mut self,window_tree:&mut Vec<Frame>) {
+        layout(self,window_tree);
     }
     pub fn set_layout(&mut self, layout:&str) {
         match layout {
             "tab" => (*self).layout=Layout::Tab,
             "ver" => (*self).layout=Layout::Vertical,
             "hor" => (*self).layout=Layout::Horizontal,
-            "cen" => (*self).layout=Layout::Center,
             "dwd" => (*self).layout=Layout::Dwindle,
             "dwm" => (*self).layout=Layout::DwindleMod,
             "ful" => (*self).layout=Layout::Full,
@@ -88,6 +86,27 @@ impl Frame {
     }
     pub fn set_slave(&mut self) {
         (*self).state = State::Slave;
+    }
+    pub fn get_client_count(&mut self)->u32 {
+        (*self).client_count
+    }
+    pub fn get_main_count(&mut self)->u32 {
+        (*self).main_count
+    }
+    pub fn get_main_index(&mut self)->u32 {
+        (*self).main_index
+    }
+    pub fn get_main_factor(&mut self)->f32 {
+        (*self).main_factor
+    }
+    pub fn get_layout(&mut self)->Layout {
+        (*self).layout
+    }
+    pub fn is_main(&mut self)->bool {
+        if self.state == State::Main {
+            return true
+        }
+        false
     }
     pub fn fix(&mut self) {
         if self.main_index >= self.client_count && self.client_count > 0 {

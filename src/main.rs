@@ -1,9 +1,10 @@
-mod base;
+mod frame;
 mod layout;
 mod custom;
 
+use crate::custom::combi;
 use std::env;
-use crate::base::Frame;
+use crate::frame::Frame;
 
 fn main() {
 
@@ -36,7 +37,7 @@ fn main() {
 
     let mut window_tree:Vec<Frame>=Vec::new();
     if layouts.len() > 1 {
-        custom::combi(&mut window_tree, layouts, output);
+        combi::combi(&mut window_tree, layouts, output);
     } else {
         output.set_layout(layouts[0]);
         output.generate(&mut window_tree);

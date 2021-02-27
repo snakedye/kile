@@ -7,15 +7,11 @@ rivertiler comes with theses layouts hardcoded:
 - ver
 - hor
 - tab
-- cen
 - dwd
 - dwm
 
-If you pass only one of this layouts to rivertiler, it will generate it. If you pass more,
-the first argument is used to initialise the main frame were the following are generated.
-The main frame will have the same amount of sub frames as the number of arguments you pass minus one.
-
-A frame is basically a partition of the screen.
+By default rivertiler runs in combi mode. This basically allows you to generate two dimensional layouts
+witht he one originaly provided.
 
 #### Exemple:
 `rivertiler ver hor hor 0`
@@ -40,7 +36,7 @@ pub struct Frame{
     pub layout: Layout
 }
 ```
-The layout generator only ouypuys the geometry at the end but all theses fields can be used to create your own layout.
+The layout generator only outpuys the geometry at the end but all theses fields can be used to create your own layout.
 
 The default layouts have a defined behaviour with some fields:
 - x : the frame's x coordinate
@@ -52,8 +48,7 @@ The default layouts have a defined behaviour with some fields:
 - state : the state of a frame, if it's main or slave
 - layout : the layout of the Frame
 
-If you want to see more concrete example of layout, there are some in custom.
-Imo it's easier to let the premade one do the heavy lifting (like cen).
+This is useful if you want to levarage from what has already been done to manage layouts differently.
 
 ## Building
 #### Arch
@@ -73,8 +68,8 @@ This project will probably change a lot. Today it might a layout generator, tomo
 a flying steno alien thingy!
 
 ####  Guidelines:
-- All custom layouts are in src/custom.rs
-- Layouts **must** fill the given frame
+- All custom layouts are in src/custom/
+- Layouts **must** fill the given frame 
 
 ## TO-DOs
 
