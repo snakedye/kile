@@ -2,6 +2,7 @@ use crate::frame::Frame;
 
 pub fn generate(window_tree:&mut Vec<Frame>, mut output:Frame, modi:u32) {
 
+    output.fix();
     let mut buffer:Vec<Frame>=Vec::new();
     let client_count:u32=output.get_client_count();
 
