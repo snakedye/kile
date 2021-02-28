@@ -85,10 +85,10 @@ pub fn layout(view:&mut Frame, frame_tree:&mut Vec<Frame>) {
            }
         }
         Layout::Dwindle => {
-            dwindle::dwindle(frame_tree, *view, 1);
+            dwindle::generate(frame_tree, *view, 1);
         }
         Layout::DwindleMod => {
-            dwindle::dwindle(frame_tree, *view, 0);
+            dwindle::generate(frame_tree, *view, 0);
         }
         Layout::Full => {
             for _i in 0..client_count {

@@ -1,6 +1,6 @@
 use crate::frame::Frame;
 
-pub fn dwindle(window_tree:&mut Vec<Frame>, mut output:Frame, modi:u32) {
+pub fn generate(window_tree:&mut Vec<Frame>, mut output:Frame, modi:u32) {
 
     let mut buffer:Vec<Frame>=Vec::new();
     let client_count:u32=output.get_client_count();
@@ -14,15 +14,12 @@ pub fn dwindle(window_tree:&mut Vec<Frame>, mut output:Frame, modi:u32) {
         } else {
             current.set_layout("hor");
         }
-        if i==current.get_main_index() {
-            current.set_main();
-        } else {
-            current.set_slave();
-        }
+        current.set_slave();
         current.set_client_count(if i<client_count-1 {
             2
         } else { 1 });
         current.generate(&mut buffer);
         window_tree.push(buffer[(2*i) as usize]);
     }
+    window_tree[output.get_main_index() as usize].set_main();
 }
