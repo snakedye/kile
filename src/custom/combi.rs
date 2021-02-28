@@ -9,9 +9,6 @@ pub fn generate(window_tree:&mut Vec<Frame>, layouts:Vec<&str>, mut output:Frame
     output.set_layout(layouts[0]);
 
     output.set_client_count(
-        // if main_count<1 && client_count > 1 {
-            // println!("{}", main_count);
-            // (layouts.len()-2) as u32
         if client_count >= (layouts.len()-1) as u32 {
             if client_count-main_count+1 < (layouts.len()-1) as u32 {
                 ((layouts.len()-1) as u32)-(client_count-main_count)
