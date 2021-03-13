@@ -1,49 +1,39 @@
 mod frame;
-mod layout;
-mod custom;
+mod engine;
+mod options;
+extern crate wayland_scanner;
 
-use std::env;
+
 use crate::frame::Frame;
+use crate::wayland::Option;
+use crate::wayland::Request;
+use std::env::var;
+use std::path::Path;
+use wayland_scanner::{Side, generate_code};
 
-fn main() {
+pub fn main() {
 
-    let args: Vec<String> = env::args().collect();
-    let mut layouts: Vec<&str> = Vec::new();
-    let mut output:Frame=Frame::new();
+    // Location of the xml file, relative to the `Cargo.toml`
+    let layout_protocol="./protocols/river-layout-unstable-v1.xml";
+    let options_protocol="./protocols/river-options-unstable-v1.xml";
 
-    for i in 1..args.len() {
-        if i <= args.len()-7 {
-            layouts.push(&args[i]);
-        } else {
-            let index=i-layouts.len();
-            match index {
-                2usize=>output.set_client_count(args[i].parse::<u32>().unwrap()),
-                3usize=>{
-                    output.set_main_count(args[i].parse::<u32>().unwrap());
-                    let main_index=args[i-2].parse::<i32>().unwrap();
-                    if main_index > 0 {output.set_main_index(main_index as u32)}
-                }
-                4usize=>output.set_main_factor(args[i].parse::<f32>().unwrap()),
-                5usize=>output.w=args[i].parse::<u32>().unwrap(),
-                6usize=>output.h=args[i].parse::<u32>().unwrap(),
-                _ => {},
-            }
-        }
-    }
+    // Target directory for the generate files
+    let out_dir=let out_dir = Path::new("./wayland");;
 
-    output.fix();
-    output.validate();
+    generate_code(
+        layout_protocol,
+        out_dir.join("river_layout_unstable.rs"),
+        Side::Client, // Replace by `Side::Server` for server-side code
+    );
 
-    let mut window_tree:Vec<Frame>=Vec::new();
-    if layouts.len() > 1 {
-        custom::combi::generate(&mut window_tree, layouts, output);
-    } else {
-        output.set_layout(layouts[0]);
-        output.generate(&mut window_tree);
-    }
+    generate_code(
+        options_protocol,
+        out_dir.join("river_options_unstable.rs"),
+        Side::Client, // Replace by `Side::Server` for server-side code
+    );
 
-    for window in window_tree {
-        println!("{} {} {} {}", window.x, window.y, window.w, window.h);
-    }
+    let options=Option::new().set_option();
+    let output=Frame::new(options.get_options()).generate();
+    output.generate();
 }
 
