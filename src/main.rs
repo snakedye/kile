@@ -1,5 +1,5 @@
-// mod display;
-// mod engine;
+mod display;
+mod layout;
 mod options;
 // mod build;
 mod wayland;
@@ -25,5 +25,4 @@ fn main() {
     // scanner();
 }
 
-fn init_wayland() {
-}
+fn init_wayland() {}

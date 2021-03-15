@@ -1,8 +1,9 @@
-use super::engine::layout;
+use super::layout::engine;
 use super::options::Layout;
 use super::options::Options;
-use std::ptr::null;
+use wayland_client::protocol::wl_output::WlOutput;
 
+#[derive(Copy, Clone, Debug)]
 pub enum State {
     Main,
     Slave,
@@ -12,195 +13,126 @@ pub enum State {
 pub struct Output {
     pub namespace: String, // Namespace is either manual or dynamic
     pub output: WlOutput,
-    pub tags:[Tag;1024]; // It's the amount of possible tags, it might be too much to set all possible tags
+    pub tags:Vec<Tag>, // It's the amount of possible tags, it might be too much to set all possible tags
     pub focused: u32,
 }
 
+#[derive(Clone, Debug)]
 pub struct Tag {
-    pub tagmask:u8,
-    pub output:Frame,
+    pub tagmask:u32,
+    pub main_frame:Frame,
+    pub client_count: u32,
+    pub windows:Vec<Frame>,
     pub layout:Vec<Layout>,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Frame{
     pub x: u32,
     pub y: u32,
     pub w: u32,
     pub h: u32,
-    pub padding: u32,
-    pub client_count: u32,
-    pub capacity: u32,
+    pub index: u32,
     state: State,
-    parent: &Frame, // add a lifetime parameter
-    tree: Vec<Frame>,
 }
 
 impl Output {
-    pub fn new() {
-        return { Display {
-            output: wl_display,
+    pub fn new(output:WlOutput)->Output {
+        return { Output {
+            namespace: "Something".to_string(),
+            output: output,
             focused: 0,
-            tags:[Tag, 256],
+            tags:Vec::new(),
         } }
     }
-    pub fn init(self) {
-        let options=Options::get(self.output, self.namespace);
+    pub fn init(&mut self) {
+        let options=Options::new(&self.output);
         self.focused=options.tagmask;
     }
-    pub fn update(self) {
-        let options=Options::listen();
-        let tag=self.get_tag(options.tagmask);
+    pub fn update(&mut self) {
+        let options=Options::new(&self.output);
+        let index=tag_index(&options.tagmask);
+        let mut tag=self.tags[index].clone();
         if self.focused != options.tagmask {
-            if tag.is_set() && tag.layout==options.layout {
-                tag.restore();
-            } else {
-                self.tags[options.tagmask]=Tag::new(options);
-            }
             self.focused=options.tagmask;
+            if tag.is_set() /*&& tag.layout==options.arguments*/ {
+                tag.restore(&options);
+            } else {
+                self.tags[index]=Tag::new(&options);
+            }
         } else {
-            options.layout=tag.layout;
-            tag.update(options);
+            // options.layout=tag.layout;
+            tag.update(&options);
         }
-    }
-    pub fn get_tag(self, tagmask:u8)->&Tag {
-        // 1)
-        // Converts the 8 bite code into a u8 integer
-        // 2)
-        // Gets the Tag at the index of that u8 integer
-        // 2)
-        // Returns a reference to the Tag
     }
 }
 
+pub fn tag_index(tagmask:&u32)->usize {
+    usize::from_str_radix(&tagmask.to_string(), 2).unwrap()
+}
+
 impl Tag {
-    pub fn new(options:Options) {
+    pub fn new(options:&Options)->Tag {
         return { Tag {
-            tagmask:options,
-            output:Frame::new(options),
-            layout:options.layout,
+            // tagmask:options.tagmask,
+            // 0 in the meanwhile because no river-status
+            tagmask:0,
+            main_frame:Frame::new(options),
+            client_count:0,
+            layout:options.arguments.clone(),
+            windows:Vec::new(),
         } }
     }
-    pub fn restore(self) {
-        // More Wayland crap
-        // Should just be sending the frame in the tag to the server
+    pub fn restore(&self,options:&Options) {
+        for frame in &self.windows {
+            options.push_dimensions(&frame);
+        }
+        options.commit();
     }
-    pub fn is_set(self)->bool {
-        if self.frame.client_count>0 {
-            true
+    pub fn is_set(&self)->bool {
+        if self.client_count>0 {
+            return true
         }
         false
     }
-    pub fn update(self, options:Options) {
-        if self.output.client_count < options.client_count {
-            options.client_count-=self.output.client_count;
-            frame.insert(options);
+    pub fn update(&mut self, options:&Options) {
+        if options.view_amount > self.client_count {
+            self.generate(options);
         } else {
-            self.output.client_count-=options.client_count;
-            frame.remove(options);
+            for i in self.client_count..options.view_amount {
+                self.windows.remove(i as usize);
+            }
+            self.generate(&options);
+            self.restore(&options)
         }
+    }
+    pub fn generate(&mut self, options:&Options) {
+        engine(self, options);
     }
 }
 
 impl Frame {
-    pub fn new() -> Frame {
+    pub fn new(options:&Options) -> Frame {
         return { Frame {
             x: 0,
             y: 0,
-            w: 0,
-            h: 0,
-            padding: 10,
-            capacity: 0,
-            client_count: 0,
-            main_factor: 0.5,
-            state: State::Output,
-            parent: null,
-            tree: Vec::new(),
-        }}
-    }
-    pub fn new(options:Options) -> Frame {
-        let output:Frame=Frame {
-            x: 0,
-            y: 0,
+            index: 0,
             w: options.usable_width,
             h: options.usable_height,
-            padding: options.view_padding,
-            capacity: Unlimited, // To fix in Frame
-            client_count: 0,
-            state: State::Output,
-            parent: null,
-            tree: Vec::new(),
-        }.apply_padding().generate(options);
-        output
-    }
-    pub fn insert(&self, options:Options) {
-        if self.space_left() == 0 {
-            self.child[self.client_count-1].insert(options);
-        }
-        options.client_count=self.client_count+options.client_count;
-        self.generate(options);
-        // Send commit message to the compositor to mark the end of the layout
-    }
-    pub fn space_left(&self)->u32 {
-        self.capacity-self.client_count;
-    }
-    pub fn remove(&self, options:Options) {
-        if self.client_count > 0 && self.child[self.client_count-1].client_count != 0 {
-            self.child[self.client_count-1].remove(options);
-        }
-        options.client_count=self.client_count-options.client_count;
-        self.generate(options);
-        // Send commit message to the compositor to mark the end of the layout
-    }
-    pub fn clone(&self) -> Frame {
-        return { Frame {
-            x: self.x,
-            y: self.x,
-            w: self.w,
-            h: self.h,
-            padding: self.padding,
-            capacity: self.capacity,
-            client_count: 0,
             state: State::Slave,
-            parent: &self,
-            tree: Vec::new(),
-        } }
+        }}.apply_padding(&options)
     }
-    pub fn generate(self, options:Options) {
-        if self.client_count>0 {
-            self.tree=Vec::new();
-        }
-        match self.state {
-            State::Output=>engine(self, options),
-            _=>layout(self, options),
-        }
-        // Send commit message to the compositor to mark the end of the layout
-    }
-    pub fn set_main(self) {
+    pub fn set_main(mut self) {
         self.state = State::Main;
     }
-    pub fn set_slave(self) {
+    pub fn set_slave(mut self) {
         self.state = State::Slave;
     }
-    pub fn callback(self,options:Options) {
-
-        if self.parent.state!=State::Output && self.parent.client_count + client_count > self.parent.capacity {
-            self.parent.callback(options);
-        }
-        self.generate(options);
-    }
-    pub fn get_tree(self) -> &mut Vec<Frame> {
-        return &mut self.tree;
-    }
-    pub fn push(self, child:Frame) {
-        self.tree.push(child);
-        self.client_count+=1;
-    }
-    pub fn apply_padding(self) {
-        self.x+=self.padding;
-        self.y+=self.padding;
-        self.w+=2*self.padding;
-        self.h+=2*self.padding;
-        // self.generate(self.client_count);
+    pub fn apply_padding(mut self,options:&Options)->Frame {
+        self.x+=options.output_padding;
+        self.y+=options.output_padding;
+        self.w+=2*options.output_padding;
+        self.h+=2*options.output_padding;
+        self
     }
 }
