@@ -1,6 +1,5 @@
-use crate::frame::Frame;
-use crate::Option::Layout;
-use crate::custom::dwindle;
+use crate::display::{Frame, State};
+use crate::Options::Layout;
 
 pub fn layout(view:&mut child, options:Options) {
 
@@ -14,25 +13,21 @@ pub fn layout(view:&mut child, options:Options) {
 
     let mut child=view.clone();
 
-    match layout {
-        Layout::Tab => {
-            // Add eww titlebar eventually
-            let i=0;
-            while ( i < capacity && i < client_count )
+    let i=0;
+    let ajusted=true;
+    while ( i < capacity && i < client_count ) {
+        match layout {
+            Layout::Tab => {
+                // Add eww titlebar eventually
                 view.push(child);
                 if client_count > 1 {
                     child.h-=30;
                     child.y+=30;
                 }
                 options.client_count-=1;
-                i++;
+                i+=1;
             }
-        }
-        Layout::Horizontal => {
-            let i=0;
-            let ajusted=true;
-            while ( view.parent.state==State::Output, i < capacity && i < client_count ) {
-
+            Layout::Horizontal => {
                 if i==main_index && main_count>0 {
                     child.set_main();
                     child.h=view.h*((main_factor * 100.0) as u32)/(50*main_count)-view.padding;
@@ -49,13 +44,8 @@ pub fn layout(view:&mut child, options:Options) {
                 child.y+=child.h+view.padding;
                 options.client_count-=1;
                 i+=1;
-           }
-        }
-        Layout::Vertical => {
-            let i=0;
-            let ajusted=true;
-            while ( i < capacity && i < client_count ) {
-
+            }
+            Layout::Vertical => {
                 if i==main_index && main_count>0 {
                     child.set_main();
                     child.w=view.w*((main_factor * 100.0) as u32)/(50*main_count)-view.padding;
@@ -72,18 +62,15 @@ pub fn layout(view:&mut child, options:Options) {
                 child.h+=child.w+view.padding;
                 i+=1;
             }
-        }
-        Layout::Full => {
-            let i=0;
-            while ( i < capacity && i < client_count ) {
+            Layout::Full => {
                 view.push(child);
                 options.client_count-=1;
                 i+=1;
             }
         }
-    }
 
-    if client_count>capacity {
-        view.callback(options);
+        if client_count>capacity {
+            view.callback(options);
+        }
     }
 }

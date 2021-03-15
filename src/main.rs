@@ -1,39 +1,29 @@
-mod frame;
-mod engine;
+// mod display;
+// mod engine;
 mod options;
-extern crate wayland_scanner;
+// mod build;
+mod wayland;
+// extern crate wayland_commons;
+// extern crate wayland_client;
+// extern crate wayland_scanner;
 
+use wayland_client::{Display, GlobalManager};
 
-use crate::frame::Frame;
-use crate::wayland::Option;
-use crate::wayland::Request;
-use std::env::var;
-use std::path::Path;
-use wayland_scanner::{Side, generate_code};
+fn main() {
+    // Connect to the server
+    let display = Display::connect_to_env().unwrap();
 
-pub fn main() {
+    let mut event_queue = display.create_event_queue();
 
-    // Location of the xml file, relative to the `Cargo.toml`
-    let layout_protocol="./protocols/river-layout-unstable-v1.xml";
-    let options_protocol="./protocols/river-options-unstable-v1.xml";
+    let attached_display = (*display).clone().attach(event_queue.token());
 
-    // Target directory for the generate files
-    let out_dir=let out_dir = Path::new("./wayland");;
+    // We use the GlobalManager convenience provided by the crate, it covers
+    // most classic use cases and avoids us the trouble to manually implement
+    // the registry
+    let globals = GlobalManager::new(&attached_display);
 
-    generate_code(
-        layout_protocol,
-        out_dir.join("river_layout_unstable.rs"),
-        Side::Client, // Replace by `Side::Server` for server-side code
-    );
-
-    generate_code(
-        options_protocol,
-        out_dir.join("river_options_unstable.rs"),
-        Side::Client, // Replace by `Side::Server` for server-side code
-    );
-
-    let options=Option::new().set_option();
-    let output=Frame::new(options.get_options()).generate();
-    output.generate();
+    // scanner();
 }
 
+fn init_wayland() {
+}

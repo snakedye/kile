@@ -1,19 +1,28 @@
 use super::engine::layout;
 use super::options::Layout;
-use super::display::Options;
+use super::options::Options;
 use std::ptr::null;
 
-pub struct Display {
-    pub tags:[Tag;10];
-    pub focused: Tag,
+pub enum State {
+    Main,
+    Slave,
+    Output,
+}
+
+pub struct Output {
+    pub namespace: String, // Namespace is either manual or dynamic
+    pub output: WlOutput,
+    pub tags:[Tag;1024]; // It's the amount of possible tags, it might be too much to set all possible tags
+    pub focused: u32,
 }
 
 pub struct Tag {
     pub tagmask:u8,
     pub output:Frame,
+    pub layout:Vec<Layout>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Debug)]
 pub struct Frame{
     pub x: u32,
     pub y: u32,
@@ -27,23 +36,40 @@ pub struct Frame{
     tree: Vec<Frame>,
 }
 
-impl Display {
+impl Output {
     pub fn new() {
+        return { Display {
+            output: wl_display,
+            focused: 0,
+            tags:[Tag, 256],
+        } }
     }
     pub fn init(self) {
-        let options=Options::get();
+        let options=Options::get(self.output, self.namespace);
         self.focused=options.tagmask;
     }
     pub fn update(self) {
         let options=Options::listen();
+        let tag=self.get_tag(options.tagmask);
         if self.focused != options.tagmask {
-            if options.tagmask.is_set() {
-                options.tagmask.restore();
+            if tag.is_set() && tag.layout==options.layout {
+                tag.restore();
             } else {
                 self.tags[options.tagmask]=Tag::new(options);
             }
             self.focused=options.tagmask;
+        } else {
+            options.layout=tag.layout;
+            tag.update(options);
         }
+    }
+    pub fn get_tag(self, tagmask:u8)->&Tag {
+        // 1)
+        // Converts the 8 bite code into a u8 integer
+        // 2)
+        // Gets the Tag at the index of that u8 integer
+        // 2)
+        // Returns a reference to the Tag
     }
 }
 
@@ -52,6 +78,7 @@ impl Tag {
         return { Tag {
             tagmask:options,
             output:Frame::new(options),
+            layout:options.layout,
         } }
     }
     pub fn restore(self) {
@@ -65,9 +92,11 @@ impl Tag {
         false
     }
     pub fn update(self, options:Options) {
-        if self.frame.client_count < options.client_count {
+        if self.output.client_count < options.client_count {
+            options.client_count-=self.output.client_count;
             frame.insert(options);
         } else {
+            self.output.client_count-=options.client_count;
             frame.remove(options);
         }
     }
@@ -101,16 +130,27 @@ impl Frame {
             state: State::Output,
             parent: null,
             tree: Vec::new(),
-        }.apply_padding().generate(options)
+        }.apply_padding().generate(options);
+        output
     }
     pub fn insert(&self, options:Options) {
-        if self.space_left == 0 {
-            self.child[self.client_count-1].update(options);
+        if self.space_left() == 0 {
+            self.child[self.client_count-1].insert(options);
         }
+        options.client_count=self.client_count+options.client_count;
         self.generate(options);
+        // Send commit message to the compositor to mark the end of the layout
     }
     pub fn space_left(&self)->u32 {
         self.capacity-self.client_count;
+    }
+    pub fn remove(&self, options:Options) {
+        if self.client_count > 0 && self.child[self.client_count-1].client_count != 0 {
+            self.child[self.client_count-1].remove(options);
+        }
+        options.client_count=self.client_count-options.client_count;
+        self.generate(options);
+        // Send commit message to the compositor to mark the end of the layout
     }
     pub fn clone(&self) -> Frame {
         return { Frame {
@@ -134,12 +174,8 @@ impl Frame {
             State::Output=>engine(self, options),
             _=>layout(self, options),
         }
+        // Send commit message to the compositor to mark the end of the layout
     }
-    // pub fn set_main_factor(self, main_factor:f32) {
-    //     if main_factor > 0.0 && main_factor < 1.0 {
-    //         self.main_factor = main_factor;
-    //     }
-    // }
     pub fn set_main(self) {
         self.state = State::Main;
     }
