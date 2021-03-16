@@ -8,6 +8,9 @@ mod wayland;
 // extern crate wayland_scanner;
 
 use wayland_client::{Display, GlobalManager};
+use wayland_client::protocol::wl_output::WlOutput;
+use display::{Context};
+use options::{Options};
 
 fn main() {
     // Connect to the server
@@ -22,7 +25,16 @@ fn main() {
     // the registry
     let globals = GlobalManager::new(&attached_display);
 
+    event_queue.sync_roundtrip(&mut (), |_, _, _| unreachable!()).unwrap();
+
+    let list=globals.list();
+
+    println!("{:?}", list);
+
+    // let options=Options::new(&WlOutput.release(),"New");
+
+
     // scanner();
 }
 
-fn init_wayland() {}
+// fn init_wayland() {}

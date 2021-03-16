@@ -15,12 +15,14 @@ pub fn engine(tag:&mut Tag, options:&Options){
     let mut frame=tag.main_frame.clone();
 
     let mut i=0;
+    let mut j=0;
     let mut ajusted=false;
     while i < client_count {
-        match options.arguments[i as usize] {
+        frame.apply_padding(&options.view_padding);
+        match options.arguments[j as usize] {
             Layout::Tab => {
                 // Add eww titlebar eventually
-                options.push_dimensions(&frame);
+                tag.push_dimensions(&frame);
                 if client_count > 1 {
                     frame.h-=30;
                     frame.y+=30;
@@ -30,10 +32,10 @@ pub fn engine(tag:&mut Tag, options:&Options){
             Layout::Horizontal => {
                 if i==main_index && main_count>0 {
                     frame.set_main();
-                    frame.h=tag.main_frame.h*((main_factor * 100.0) as u32)/(50*main_count)-options.view_padding;
+                    frame.h=tag.main_frame.h*((main_factor * 100.0) as u32)/(50*main_count);
                 } else {
                     frame.set_slave();
-                    frame.h=tag.main_frame.h*(((1.0-main_factor) * 100.0) as u32)/(50*(client_count-main_count))-options.view_padding;
+                    frame.h=tag.main_frame.h*(((1.0-main_factor) * 100.0) as u32)/(50*(client_count-main_count));
                 }
 
                 if ! ajusted && i!=main_index {
@@ -42,16 +44,16 @@ pub fn engine(tag:&mut Tag, options:&Options){
                 }
 
                 tag.windows.push(frame);
-                options.push_dimensions(&frame);
-                frame.y+=frame.h+options.view_padding;
+                tag.push_dimensions(&frame);
+                frame.y+=frame.h;
             }
             Layout::Vertical => {
                 if i==main_index && main_count>0 {
                     frame.set_main();
-                    frame.w=tag.main_frame.w*((main_factor * 100.0) as u32)/(50*main_count)-options.view_padding;
+                    frame.w=tag.main_frame.w*((main_factor * 100.0) as u32)/(50*main_count);
                 } else {
                     frame.set_slave();
-                    frame.w=tag.main_frame.w*(((1.0-main_factor) * 100.0) as u32)/(50*(client_count-main_count))-options.view_padding;
+                    frame.w=tag.main_frame.w*(((1.0-main_factor) * 100.0) as u32)/(50*(client_count-main_count));
                 }
 
                 if ! ajusted && i!=main_index {
@@ -60,15 +62,16 @@ pub fn engine(tag:&mut Tag, options:&Options){
                 }
 
                 tag.windows.push(frame);
-                options.push_dimensions(&frame);
-                frame.h+=frame.w+options.view_padding;
+                tag.push_dimensions(&frame);
+                frame.h+=frame.w;
             }
             Layout::Full => {
                 tag.windows.push(frame);
             }
         }
         i+=1;
+        if i as usize%options.arguments.len()==0 {j+=1}
     }
     // Send commit message to the compositor
-    options.commit();
+    tag.commit();
 }

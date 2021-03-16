@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="river_layout_unstable_v1">
+  <copyright>
+    Copyright 2020 The River Developers
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  </copyright>
+
+  <description summary="let clients propose view positions and dimensions">
+    This protocol specifies a way for clients to propose arbitrary positions and
+    dimensions for a set of views on a specific output of a compositor through
+    the river_layout object.
+
+    This set of views is logically structured as a simple list. Individual views
+    in this list can not be addressed. Instead the order of events and requests
+    decides which view they concern. This is an intentional limitation.
+
+    The entire set of proposed positions and dimensions for the views in the
+    list are called a layout. Due to their list heritage, layouts are also
+    logically strictly linear; Any complex underlying data structure a client
+    may use when generating the layout is lost in transmission. This is an
+    intentional limitation.
+
+    Note that the client may need to handle multiple layout demands per
+    river_layout object simultaneously.
+  </description>
+
+  <interface name="zriver_layout_manager_v1" version="1">
+    <description summary="manage river layout objects">
+      A global factory for river_layout objects.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the river_layout_manager object">
+        This request indicates that the client will not use the
+        river_layout_manager object any more. Objects that have been created
+        through this instance are not affected.
+      </description>
+    </request>
+
+    <request name="get_river_layout">
+      <description summary="create a river_layout object">
+        This creates a new river_layout object for the given wl_output.
+
+        All layout related communication is done through this interface.
+
+        The namespace is used by the compositor to decide which river_layout
+        object will receive layout demands for the output. Namespaces must be
+        unique per output. The same namespace may occur on other outputs, as
+        long as that river_layout object comes from the same client. If the
+        namespace is found to not obey these uniqueness rules, the server will
+        send a namespace_in_use event on the river_layout object immediately
+        after creation and ignore all requests on the object aside from the
+        destroy request.
+      </description>
+      <arg name="id" type="new_id" interface="zriver_layout_v1"/>
+      <arg name="output" type="object" interface="wl_output"/>
+      <arg name="namespace" type="string" summary="namespace of the layout object"/>
+    </request>
+  </interface>
+
+  <interface name="zriver_layout_v1" version="1">
+    <description summary="receive and respond to layout demands">
+      This interface allows clients to receive layout demands from the
+      compositor for a specific output and subsequently propose positions and
+      dimensions of individual views.
+    </description>
+
+    <enum name="error">
+      <entry name="proposed_dimension_mismatch" value="0" summary="amount of
+        proposed dimensions does not match amount of views in layout"/>
+    </enum>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the river_layout object">
+        This request indicates that the client will not use the river_layout
+        object any more.
+      </description>
+    </request>
+
+    <event name="namespace_in_use">
+      <description summary="namespace already in use">
+        The requested namespace is already used by another river_layout object.
+        After receiving this event, the client should destroy the river_layout
+        object. Any other request will be ignored.
+      </description>
+    </event>
+
+    <event name="layout_demand">
+      <description summary="the compositor is in demand of a layout">
+        The compositor raises this event to inform the client that it requires a
+        layout for a set of views.
+
+        The usable width and height height indicate the space in which the
+        client can safely position views without interfering with desktop
+        widgets such as panels.
+
+        The serial of this event is used to identify subsequent events and
+        request as belonging to this layout demand. Beware that the client
+        might need to handle multiple layout demands at the same time.
+
+        The server will ignore responses to all but the most recent
+        layout_demand. Thus, clients should only respond to the most recent
+        layout_demand received. If a newer layout_demand is received before the
+        client has finished responding to an old demand, the client should abort
+        work on the old demand as any further work would be wasted.
+      </description>
+      <arg name="view_amount" type="uint" summary="amount of views in the logical view list and therefore the layout"/>
+      <arg name="usable_width" type="uint" summary="width of usable area on output"/>
+      <arg name="usable_height" type="uint" summary="height of usable area on output"/>
+      <arg name="serial" type="uint" summary="serial of demand"/>
+    </event>
+
+    <event name="advertise_view">
+      <description summary="make layout client aware of view">
+        This event is raised by the compositor after a layout_demand event.
+        It contains additional information about one out of the set of views
+        for which a layout has been demanded.
+
+        It is guaranteed that every view in the layout will be advertised
+        exactly once, in the exact order of the view list.
+
+        A client not interested in the additional information may ignore this
+        event.
+
+        The serial is the same as that of the layout demand this event belongs
+        to.
+      </description>
+      <arg name="tags" type="uint" summary="bitfield, active tags of view"/>
+      <arg name="app_id" type="string" summary="view app-id" allow-null="true"/>
+      <arg name="serial" type="uint" summary="serial of layout demand"/>
+    </event>
+
+    <event name="advertise_done">
+      <description summary="all views have been advertised">
+        The compositor raises this event when it has advertised the entire set
+        of views for which a layout has been demanded.
+
+        A client not interested in the additional information may ignore this
+        event.
+
+        The serial is the same as that of the layout demand this event belongs
+        to.
+      </description>
+      <arg name="serial" type="uint" summary="serial of layout demand"/>
+    </event>
+
+    <request name="push_view_dimensions">
+      <description summary="propose view dimensions">
+        The client may use this request to push a view dimension proposal to the
+        layout.
+
+        View dimension proposals apply to the views in order of the view list.
+        As an example, the first push_view_dimensions request will always affect
+        the first view in the list.
+
+        A client must propose position and dimensions for the entire set of
+        views. Proposing to many or to few view dimensions is a protocol error.
+
+        This request may be sent before the corresponding view has been
+        advertised.
+
+        The compositor will transpose the dimensions so that 0 aligns with the
+        origin of the usable width and height.
+
+        The serial is used to identify the layout demand this request is a
+        response to.
+      </description>
+      <arg name="serial" type="uint" summary="serial of layout demand"/>
+      <arg name="x" type="int" summary="x coordinate of view"/>
+      <arg name="y" type="int" summary="y coordinate of view"/>
+      <arg name="width" type="uint" summary="width of view"/>
+      <arg name="height" type="uint" summary="height of view"/>
+    </request>
+
+    <request name="commit">
+      <description summary="commit a layout">
+        The client may use this request to signal the compositor that it has
+        finished proposing a layout.
+
+        Sending this request irrevocably marks the layout as finished and the
+        layout demand will no longer be active. The client may not send any
+        other responses to it, doing so is a protocol error.
+
+        Beware that there are no guarantees that the proposed layout will be
+        used, the compositor may silently ignore it.
+
+        The serial is used to identify the layout demand this request is a
+        response to.
+      </description>
+      <arg name="serial" type="uint" summary="serial of layout demand"/>
+    </request>
+
+    <request name="parameters_changed">
+      <description summary="parameters of layout have changed">
+        The client may use this request to inform the compositor that one or
+        muliple of the parameters it uses to generate layouts have changed.
+
+        If the client is responsible for the current view layout, the compositor
+        may decide to send a new layout demand to update the layout.
+      </description>
+    </request>
+  </interface>
+</protocol>
