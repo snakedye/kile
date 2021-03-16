@@ -1,4 +1,4 @@
-use super::display::{Frame, Context};
+use super::display::{Context, Frame};
 use crate::wayland::{
     river_layout_unstable_v1::{
         zriver_layout_manager_v1::ZriverLayoutManagerV1, zriver_layout_v1,
@@ -14,14 +14,12 @@ use wayland_client::Main;
 
 pub struct Options {
     pub serial: u32,
-    // layout: Main<ZriverLayoutV1>,
-    // options_manager: Main<ZriverOptionsManagerV1>,
     pub tagmask: u32,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
     pub view_padding: u32,
-    pub output_padding : u32,
+    pub output_padding: u32,
     pub main_index: u32,
     pub main_factor: f64,
     pub main_count: u32,
@@ -53,9 +51,7 @@ impl Options {
         let mut usable_height_value: u32 = 0;
         let mut namespace_status = true;
 
-        // let layout_manager: Option<Main<ZriverLayoutManagerV1>> = None;
-        // let options_manager: Option<Main<ZriverOptionsManagerV1>> = None;
-        let layout=context
+        let layout = context
             .clone()
             .layout_manager
             .unwrap()
@@ -78,14 +74,16 @@ impl Options {
                 serial,
             } => {}
             zriver_layout_v1::Event::NamespaceInUse => {
-                namespace_status=false;
+                namespace_status = false;
                 // println!("Namespace already in use.");
                 // layout.destroy()
             }
             zriver_layout_v1::Event::AdvertiseDone { serial } => {}
         });
 
-        if !namespace_status {layout.destroy()}
+        if !namespace_status {
+            layout.destroy()
+        }
 
         let mut options = {
             Options {
@@ -115,20 +113,19 @@ impl Options {
 
         return options;
     }
-    fn get_option(
-        &mut self,
-        name: &str,
-        context: &Context,
-    ) {
-        let mut layout_string:String=String::new();
-        let option = context.options_manager
+    fn get_option(&mut self, name: &str, context: &Context) {
+        let mut layout_string: String = String::new();
+        let option = context
+            .options_manager
             .clone()
             .unwrap()
             .get_option_handle(String::from(name), Some(&context.output));
         unsafe {
             let mut option_value: Value = Value { uint: 0 };
             option.quick_assign(move |option, event, _| match event {
-                zriver_option_handle_v1::Event::StringValue { value } => layout_string.push_str(&value.unwrap()),
+                zriver_option_handle_v1::Event::StringValue { value } => {
+                    layout_string.push_str(&value.unwrap())
+                }
                 zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
                 zriver_option_handle_v1::Event::IntValue { value } => {
