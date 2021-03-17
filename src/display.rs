@@ -20,22 +20,22 @@ pub enum State {
 #[derive(Clone, Debug)]
 pub struct Context {
     pub namespace: String, // Namespace is either manual or dynamic
+    pub running: bool,
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
     pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
-    pub output: WlOutput,
+    pub output: Option<WlOutput>,
     pub tags: Vec<Tag>, // It's the amount of possible tags, it might be too much to set all possible tags
     pub focused: u32,
 }
 
 #[derive(Clone, Debug)]
 pub struct Tag {
-    pub tagmask: u32,
     pub serial: u32,
     pub main_frame: Frame,
     pub layout: Main<ZriverLayoutV1>,
     pub client_count: u32,
     pub windows: Vec<Frame>,
-    pub modifier: Vec<Layout>,
+    pub modifier: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -49,28 +49,31 @@ pub struct Frame {
 }
 
 impl Context {
-    pub fn new(output: WlOutput, namespace: String) -> Context {
+    pub fn new(namespace: String) -> Context {
         return {
             Context {
                 // The layout_manager should have a callback function
                 layout_manager: None,
+                running: false,
                 // The options_manager should have a callback function
                 options_manager: None,
                 namespace: namespace,
-                output: output,
+                output: None,
                 focused: 0,
                 tags: Vec::with_capacity(256),
             }
         };
     }
     pub fn init(&mut self) {
+        // Setting the options
+        // To-do
         // Maybe I should initialize the layout_manager and options_manager here
-        let options = Options::new(self.clone());
+        let options = Options::new().init(self.clone());
         self.tags.push(Tag::new(self, &options));
         self.update_focus(options.tagmask);
     }
     pub fn update(&mut self) {
-        let options = Options::new(self.clone());
+        let options = Options::new().init(self.clone());
         let index = tag_index(&options.tagmask);
         let mut tag = self.tags[index].clone();
         if self.focused != options.tagmask {
@@ -119,14 +122,13 @@ impl Tag {
             Tag {
                 // tagmask:options.tagmask,
                 // 0 in the meanwhile because no river-status
-                tagmask: 0,
+                main_frame: Frame::new(options),
                 layout: context
                     .layout_manager
                     .clone()
                     .unwrap()
-                    .get_river_layout(&context.output, context.namespace.clone()),
+                    .get_river_layout(&context.output.as_ref().unwrap().clone(), context.namespace.clone()),
                 serial: options.serial,
-                main_frame: Frame::new(options),
                 client_count: 0,
                 modifier: options.arguments.clone(),
                 windows: Vec::new(),
@@ -155,6 +157,7 @@ impl Tag {
             self.generate(&options);
             self.restore(&options)
         }
+        self.client_count=options.view_amount;
     }
     pub fn generate(&mut self, options: &Options) {
         engine(self, options);

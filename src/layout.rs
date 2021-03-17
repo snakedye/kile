@@ -13,32 +13,30 @@ pub fn engine(tag: &mut Tag, options: &Options) {
     } else { options.main_count };
     let main_factor = options.main_factor;
 
+    let layout_vec=options.parse();
+
     let mut frame = tag.main_frame.clone();
 
     let mut i = 0;
-    let mut j = 0;
     let mut ajusted = false;
     while i < client_count {
-        frame.apply_padding(&options.view_padding);
+        if options.view_amount > 0 {frame.apply_padding(&options.view_padding);}
         if i >= main_index && i < main_index+main_index && main_count > 0 {
            frame.set_main();
         } else { frame.set_slave() }
-        match options.arguments[j as usize] {
+        match layout_vec[i as usize] {
             Layout::Tab => {
                 // Add eww titlebar eventually
-                tag.push_dimensions(&frame);
-                if client_count > 1 {
+                if i > 1 {
                     frame.h -= 30;
                     frame.y += 30;
                 }
-                tag.windows.push(frame);
             }
             Layout::Horizontal => {
                 if frame.is_main() {
-                    frame.h = tag.main_frame.h * ((main_factor * 100.0) as u32) / (50 * main_count);
+                    frame.h *= (main_factor * 100.0) as u32 / (50 * main_count);
                 } else {
-                    frame.h = tag.main_frame.h * (((1.0 - main_factor) * 100.0) as u32)
-                        / (50 * 2);
+                    frame.h /= 2;
                 }
 
                 if !ajusted && i != main_index {
@@ -46,16 +44,14 @@ pub fn engine(tag: &mut Tag, options: &Options) {
                     ajusted = true;
                 }
 
-                tag.windows.push(frame);
-                tag.push_dimensions(&frame);
                 frame.y += frame.h;
             }
             Layout::Vertical => {
                 if frame.is_main() {
-                    frame.w = tag.main_frame.w * ((main_factor * 100.0) as u32) / (50 * main_count);
+                    frame.w *= ((main_factor * 100.0) as u32) / (50 * main_count);
                 } else {
-                    frame.w = tag.main_frame.w * (((1.0 - main_factor) * 100.0) as u32)
-                        / (50 * 2);
+                    frame.w *= (((1.0 - main_factor) * 100.0) as u32)
+                        / (100 * 2);
                 }
 
                 if !ajusted && i != main_index {
@@ -63,18 +59,13 @@ pub fn engine(tag: &mut Tag, options: &Options) {
                     ajusted = true;
                 }
 
-                tag.windows.push(frame);
-                tag.push_dimensions(&frame);
                 frame.h += frame.w;
             }
-            Layout::Full => {
-                tag.windows.push(frame);
-            }
+            Layout::Full => { }
         }
         i += 1;
-        if i as usize % options.arguments.len() == 0 {
-            j += 1
-        }
+        tag.windows.push(frame);
+        tag.push_dimensions(&frame);
     }
     // Send commit message to the compositor
     tag.commit();
