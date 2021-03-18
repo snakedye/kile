@@ -7,6 +7,7 @@ use crate::wayland::{
     },
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
 };
+use wayland_client::EventQueue;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
 
@@ -32,10 +33,10 @@ pub struct Context {
 pub struct Tag {
     pub serial: u32,
     pub main_frame: Frame,
-    pub layout: Main<ZriverLayoutV1>,
+    // pub layout: Main<ZriverLayoutV1>,
     pub client_count: u32,
     pub windows: Vec<Frame>,
-    pub modifier: String,
+    pub name: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -64,38 +65,30 @@ impl Context {
             }
         };
     }
-    pub fn init(&mut self) {
-        // Setting the options
-        // To-do
-        // Maybe I should initialize the layout_manager and options_manager here
-        let options = Options::new().init(self.clone());
-        self.tags.push(Tag::new(self, &options));
+    pub fn init(&mut self,mut options:Options) {
+        // options=options.init(self.clone());
         self.update_focus(options.tagmask);
+        self.tags.push(Tag::new(self, &options));
     }
-    pub fn update(&mut self) {
-        let options = Options::new().init(self.clone());
-        let index = tag_index(&options.tagmask);
-        let mut tag = self.tags[index].clone();
-        if self.focused != options.tagmask {
-            (*self).focused = options.tagmask;
-            if tag.is_set()
-            /*&& tag.layout==options.arguments*/
-            {
-                tag.restore(&options);
-            } else {
-                self.tags[index] = Tag::new(self, &options);
-            }
+    pub fn update(&mut self,options:&Options) {
+        if !options.state {
+            self.destroy();
+        }
+        if self.tags.len() == 0 {
+            println!("{:?}",options);
+            self.tags.push(Tag::new(self, options));
         } else {
-            // options.modifier=tag.layout;
-            tag.update(&options);
+            println!("{:?}",options);
+            self.tags[0].update(options);
         }
     }
-    pub fn update_focus(&mut self, tagmask: u32) {
+    pub fn update_focus(&mut self, tagmask:u32) {
         self.focused = tagmask;
     }
-    pub fn destroy(&self, output: &WlOutput) {
+    pub fn destroy(&self) {
+        let output=self.output.as_ref().unwrap();
         self.options_manager.clone().unwrap().destroy();
-        self.tags[self.focused as usize].layout.destroy();
+        // self.tags[self.focused as usize].layout.destroy();
         self.destroy_handle("main-index", output);
         self.destroy_handle("main-count", output);
         self.destroy_handle("main-factor", output);
@@ -117,29 +110,27 @@ pub fn tag_index(tagmask: &u32) -> usize {
 }
 
 impl Tag {
-    pub fn new(context: &Context, options: &Options) -> Tag {
+    pub fn new(context: &Context, options:&Options) -> Tag {
         return {
             Tag {
-                // tagmask:options.tagmask,
-                // 0 in the meanwhile because no river-status
-                main_frame: Frame::new(options),
-                layout: context
-                    .layout_manager
-                    .clone()
-                    .unwrap()
-                    .get_river_layout(&context.output.as_ref().unwrap().clone(), context.namespace.clone()),
+                main_frame: Frame::new(&options),
+                // layout: context
+                //     .layout_manager
+                //     .clone()
+                //     .unwrap()
+                //     .get_river_layout(&context.output.as_ref().unwrap().clone(), context.namespace.clone()),
                 serial: options.serial,
                 client_count: 0,
-                modifier: options.arguments.clone(),
+                name: options.arguments.clone(),
                 windows: Vec::new(),
             }
         };
     }
     pub fn restore(&self, options: &Options) {
         for frame in &self.windows {
-            self.push_dimensions(&frame);
+            options.push_dimensions(&frame);
         }
-        self.commit();
+        options.commit();
     }
     pub fn is_set(&self) -> bool {
         if self.client_count > 0 {
@@ -148,7 +139,7 @@ impl Tag {
         false
     }
     pub fn update(&mut self, options: &Options) {
-        if options.view_amount > self.client_count {
+        if options.view_amount > 0 {
             self.generate(options);
         } else {
             for i in self.client_count..options.view_amount {
@@ -161,18 +152,6 @@ impl Tag {
     }
     pub fn generate(&mut self, options: &Options) {
         engine(self, options);
-    }
-    pub fn push_dimensions(&self, frame: &Frame) {
-        self.layout.push_view_dimensions(
-            self.serial,
-            frame.x as i32,
-            frame.y as i32,
-            frame.w,
-            frame.h,
-        )
-    }
-    pub fn commit(&self) {
-        self.layout.commit(self.serial);
     }
 }
 

@@ -9,13 +9,17 @@ use crate::wayland::{
         zriver_options_manager_v1::ZriverOptionsManagerV1,
     },
 };
+use wayland_client::EventQueue;
 use wayland_client::DispatchData;
 // use wayland_client::protocol::wl_output::WlOutput;
-// use wayland_client::Main;
+use wayland_client::Main;
 
+#[derive(Clone, Debug)]
 pub struct Options {
+    pub state: bool,
     pub serial: u32,
     pub tagmask: u32,
+    pub layout: Option<Main<ZriverLayoutV1>>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
@@ -47,8 +51,10 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
+                state: true,
                 serial: 0,
                 tagmask: 0,
+                layout: None,
                 view_amount: 0,
                 capacity: 0,
                 view_padding: 0,
@@ -58,7 +64,7 @@ impl Options {
                 main_factor: 0.0,
                 main_index: 0,
                 main_count: 0,
-                arguments: String::new(),
+                arguments: String::from("v|h|"),
             }
         }
     }
@@ -67,12 +73,12 @@ impl Options {
 
         let new_context=context.clone();
 
-        let layout = new_context
+        self.layout = Some(new_context
             .layout_manager
             // .unwrap()
             .expect("Compositor doesn't implement ZriverOptionsManagerV1")
-            .get_river_layout(&new_context.output.unwrap(), new_context.namespace.clone());
-        layout.quick_assign(move |layout_obj, event, mut option: DispatchData| match event {
+            .get_river_layout(&new_context.output.unwrap(), new_context.namespace));
+        self.clone().layout.unwrap().quick_assign(move |layout_obj, event, mut option: DispatchData| match event {
             zriver_layout_v1::Event::LayoutDemand {
                 view_amount,
                 usable_width,
@@ -90,11 +96,8 @@ impl Options {
                 serial,
             } => {}
             zriver_layout_v1::Event::NamespaceInUse => {
-                // if new_context.namespace == String::from("") {
-                    // layout_obj.destroy();
                 println!("Namespace already in use.");
-                // }
-                // layout.destroy()
+                option.get::<Options>().unwrap().state=false;
             }
             zriver_layout_v1::Event::AdvertiseDone { serial } => {}
         });
@@ -105,10 +108,9 @@ impl Options {
         self.get_option("view-padding", &context);
         self.get_option("capacity", &context);
         self.get_option("layout", &context);
-        self.get_option("layout", &context);
 
         // event_queue
-        //     .sync_roundtrip(&mut main_context, |_, _, _| unreachable!())
+        //     .dispatch(&mut self, |_, _, _| unreachable!())
         //     .unwrap();
 
         return self;
@@ -154,16 +156,44 @@ impl Options {
         });
     }
     pub fn parse(&self) -> Vec<Layout> {
-        fn to_layout(str: &str) -> Layout {
-            match str {
-                "ver" => Layout::Vertical,
-                "hor" => Layout::Horizontal,
-                "tab" => Layout::Tab,
-                "ful" => Layout::Full,
-                _ => Layout::Full,
+        let mut closure=false;
+        let mut start:usize=0;
+        let mut i :usize=0;
+        let mut layout=Vec::with_capacity(self.view_amount as usize);
+        let my_chars: Vec<_>=self.arguments.chars().collect();
+        while layout.len() < self.view_amount as usize {
+            let c=my_chars[i];
+            let mut orientation:Layout=Layout::Full;
+            match c {
+                'v' => orientation=Layout::Vertical,
+                'h' => orientation=Layout::Horizontal,
+                't' => orientation=Layout::Tab,
+                'f' => orientation=Layout::Full,
+                '|' => if closure {
+                    closure=false;
+                    i=start;
+                } else {
+                    closure=true;
+                    start=i;
+                }
+                _ => println!("{}: Not a valid character at index {}", c, i),
             }
+            layout.push(orientation);
+            if i < layout.len() {i+=1}
         }
-        return Vec::new();
+        return layout;
+    }
+    pub fn push_dimensions(&self, frame:&Frame) {
+        self.layout.clone().unwrap().push_view_dimensions(
+            self.serial,
+            frame.x as i32,
+            frame.y as i32,
+            frame.w,
+            frame.h,
+        )
+    }
+    pub fn commit(&self) {
+        self.layout.clone().unwrap().commit(self.serial);
     }
 }
 

@@ -65,8 +65,8 @@ pub fn engine(tag: &mut Tag, options: &Options) {
         }
         i += 1;
         tag.windows.push(frame);
-        tag.push_dimensions(&frame);
+        options.push_dimensions(&frame);
     }
     // Send commit message to the compositor
-    tag.commit();
+    options.commit();
 }
