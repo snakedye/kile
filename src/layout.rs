@@ -1,72 +1,79 @@
-use crate::display::Tag;
+use crate::display::{Tag, Frame, State};
 use crate::options::{Layout, Options};
 
-pub fn engine(tag: &mut Tag, options: &Options) {
-    let client_count = if tag.client_count > options.view_amount {
-        tag.client_count - options.view_amount
-    } else {
-        options.view_amount
-    };
-    let main_index = options.main_index;
-    let main_count = if options.main_index+options.main_count>client_count {
-        client_count-options.main_index
-    } else { options.main_count };
-    let main_factor = options.main_factor;
+pub fn new(mut frame:Frame, options: &Options, layout:(Layout, u32, State), frames:&mut Vec<Frame>) {
 
-    let layout_vec=options.parse();
+    let (layout, client_count, state)=layout;
 
-    let mut frame = tag.main_frame.clone();
-
-    let mut i = 0;
-    let mut ajusted = false;
-    while i < client_count {
-        if options.view_amount > 0 {frame.apply_padding(&options.view_padding);}
-        if i >= main_index && i < main_index+main_index && main_count > 0 {
-           frame.set_main();
-        } else { frame.set_slave() }
-        match layout_vec[i as usize] {
-            Layout::Tab => {
-                // Add eww titlebar eventually
-                if i > 1 {
-                    frame.h -= 30;
-                    frame.y += 30;
-                }
+    match layout {
+        Layout::Tab => {
+            // Add eww titlebar eventually
+            for _i in 0..client_count {
+                frames.push(frame);
+                frame.h -= 30;
+                frame.y += 30;
             }
-            Layout::Horizontal => {
-                if frame.is_main() {
-                    frame.h *= (main_factor * 100.0) as u32 / (50 * main_count);
-                } else {
-                    frame.h /= 2;
-                }
-
-                if !ajusted && i != main_index {
-                    frame.h += tag.main_frame.h % frame.h;
-                    ajusted = true;
-                }
-
-                frame.y += frame.h;
-            }
-            Layout::Vertical => {
-                if frame.is_main() {
-                    frame.w *= ((main_factor * 100.0) as u32) / (50 * main_count);
-                } else {
-                    frame.w *= (((1.0 - main_factor) * 100.0) as u32)
-                        / (100 * 2);
-                }
-
-                if !ajusted && i != main_index {
-                    frame.w += tag.main_frame.w % frame.w;
-                    ajusted = true;
-                }
-
-                frame.h += frame.w;
-            }
-            Layout::Full => { }
         }
-        i += 1;
-        tag.windows.push(frame);
-        options.push_dimensions(&frame);
+        Layout::Horizontal => {
+            let mut is_main=0;
+            let mut slave_area=frame;
+            let mut main_area=frame;
+            let reste=frame.h%client_count;
+            if state==State::Frame {
+                main_area.h = (frame.h*(options.main_factor * 100.0) as u32) / (50*client_count);
+                slave_area.h-=main_area.h;
+                if options.main_index < options.view_amount
+                    && options.main_count > 0 {
+                        is_main=1;
+                }
+            }
+            for i in 0..client_count {
+                if state==State::Frame && i == options.main_index {
+                    frame.h = main_area.h;
+                } else {
+                    frame.h = slave_area.h / client_count;
+                }
+                frame.h -= options.view_padding;
+                if i == 0 { 
+                    frame.h+=reste;
+                }
+
+                frames.push(frame);
+                frame.y += frame.h + options.view_padding;
+            }
+        }
+        Layout::Vertical => {
+            let mut is_main=0;
+            let mut slave_area=frame;
+            let mut main_area=frame;
+            let reste=frame.w%client_count;
+            if state==State::Frame {
+                main_area.w = (frame.w*(options.main_factor * 100.0) as u32) / (50*client_count);
+                slave_area.w-=main_area.w;
+                if options.main_index < options.view_amount
+                    && options.main_count > 0 {
+                        is_main=1;
+                }
+            }
+            for i in 0..client_count {
+                if state==State::Frame && i == options.main_index {
+                    frame.w = main_area.w;
+                } else {
+                    frame.w = slave_area.w / (client_count-is_main);
+                }
+                frame.w -= options.view_padding;
+                if i == 0 { 
+                    frame.w+=reste;
+                }
+
+                frames.push(frame);
+                frame.x += frame.w + options.view_padding;
+            }
+        }
+        Layout::Full => {
+            for _i in 0..client_count {
+                frames.push(frame);
+            }
+        }
     }
-    // Send commit message to the compositor
-    options.commit();
 }

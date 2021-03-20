@@ -32,7 +32,7 @@ fn main() {
     // most classic use cases and avoids us the trouble to manually implement
     // the registry
 
-    let mut context=Context::new(String::from("test"));
+    let mut context=Context::new(String::from("vhhh"));
 
     let globals = GlobalManager::new_with_cb(
         &attached_display,
@@ -54,10 +54,10 @@ fn main() {
     event_queue
         .sync_roundtrip(&mut context, |_, _, _| unreachable!()).unwrap();
 
-    let mut options=Options::new().init(context.clone());
+    context.init();
 
     while context.running {
-        event_queue.dispatch(&mut options, |event, object, _| {
+        event_queue.dispatch(&mut context.options, |event, object, _| {
             panic!(
                 "[callop] Encountered an orphan event: {}@{}: {}",
                 event.interface,
@@ -65,7 +65,7 @@ fn main() {
                 event.name
             );
         }).unwrap();
-        context.update(&options);
+        context.update();
     }
 }
 

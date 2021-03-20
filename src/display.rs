@@ -1,4 +1,4 @@
-use super::layout::engine;
+use super::layout;
 use super::options::Layout;
 use super::options::Options;
 use crate::wayland::{
@@ -11,17 +11,17 @@ use wayland_client::EventQueue;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum State {
-    Main,
-    Slave,
-    Output,
+    Frame,
+    Window,
 }
 
 #[derive(Clone, Debug)]
 pub struct Context {
     pub namespace: String, // Namespace is either manual or dynamic
     pub running: bool,
+    pub options: Options,
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
     pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
     pub output: Option<WlOutput>,
@@ -32,11 +32,11 @@ pub struct Context {
 #[derive(Clone, Debug)]
 pub struct Tag {
     pub serial: u32,
-    pub main_frame: Frame,
-    // pub layout: Main<ZriverLayoutV1>,
+    pub main: Vec<Frame>,
+    pub reference: (Layout, u32, State),
     pub client_count: u32,
     pub windows: Vec<Frame>,
-    pub name: String,
+    pub layout: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -45,18 +45,17 @@ pub struct Frame {
     pub y: u32,
     pub w: u32,
     pub h: u32,
-    pub index: u32,
-    state: State,
+    // pub index: u32,
+    // state: State,
 }
 
 impl Context {
     pub fn new(namespace: String) -> Context {
         return {
             Context {
-                // The layout_manager should have a callback function
                 layout_manager: None,
+                options: Options::new(),
                 running: false,
-                // The options_manager should have a callback function
                 options_manager: None,
                 namespace: namespace,
                 output: None,
@@ -65,21 +64,21 @@ impl Context {
             }
         };
     }
-    pub fn init(&mut self,mut options:Options) {
-        // options=options.init(self.clone());
-        self.update_focus(options.tagmask);
-        self.tags.push(Tag::new(self, &options));
+    pub fn init(&mut self) {
+        self.options.init(self.clone());
+        self.update_focus(self.options.tagmask);
+        // self.tags.push(Tag::new(&self));
     }
-    pub fn update(&mut self,options:&Options) {
-        if !options.state {
+    pub fn update(&mut self) {
+        if !self.options.state {
             self.destroy();
         }
         if self.tags.len() == 0 {
-            println!("{:?}",options);
-            self.tags.push(Tag::new(self, options));
+            // self.options.debug();
+            self.tags.push(Tag::new(&self));
         } else {
-            println!("{:?}",options);
-            self.tags[0].update(options);
+            // self.options.debug();
+            self.tags[0].update(&mut self.options);
         }
     }
     pub fn update_focus(&mut self, tagmask:u32) {
@@ -88,7 +87,6 @@ impl Context {
     pub fn destroy(&self) {
         let output=self.output.as_ref().unwrap();
         self.options_manager.clone().unwrap().destroy();
-        // self.tags[self.focused as usize].layout.destroy();
         self.destroy_handle("main-index", output);
         self.destroy_handle("main-count", output);
         self.destroy_handle("main-factor", output);
@@ -110,18 +108,14 @@ pub fn tag_index(tagmask: &u32) -> usize {
 }
 
 impl Tag {
-    pub fn new(context: &Context, options:&Options) -> Tag {
+    pub fn new(context: &Context) -> Tag {
         return {
             Tag {
-                main_frame: Frame::new(&options),
-                // layout: context
-                //     .layout_manager
-                //     .clone()
-                //     .unwrap()
-                //     .get_river_layout(&context.output.as_ref().unwrap().clone(), context.namespace.clone()),
-                serial: options.serial,
+                reference: (Layout::Full, 1, State::Frame),
+                main: Vec::new(),
+                serial: context.options.serial,
                 client_count: 0,
-                name: options.arguments.clone(),
+                layout: context.options.arguments.clone(),
                 windows: Vec::new(),
             }
         };
@@ -138,20 +132,29 @@ impl Tag {
         }
         false
     }
-    pub fn update(&mut self, options: &Options) {
-        if options.view_amount > 0 {
-            self.generate(options);
-        } else {
-            for i in self.client_count..options.view_amount {
-                self.windows.remove(i as usize);
-            }
-            self.generate(&options);
-            self.restore(&options)
+    pub fn update(&mut self, options: &mut Options) {
+
+        if options.view_amount < 1 {
+            options.output_padding=0;
+            options.view_padding=0;
         }
+
+        let layout=options.parse(self);
+        layout::new(Frame::new(options), options, self.reference, &mut self.main);
+
+        let mut i=0;
+        for frame in &self.main {
+            layout::new(frame.clone(), options, layout[i], &mut self.windows);
+            i+=1;
+        }
+        self.restore(options);
         self.client_count=options.view_amount;
+        self.clean();
     }
-    pub fn generate(&mut self, options: &Options) {
-        engine(self, options);
+    pub fn clean(&mut self) {
+        self.reference=(Layout::Full, 1, State::Frame);
+        self.main=Vec::new();
+        self.windows=Vec::new();
     }
 }
 
@@ -159,34 +162,21 @@ impl Frame {
     pub fn new(options: &Options) -> Frame {
         let mut frame = {
             Frame {
-                x: 0,
-                y: 0,
-                index: 0,
-                w: options.usable_width,
-                h: options.usable_height,
-                state: State::Slave,
+                x: options.view_padding,
+                y: options.view_padding,
+                w: options.usable_width-options.view_padding,
+                h: options.usable_height-options.view_padding,
             }
         };
-        frame.apply_padding(&options.output_padding);
+        frame.apply_padding(options.output_padding);
         frame
     }
-    pub fn set_main(mut self) {
-        self.state = State::Main;
-    }
-    pub fn set_slave(mut self) {
-        self.state = State::Slave;
-    }
-    pub fn apply_padding(&mut self, padding: &u32) {
-        self.x += padding;
-        self.y += padding;
-        self.w += 2 * padding;
-        self.h += 2 * padding;
-    }
-    pub fn is_main(&self)->bool {
-        match self.state {
-            State::Slave=>false,
-            State::Output=>false,
-            State::Main=>true,
+    pub fn apply_padding(&mut self, padding: u32) {
+        if 2*padding < self.h && 2*padding < self.w {
+            self.x += padding;
+            self.y += padding;
+            self.w -= 2 * padding;
+            self.h -= 2 * padding;
         }
     }
 }

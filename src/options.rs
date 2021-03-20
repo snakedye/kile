@@ -1,4 +1,4 @@
-use super::display::{Context, Frame};
+use super::display::{Context, Frame, State, Tag};
 use crate::wayland::{
     river_layout_unstable_v1::{
         zriver_layout_manager_v1::ZriverLayoutManagerV1, zriver_layout_v1,
@@ -9,10 +9,9 @@ use crate::wayland::{
         zriver_options_manager_v1::ZriverOptionsManagerV1,
     },
 };
-use wayland_client::EventQueue;
-use wayland_client::DispatchData;
 // use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
+use wayland_client::DispatchData;
 
 #[derive(Clone, Debug)]
 pub struct Options {
@@ -69,7 +68,7 @@ impl Options {
         }
     }
     // Listen to the options and layout and returns an Options when the context is updated
-    pub fn init(mut self,context: Context)->Options {
+    pub fn init(&mut self,context: Context) {
 
         let new_context=context.clone();
 
@@ -106,14 +105,10 @@ impl Options {
         self.get_option("main-count", &context);
         self.get_option("main-index", &context);
         self.get_option("view-padding", &context);
-        self.get_option("capacity", &context);
+        self.get_option("output-padding", &context);
         self.get_option("layout", &context);
 
-        // event_queue
-        //     .dispatch(&mut self, |_, _, _| unreachable!())
-        //     .unwrap();
-
-        return self;
+        // return self;
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
         let option = context
@@ -128,7 +123,6 @@ impl Options {
             match event {
                 zriver_option_handle_v1::Event::StringValue { value } => {
                     args=value.unwrap();
-                    // layout_ref.as_mut().unwrap().push_str(&value.unwrap())
                 }
                 zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
@@ -140,6 +134,10 @@ impl Options {
                     }
                 }
                 zriver_option_handle_v1::Event::Unset => {}
+            }
+            match &option.get::<Options>().unwrap().layout {
+                Some(layout)=>layout.parameters_changed(),
+                None=>{}
             }
             unsafe {
                 match name {
@@ -155,32 +153,50 @@ impl Options {
             }
         });
     }
-    pub fn parse(&self) -> Vec<Layout> {
-        let mut closure=false;
-        let mut start:usize=0;
-        let mut i :usize=0;
-        let mut layout=Vec::with_capacity(self.view_amount as usize);
-        let my_chars: Vec<_>=self.arguments.chars().collect();
-        while layout.len() < self.view_amount as usize {
-            let c=my_chars[i];
-            let mut orientation:Layout=Layout::Full;
+    pub fn parse(&self, tag:&mut Tag) -> Vec<(Layout, u32, State)> {
+        let mut total_views=1;
+        let mut layout=Vec::new();
+        let mut orientation=Layout::Full;
+        let main_view=if self.main_count > 0 {1} else {0};
+        let main_count=if self.main_index +self.main_count > self.view_amount {
+            self.view_amount-self.main_index
+        } else { self.main_count };
+        let mut reste=0;
+
+        for (i,c) in self.arguments.chars().enumerate() {
             match c {
                 'v' => orientation=Layout::Vertical,
                 'h' => orientation=Layout::Horizontal,
                 't' => orientation=Layout::Tab,
                 'f' => orientation=Layout::Full,
-                '|' => if closure {
-                    closure=false;
-                    i=start;
-                } else {
-                    closure=true;
-                    start=i;
-                }
                 _ => println!("{}: Not a valid character at index {}", c, i),
             }
-            layout.push(orientation);
-            if i < layout.len() {i+=1}
+            if i == 0 {
+                let client_count=if self.view_amount >= (self.arguments.len()-1) as u32 {
+                    if self.view_amount-self.main_count+1 < (self.arguments.len()-1) as u32 {
+                        (self.arguments.len()-1) as u32 - (self.view_amount-self.main_count)
+                    } else {
+                        (self.arguments.len()-1) as u32
+                    }
+                } else {
+                    self.view_amount
+                };
+                total_views=client_count;
+                reste=(self.view_amount-main_count)%(total_views-main_view);
+                tag.reference=(orientation, client_count, State::Frame);
+            } else if i-1 == self.main_index as usize {
+                layout.push((orientation, main_count, State::Window));
+            } else {
+                let mut client_count=(self.view_amount-main_count)/(total_views-main_view);
+                if reste > 0 {
+                    client_count+=1;
+                    reste-=1;
+                }
+                layout.push((orientation, client_count, State::Window));
+            }
+            if i > total_views as usize { break; }
         }
+
         return layout;
     }
     pub fn push_dimensions(&self, frame:&Frame) {
@@ -191,6 +207,17 @@ impl Options {
             frame.w,
             frame.h,
         )
+    }
+    pub fn debug(&self) {
+        println!("Option - {}", self.serial);
+        println!("  tagmask : {}", self.tagmask);
+        println!("  view_amount : {}", self.view_amount);
+        println!("  usable_width : {}", self.usable_width);
+        println!("  usable_height : {}", self.usable_height);
+        println!("  output_padding : {}", self.output_padding);
+        println!("  output_padding : {}", self.output_padding);
+        println!("  main_factor : {}", self.main_factor);
+        println!("  namespace : {}\n", self.arguments);
     }
     pub fn commit(&self) {
         self.layout.clone().unwrap().commit(self.serial);
