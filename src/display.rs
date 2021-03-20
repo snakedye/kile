@@ -7,8 +7,8 @@ use crate::wayland::{
     },
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
 };
-use wayland_client::EventQueue;
 use wayland_client::protocol::wl_output::WlOutput;
+use wayland_client::EventQueue;
 use wayland_client::Main;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -74,24 +74,24 @@ impl Context {
             self.destroy();
         }
         if self.tags.len() == 0 {
-            // self.options.debug();
+            self.options.debug();
             self.tags.push(Tag::new(&self));
         } else {
-            // self.options.debug();
+            self.options.debug();
             self.tags[0].update(&mut self.options);
         }
     }
-    pub fn update_focus(&mut self, tagmask:u32) {
+    pub fn update_focus(&mut self, tagmask: u32) {
         self.focused = tagmask;
     }
     pub fn destroy(&self) {
-        let output=self.output.as_ref().unwrap();
+        let output = self.output.as_ref().unwrap();
         self.options_manager.clone().unwrap().destroy();
         self.destroy_handle("main-index", output);
         self.destroy_handle("main-count", output);
         self.destroy_handle("main-factor", output);
         self.destroy_handle("view-padding", output);
-        self.destroy_handle("output-padding", output);
+        self.destroy_handle("outer-padding", output);
     }
     pub fn destroy_handle(&self, name: &str, output: &WlOutput) {
         let option = self
@@ -133,28 +133,27 @@ impl Tag {
         false
     }
     pub fn update(&mut self, options: &mut Options) {
-
-        if options.view_amount < 1 {
-            options.output_padding=0;
-            options.view_padding=0;
+        if options.view_amount <= 1 {
+            options.outer_padding = 0;
+            options.view_padding = 0;
         }
 
-        let layout=options.parse(self);
+        let layout = options.parse(self);
         layout::new(Frame::new(options), options, self.reference, &mut self.main);
 
-        let mut i=0;
+        let mut i = 0;
         for frame in &self.main {
             layout::new(frame.clone(), options, layout[i], &mut self.windows);
-            i+=1;
+            i += 1;
         }
         self.restore(options);
-        self.client_count=options.view_amount;
+        self.client_count = options.view_amount;
         self.clean();
     }
     pub fn clean(&mut self) {
-        self.reference=(Layout::Full, 1, State::Frame);
-        self.main=Vec::new();
-        self.windows=Vec::new();
+        self.reference = (Layout::Full, 1, State::Frame);
+        self.main = Vec::new();
+        self.windows = Vec::new();
     }
 }
 
@@ -164,15 +163,15 @@ impl Frame {
             Frame {
                 x: options.view_padding,
                 y: options.view_padding,
-                w: options.usable_width-options.view_padding,
-                h: options.usable_height-options.view_padding,
+                w: options.usable_width - options.view_padding,
+                h: options.usable_height - options.view_padding,
             }
         };
-        frame.apply_padding(options.output_padding);
+        frame.apply_padding(options.outer_padding);
         frame
     }
     pub fn apply_padding(&mut self, padding: u32) {
-        if 2*padding < self.h && 2*padding < self.w {
+        if 2 * padding < self.h && 2 * padding < self.w {
             self.x += padding;
             self.y += padding;
             self.w -= 2 * padding;
