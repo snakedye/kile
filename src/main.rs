@@ -1,5 +1,4 @@
 mod display;
-mod layout;
 mod options;
 // mod build;
 mod wayland;
@@ -25,7 +24,7 @@ fn main() {
     // most classic use cases and avoids us the trouble to manually implement
     // the registry
 
-    let mut context = Context::new(String::from("waytile"));
+    let mut context = Context::new(String::from("kile"));
 
     let _globals = GlobalManager::new_with_cb(
         &attached_display,
