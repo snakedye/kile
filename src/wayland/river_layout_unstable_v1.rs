@@ -1,12 +1,12 @@
-// use std::os::raw::{c_char, c_void};
-// const NULLPTR: *const c_void = 0 as *const c_void;
-// static mut types_null: [*const sys::common::wl_interface; 5] = [
-//     NULLPTR as *const sys::common::wl_interface,
-//     NULLPTR as *const sys::common::wl_interface,
-//     NULLPTR as *const sys::common::wl_interface,
-//     NULLPTR as *const sys::common::wl_interface,
-//     NULLPTR as *const sys::common::wl_interface,
-// ];
+use std::os::raw::{c_char, c_void};
+const NULLPTR: *const c_void = 0 as *const c_void;
+static mut types_null: [*const sys::common::wl_interface; 5] = [
+    NULLPTR as *const sys::common::wl_interface,
+    NULLPTR as *const sys::common::wl_interface,
+    NULLPTR as *const sys::common::wl_interface,
+    NULLPTR as *const sys::common::wl_interface,
+    NULLPTR as *const sys::common::wl_interface,
+];
 #[doc = "manage river layout objects\n\nA global factory for river_layout objects."]
 pub mod zriver_layout_manager_v1 {
     use super::sys::client::*;

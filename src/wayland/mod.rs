@@ -8,6 +8,7 @@ extern crate wayland_commons;
 // You can use all the types from my_protocol as if they went from `wayland_client::protocol`.
 pub use wayland::client as river_layout_unstable_v1;
 pub use wayland::client as river_options_unstable_v1;
+pub use wayland::client as river_status_unstable_v1;
 
 pub mod wayland {
     // The generated code tends to trigger a lot of warnings
@@ -18,7 +19,7 @@ pub mod wayland {
     pub mod client {
         // These imports are used by the generated code
         pub(crate) use wayland_client::protocol::wl_output;
-        pub(crate) use wayland_client::sys;
+        pub(crate) use wayland_client::{sys, protocol};
         pub(crate) use wayland_client::{
             AnonymousObject, Attached, Display, GlobalManager, Main, Proxy, ProxyMap,
         };
@@ -28,14 +29,18 @@ pub mod wayland {
         pub(crate) use wayland_commons::{Interface, MessageGroup};
         // If you protocol interacts with objects from other protocols, you'll need to import
         // their modules, like so:
-        pub(crate) use wayland_client::protocol::{wl_region, wl_surface};
+        pub(crate) use wayland_client::protocol::{wl_region, wl_surface, wl_seat};
         include!(concat!(
-            "/home/bryan/projects/rivertiler/src/wayland",
-            "/river_options_unstable_v1.rs"
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/wayland/river_options_unstable_v1.rs"
         ));
         include!(concat!(
-            "/home/bryan/projects/rivertiler/src/wayland",
-            "/river_layout_unstable_v1.rs"
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/wayland/river_layout_unstable_v1.rs"
+        ));
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/wayland/river_status_unstable_v1.rs"
         ));
     }
 }

@@ -2,6 +2,10 @@ use super::display::{Context, Frame, State, Tag};
 use crate::wayland::{
     river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
     river_options_unstable_v1::zriver_option_handle_v1,
+    river_status_unstable_v1::{
+        zriver_output_status_v1,
+        zriver_seat_status_v1,
+    },
 };
 use wayland_client::DispatchData;
 use wayland_client::Main;
@@ -13,6 +17,7 @@ pub struct Options {
     pub tagmask: u32,
     pub zlayout: Option<Main<ZriverLayoutV1>>,
     pub view_amount: u32,
+    pub window_title: String,
     pub usable_width: u32,
     pub usable_height: u32,
     pub view_padding: u32,
@@ -46,6 +51,7 @@ impl Options {
                 serial: 0,
                 tagmask: 0,
                 zlayout: None,
+                window_title: String::new(),
                 view_amount: 0,
                 view_padding: 0,
                 outer_padding: 0,
@@ -95,6 +101,37 @@ impl Options {
             },
         );
 
+        let seat_status = context
+            .status_manager
+            .clone()
+            .expect("Compositor doesn't implement river_status_unstable_v1")
+            .get_river_seat_status(&new_context.seat.clone().unwrap());
+
+        seat_status.quick_assign(move |_, event, mut options| {
+            match event {
+                zriver_seat_status_v1::Event::FocusedView { title }=> {
+                    options.get::<Options>().unwrap().window_title = title;
+                }
+                zriver_seat_status_v1::Event::FocusedOutput { output }=> { }
+                zriver_seat_status_v1::Event::UnfocusedOutput { output }=> { }
+            }
+        });
+
+        let output_status = context
+            .status_manager
+            .clone()
+            .expect("Compositor doesn't implement river_status_unstable_v1")
+            .get_river_output_status(&context.output.clone().unwrap());
+
+        output_status.quick_assign(move |_, event, mut options| {
+            match event {
+                zriver_output_status_v1::Event::FocusedTags { tags }=>{
+                    options.get::<Options>().unwrap().tagmask = tags;
+                }
+                zriver_output_status_v1::Event::ViewTags { tags }=>{}
+            }
+        });
+
         self.get_option("main_factor", &context);
         self.get_option("main_count", &context);
         self.get_option("main_index", &context);
@@ -106,10 +143,9 @@ impl Options {
         let option = context
             .options_manager
             .clone()
-            .expect("Compositor doesn't implement ZriverOptionsManagerV1")
-            // .unwrap()
+            .expect("Compositor doesn't implement river_options_unstable_v1")
             .get_option_handle(name.to_owned(), Some(&context.output.as_ref().unwrap()));
-        option.quick_assign(move |_, event, mut option| {
+        option.quick_assign(move |_, event, mut options| {
             let mut option_value: Value = Value { uint: 0 };
             let mut args: String = String::new();
             match event {
@@ -127,24 +163,24 @@ impl Options {
                 }
                 zriver_option_handle_v1::Event::Unset => {}
             }
-            match &option.get::<Options>().unwrap().zlayout {
+            match &options.get::<Options>().unwrap().zlayout {
                 Some(zlayout) => zlayout.parameters_changed(),
                 None => {}
             }
             unsafe {
                 match name {
-                    "main_index" => option.get::<Options>().unwrap().main_index = option_value.uint,
-                    "main_count" => option.get::<Options>().unwrap().main_count = option_value.uint,
+                    "main_index" => options.get::<Options>().unwrap().main_index = option_value.uint,
+                    "main_count" => options.get::<Options>().unwrap().main_count = option_value.uint,
                     "main_factor" => {
-                        option.get::<Options>().unwrap().main_factor = option_value.double
+                        options.get::<Options>().unwrap().main_factor = option_value.double
                     }
                     "view_padding" => {
-                        option.get::<Options>().unwrap().view_padding = option_value.uint
+                        options.get::<Options>().unwrap().view_padding = option_value.uint
                     }
                     "outer_padding" => {
-                        option.get::<Options>().unwrap().outer_padding = option_value.uint
+                        options.get::<Options>().unwrap().outer_padding = option_value.uint
                     }
-                    "kile" => option.get::<Options>().unwrap().layout = args,
+                    "kile" => options.get::<Options>().unwrap().layout = args,
                     _ => {}
                 }
             }
@@ -209,7 +245,6 @@ impl Options {
             }
         }
 
-        println!("{:?}", layout);
         return layout;
     }
     pub fn push_dimensions(&self, frame: &Frame) {
@@ -224,7 +259,6 @@ impl Options {
     pub fn debug(&self) {
         println!("Option - {}", self.serial);
         println!("\n  ZriverLayoutV1");
-        println!("    tagmask : {}", self.tagmask);
         println!("    view_amount : {}", self.view_amount);
         println!("    usable_width : {}", self.usable_width);
         println!("    usable_height : {}", self.usable_height);
@@ -234,7 +268,11 @@ impl Options {
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_count : {}", self.main_count);
-        println!("    layout : {}\n", self.layout);
+        println!("    layout : {}", self.layout);
+        println!("\n  ZriverOutputStatusV1");
+        println!("    tagmask : {}", self.tagmask);
+        println!("\n  ZriverSeatStatusV1");
+        println!("    window_title : {}\n", self.window_title);
     }
     pub fn commit(&self) {
         self.zlayout.clone().unwrap().commit(self.serial);
