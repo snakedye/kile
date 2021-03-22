@@ -112,7 +112,7 @@ impl Options {
         seat_status.quick_assign(move |_, event, mut options| {
             match event {
                 zriver_seat_status_v1::Event::FocusedView { title }=> {
-                    options.get::<Options>().unwrap().window_title = title;
+                    // options.get::<Options>().unwrap().window_title = title;
                 }
                 zriver_seat_status_v1::Event::FocusedOutput { output }=> { }
                 zriver_seat_status_v1::Event::UnfocusedOutput { output }=> { }
@@ -164,9 +164,9 @@ impl Options {
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
                 zriver_option_handle_v1::Event::IntValue { value } => {
                     if value < 0 {
-                        option_value.int = 0;
+                        option_value.uint = 0;
                     } else {
-                        option_value.int = value;
+                        option_value.uint = value as u32;
                     }
                 }
                 zriver_option_handle_v1::Event::Unset => {}
@@ -211,13 +211,13 @@ impl Options {
         } else {
             self.view_amount
         };
-        for (i, c) in layout_frame.chars().enumerate() {
+        for (_i, c) in layout_frame.chars().enumerate() {
             match c {
                 'v' => orientation = Layout::Vertical,
                 'h' => orientation = Layout::Horizontal,
                 't' => orientation = Layout::Tab,
                 'f' => orientation = Layout::Full,
-                _ => println!("{}: Not a valid character", i),
+                _ => println!("{}: Not a valid character", c),
             }
         }
         (orientation, total_views, State::Frame)
@@ -226,17 +226,26 @@ impl Options {
         let mut layout = Vec::new();
         let mut orientation = Layout::Full;
         let main_view =
-            if self.main_index + self.main_amount < self.view_amount && self.main_amount > 0 {
+            if self.main_index + self.main_amount <= self.view_amount 
+                && self.main_index < total_views
+                && total_views > 1
+                && self.main_amount > 0 {
                 1
             } else {
                 0
             };
-        let main_amount = if self.main_index + self.main_amount > self.view_amount {
+        let main_amount = if self.main_index < total_views && self.main_index + self.main_amount > self.view_amount {
             self.view_amount - self.main_index
         } else {
             self.main_amount
         };
-        let mut reste = 0;
+        let mut reste = (self.view_amount - main_view*main_amount) % (total_views - main_view);
+        println!("{}", main_view);
+        let client_count = if total_views > 1 {
+            (self.view_amount - main_view*main_amount) / (total_views - main_view)
+        } else {
+            self.view_amount
+        };
 
         for (i, c) in string.chars().enumerate() {
             match c {
@@ -246,24 +255,19 @@ impl Options {
                 'f' => orientation = Layout::Full,
                 _ => println!("{}: Not a valid character at index {}", c, i),
             }
-            if i == self.main_index as usize && self.main_amount > 0 {
+            if i == self.main_index as usize && total_views > 1 && main_view==1 {
                 layout.push((orientation, main_amount, State::Window));
             } else {
-                let mut client_count = if total_views > 0 {
-                    (self.view_amount - main_amount) / (total_views - main_view)
-                } else {
-                    self.view_amount
-                };
-                if reste > 0 {
-                    client_count += 1;
+                layout.push((orientation, if reste > 0 {
                     reste -= 1;
-                }
-                layout.push((orientation, client_count, State::Window));
+                    client_count + 1
+                } else { client_count }, State::Window));
             }
             if i > total_views as usize {
                 break;
             }
         }
+
 
         return layout;
     }
@@ -288,7 +292,8 @@ impl Options {
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_amount : {}", self.main_amount);
-        println!("    layout : {}", self.layout_window);
+        println!("    kile_window : {}", self.layout_window);
+        println!("    kile_frame : {}", self.layout_frame);
         println!("\n  ZriverOutputStatusV1");
         println!("    tagmask : {}", self.tagmask);
         println!("\n  ZriverSeatStatusV1");

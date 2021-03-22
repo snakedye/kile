@@ -121,7 +121,6 @@ impl Tag {
     pub fn new() -> Tag {
         return {
             Tag {
-                // reference: (Layout::Full, 1, State::Frame),
                 main: Vec::new(),
                 serial: 0,
                 client_count: 0,
@@ -132,22 +131,20 @@ impl Tag {
         };
     }
     pub fn init(&mut self, options: &mut Options) {
-        // self.reference = (Layout::Full, 1, State::Frame);
         self.main = Vec::new();
         self.serial = options.serial;
         self.client_count = options.view_amount;
 
         match tag_index(options.tagmask)+1 {
-            1 => {
-                self.layout_frame=String::from("t");
-                self.layout_window=String::from("ff");
+            4 => {
+                self.layout_frame=String::from("v");
+                self.layout_window=String::from("hhh");
             }
             2 => {
                 self.layout_frame=String::from("v");
                 self.layout_window=String::from("tt");
             }
             _ => {
-                // let char_vec: Vec<char> = options.layout_frame.chars().collect();
                 self.layout_frame=options.layout_frame.clone();
                 self.layout_window=options.layout_window.clone();
             }
@@ -169,6 +166,8 @@ impl Tag {
             Frame::new(options).new_layout(options, layout_frame, &mut self.main);
             let layout_window=options.layout_window(self.layout_window.clone(), layout_frame.1);
 
+            println!("{:?}", layout_frame);
+            println!("{:?}", layout_window);
             let mut i = 0;
             for frame in &self.main {
                 if layout_window[i].1 > 0 {
@@ -222,7 +221,6 @@ impl Frame {
         if client_count > 0 {
             match layout {
                 Layout::Tab => {
-                    // Add eww titlebar eventually
                     self.h -= options.view_padding;
                     for _i in 0..client_count {
                         frames.push(self.clone());
@@ -237,7 +235,7 @@ impl Frame {
                     if state == State::Frame {
                         main_area.h = if options.main_amount > 0
                             && options.main_amount < options.view_amount
-                            && options.main_index < options.view_amount
+                            && options.main_index < client_count
                         {
                             is_main = 1;
                             (self.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
@@ -272,7 +270,7 @@ impl Frame {
                     if state == State::Frame {
                         main_area.w = if options.main_amount > 0
                             && options.main_amount < options.view_amount
-                            && options.main_index < options.view_amount
+                            && options.main_index < client_count
                         {
                             is_main = 1;
                             (self.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
@@ -301,9 +299,8 @@ impl Frame {
                     }
                 }
                 Layout::Full => {
-                    self.y += options.view_padding;
+                    self.apply_padding(options.view_padding);
                     for _i in 0..client_count {
-                        self.y -= options.view_padding;
                         frames.push(*self);
                     }
                 }

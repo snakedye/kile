@@ -1,4 +1,4 @@
-mod build;
+// mod build;
 mod display;
 mod options;
 mod wayland;
@@ -18,7 +18,6 @@ use wayland_client::{Display, GlobalManager};
 use std::env;
 
 fn main() {
-    // Connect to the server
     let display = Display::connect_to_env().unwrap();
 
     let mut event_queue = display.create_event_queue();
