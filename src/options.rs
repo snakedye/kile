@@ -24,8 +24,9 @@ pub struct Options {
     pub outer_padding: u32,
     pub main_index: u32,
     pub main_factor: f64,
-    pub main_count: u32,
-    pub layout: String,
+    pub main_amount: u32,
+    pub layout_window: String,
+    pub layout_frame: String,
 }
 
 #[derive(Copy, Clone)]
@@ -59,8 +60,9 @@ impl Options {
                 usable_height: 0,
                 main_factor: 0.0,
                 main_index: 0,
-                main_count: 0,
-                layout: String::new(),
+                main_amount: 0,
+                layout_window: String::new(),
+                layout_frame: String::new(),
             }
         };
     }
@@ -129,6 +131,7 @@ impl Options {
                     options.get::<Options>().unwrap().tagmask = tags;
                     match &options.get::<Options>().unwrap().zlayout {
                         Some(zlayout) => zlayout.parameters_changed(),
+                        // Some(zlayout) => {},
                         None => {}
                     }
                 }
@@ -137,11 +140,12 @@ impl Options {
         });
 
         self.get_option("main_factor", &context);
-        self.get_option("main_count", &context);
+        self.get_option("main_amount", &context);
         self.get_option("main_index", &context);
         self.get_option("view_padding", &context);
         self.get_option("outer_padding", &context);
-        self.get_option("kile", &context);
+        self.get_option("kile_frame", &context);
+        self.get_option("kile_window", &context);
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
         let option = context
@@ -174,7 +178,7 @@ impl Options {
             unsafe {
                 match name {
                     "main_index" => options.get::<Options>().unwrap().main_index = option_value.uint,
-                    "main_count" => options.get::<Options>().unwrap().main_count = option_value.uint,
+                    "main_amount" => options.get::<Options>().unwrap().main_amount = option_value.uint,
                     "main_factor" => {
                         options.get::<Options>().unwrap().main_factor = option_value.double
                     }
@@ -184,30 +188,57 @@ impl Options {
                     "outer_padding" => {
                         options.get::<Options>().unwrap().outer_padding = option_value.uint
                     }
-                    "kile" => options.get::<Options>().unwrap().layout = args,
+                    "kile_frame" => {
+                        options.get::<Options>().unwrap().layout_frame = args;
+                    }
+                    "kile_window" => {
+                        options.get::<Options>().unwrap().layout_window = args;
+                    }
                     _ => {}
                 }
             }
         });
     }
-    pub fn parse_layout(&self, tag: &mut Tag) -> Vec<(Layout, u32, State)> {
-        let mut total_views = 1;
+    pub fn layout_frame(&self, layout_frame: String, count: u32)->(Layout, u32, State) {
+        let mut orientation = Layout::Full;
+        let total_views = if self.view_amount >= count as u32 {
+            if self.view_amount > self.main_amount 
+            && self.view_amount - self.main_amount + 1 < count - 1 {
+                count as u32 - (self.view_amount - self.main_amount)
+            } else {
+                count as u32
+            }
+        } else {
+            self.view_amount
+        };
+        for (i, c) in layout_frame.chars().enumerate() {
+            match c {
+                'v' => orientation = Layout::Vertical,
+                'h' => orientation = Layout::Horizontal,
+                't' => orientation = Layout::Tab,
+                'f' => orientation = Layout::Full,
+                _ => println!("{}: Not a valid character", i),
+            }
+        }
+        (orientation, total_views, State::Frame)
+    }
+    pub fn layout_window(&self, string: String, total_views: u32) -> Vec<(Layout, u32, State)> {
         let mut layout = Vec::new();
         let mut orientation = Layout::Full;
         let main_view =
-            if self.main_index + self.main_count < self.view_amount && self.main_count > 0 {
+            if self.main_index + self.main_amount < self.view_amount && self.main_amount > 0 {
                 1
             } else {
                 0
             };
-        let main_count = if self.main_index + self.main_count > self.view_amount {
+        let main_amount = if self.main_index + self.main_amount > self.view_amount {
             self.view_amount - self.main_index
         } else {
-            self.main_count
+            self.main_amount
         };
         let mut reste = 0;
 
-        for (i, c) in tag.layout.chars().enumerate() {
+        for (i, c) in string.chars().enumerate() {
             match c {
                 'v' => orientation = Layout::Vertical,
                 'h' => orientation = Layout::Horizontal,
@@ -215,27 +246,11 @@ impl Options {
                 'f' => orientation = Layout::Full,
                 _ => println!("{}: Not a valid character at index {}", c, i),
             }
-            if i == 0 {
-                let client_count = if self.view_amount >= (tag.layout.len() - 1) as u32 {
-                    if self.view_amount > self.main_count 
-                    && self.view_amount - self.main_count + 1 < (tag.layout.len() - 1) as u32 {
-                        (tag.layout.len() - 1) as u32 - (self.view_amount - self.main_count)
-                    } else {
-                        (tag.layout.len() - 1) as u32
-                    }
-                } else {
-                    self.view_amount
-                };
-                total_views = client_count;
-                if total_views > main_view {
-                    reste = (self.view_amount - main_count) % (total_views - main_view);
-                }
-                tag.reference = (orientation, client_count, State::Frame);
-            } else if i > 0 && i - 1 == self.main_index as usize && self.main_count > 0 {
-                layout.push((orientation, main_count, State::Window));
+            if i == self.main_index as usize && self.main_amount > 0 {
+                layout.push((orientation, main_amount, State::Window));
             } else {
                 let mut client_count = if total_views > 0 {
-                    (self.view_amount - main_count) / (total_views - main_view)
+                    (self.view_amount - main_amount) / (total_views - main_view)
                 } else {
                     self.view_amount
                 };
@@ -272,8 +287,8 @@ impl Options {
         println!("    view_padding : {}", self.view_padding);
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
-        println!("    main_count : {}", self.main_count);
-        println!("    layout : {}", self.layout);
+        println!("    main_amount : {}", self.main_amount);
+        println!("    layout : {}", self.layout_window);
         println!("\n  ZriverOutputStatusV1");
         println!("    tagmask : {}", self.tagmask);
         println!("\n  ZriverSeatStatusV1");

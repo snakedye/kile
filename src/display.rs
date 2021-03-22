@@ -34,10 +34,10 @@ pub struct Context {
 pub struct Tag {
     pub serial: u32,
     pub main: Vec<Frame>,
-    pub reference: (Layout, u32, State),
     pub client_count: u32,
     pub windows: Vec<Frame>,
-    pub layout: String,
+    pub layout_frame: String,
+    pub layout_window: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -70,7 +70,7 @@ impl Context {
         for _i in 0..33 {
             self.tags.push(Tag::new());
         }
-        self.update_focus(self.options.tagmask);
+        self.update_focus(tag_index(self.options.tagmask));
     }
     pub fn update(&mut self) {
         if self.options.state {
@@ -86,11 +86,12 @@ impl Context {
     }
     pub fn destroy(&mut self) {
         self.destroy_handle("main_index");
-        self.destroy_handle("main_count");
+        self.destroy_handle("main_amount");
         self.destroy_handle("main_factor");
         self.destroy_handle("view_padding");
         self.destroy_handle("outer_padding");
-        self.destroy_handle("kile");
+        self.destroy_handle("kile_window");
+        self.destroy_handle("kile_frame");
         self.status_manager.as_ref().unwrap().destroy();
         self.layout_manager.as_ref().unwrap().destroy();
         self.options_manager.as_ref().unwrap().destroy();
@@ -106,7 +107,6 @@ impl Context {
 }
 
 pub fn tag_index(mut tagmask: u32) -> u32 {
-    // tagmask+=1;
     let mut tag=0;
     while tagmask/2 >= 1 {
         tagmask/=2;
@@ -121,25 +121,36 @@ impl Tag {
     pub fn new() -> Tag {
         return {
             Tag {
-                reference: (Layout::Full, 1, State::Frame),
+                // reference: (Layout::Full, 1, State::Frame),
                 main: Vec::new(),
                 serial: 0,
                 client_count: 0,
                 windows: Vec::new(),
-                layout: String::new(),
+                layout_window: String::new(),
+                layout_frame: String::new(),
             }
         };
     }
     pub fn init(&mut self, options: &mut Options) {
-        self.reference = (Layout::Full, 1, State::Frame);
+        // self.reference = (Layout::Full, 1, State::Frame);
         self.main = Vec::new();
         self.serial = options.serial;
         self.client_count = options.view_amount;
 
         match tag_index(options.tagmask)+1 {
-            1 => self.layout=String::from("vtt"),
-            2 => self.layout=String::from("vtth"),
-            _ => self.layout=options.layout.clone(),
+            1 => {
+                self.layout_frame=String::from("t");
+                self.layout_window=String::from("ff");
+            }
+            2 => {
+                self.layout_frame=String::from("v");
+                self.layout_window=String::from("tt");
+            }
+            _ => {
+                // let char_vec: Vec<char> = options.layout_frame.chars().collect();
+                self.layout_frame=options.layout_frame.clone();
+                self.layout_window=options.layout_window.clone();
+            }
         }
 
         self.windows = Vec::new();
@@ -154,15 +165,16 @@ impl Tag {
         self.init(options);
 
         if options.view_amount > 0 {
-            let layout = options.parse_layout(self);
-            Frame::new(options).new_layout(options, self.reference, &mut self.main);
+            let layout_frame=options.layout_frame(self.layout_frame.clone(), self.layout_window.len() as u32);
+            Frame::new(options).new_layout(options, layout_frame, &mut self.main);
+            let layout_window=options.layout_window(self.layout_window.clone(), layout_frame.1);
 
             let mut i = 0;
             for frame in &self.main {
-                if layout[i].1 > 0 {
+                if layout_window[i].1 > 0 {
                     frame
                         .clone()
-                        .new_layout(options, layout[i], &mut self.windows);
+                        .new_layout(options, layout_window[i], &mut self.windows);
                 }
                 i += 1;
             }
@@ -172,7 +184,6 @@ impl Tag {
         self.clean();
     }
     pub fn clean(&mut self) {
-        self.reference = (Layout::Full, 1, State::Frame);
         self.main = Vec::new();
         self.windows = Vec::new();
     }
@@ -224,8 +235,8 @@ impl Frame {
                     let mut main_area = self.clone();
                     let reste = self.h % client_count;
                     if state == State::Frame {
-                        main_area.h = if options.main_count > 0
-                            && options.main_count < options.view_amount
+                        main_area.h = if options.main_amount > 0
+                            && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
                             is_main = 1;
@@ -238,12 +249,12 @@ impl Frame {
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
-                            && options.main_count < options.view_amount
+                            && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
                             self.h = main_area.h;
                         } else {
-                            self.h = slave_area.h / client_count;
+                            self.h = slave_area.h / ( client_count - is_main );
                         }
                         self.h -= options.view_padding;
                         if i == 0 {
@@ -259,8 +270,8 @@ impl Frame {
                     let mut main_area = self.clone();
                     let reste = self.w % client_count;
                     if state == State::Frame {
-                        main_area.w = if options.main_count > 0
-                            && options.main_count < options.view_amount
+                        main_area.w = if options.main_amount > 0
+                            && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
                             is_main = 1;
@@ -273,7 +284,7 @@ impl Frame {
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
-                            && options.main_count < options.view_amount
+                            && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
                             self.w = main_area.w;
@@ -290,6 +301,7 @@ impl Frame {
                     }
                 }
                 Layout::Full => {
+                    self.y += options.view_padding;
                     for _i in 0..client_count {
                         self.y -= options.view_padding;
                         frames.push(*self);
