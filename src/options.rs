@@ -127,6 +127,10 @@ impl Options {
             match event {
                 zriver_output_status_v1::Event::FocusedTags { tags }=>{
                     options.get::<Options>().unwrap().tagmask = tags;
+                    match &options.get::<Options>().unwrap().zlayout {
+                        Some(zlayout) => zlayout.parameters_changed(),
+                        None => {}
+                    }
                 }
                 zriver_output_status_v1::Event::ViewTags { tags }=>{}
             }
@@ -186,7 +190,7 @@ impl Options {
             }
         });
     }
-    pub fn parse(&self, tag: &mut Tag) -> Vec<(Layout, u32, State)> {
+    pub fn parse_layout(&self, tag: &mut Tag) -> Vec<(Layout, u32, State)> {
         let mut total_views = 1;
         let mut layout = Vec::new();
         let mut orientation = Layout::Full;
@@ -203,7 +207,7 @@ impl Options {
         };
         let mut reste = 0;
 
-        for (i, c) in self.layout.chars().enumerate() {
+        for (i, c) in tag.layout.chars().enumerate() {
             match c {
                 'v' => orientation = Layout::Vertical,
                 'h' => orientation = Layout::Horizontal,
@@ -212,11 +216,12 @@ impl Options {
                 _ => println!("{}: Not a valid character at index {}", c, i),
             }
             if i == 0 {
-                let client_count = if self.view_amount >= (self.layout.len() - 1) as u32 {
-                    if self.view_amount - self.main_count + 1 < (self.layout.len() - 1) as u32 {
-                        (self.layout.len() - 1) as u32 - (self.view_amount - self.main_count)
+                let client_count = if self.view_amount >= (tag.layout.len() - 1) as u32 {
+                    if self.view_amount > self.main_count 
+                    && self.view_amount - self.main_count + 1 < (tag.layout.len() - 1) as u32 {
+                        (tag.layout.len() - 1) as u32 - (self.view_amount - self.main_count)
                     } else {
-                        (self.layout.len() - 1) as u32
+                        (tag.layout.len() - 1) as u32
                     }
                 } else {
                     self.view_amount

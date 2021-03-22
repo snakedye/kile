@@ -74,7 +74,6 @@ impl Context {
     }
     pub fn update(&mut self) {
         if self.options.state {
-            // self.options.debug();
             self.focused=tag_index(self.options.tagmask);
             self.tags[self.focused as usize].update(&mut self.options);
         } else {
@@ -92,6 +91,7 @@ impl Context {
         self.destroy_handle("view_padding");
         self.destroy_handle("outer_padding");
         self.destroy_handle("kile");
+        self.status_manager.as_ref().unwrap().destroy();
         self.layout_manager.as_ref().unwrap().destroy();
         self.options_manager.as_ref().unwrap().destroy();
     }
@@ -106,9 +106,9 @@ impl Context {
 }
 
 pub fn tag_index(mut tagmask: u32) -> u32 {
-    tagmask+=1;
+    // tagmask+=1;
     let mut tag=0;
-    while tagmask/2 > 1 {
+    while tagmask/2 >= 1 {
         tagmask/=2;
         tag+=1;
     };
@@ -135,7 +135,13 @@ impl Tag {
         self.main = Vec::new();
         self.serial = options.serial;
         self.client_count = options.view_amount;
-        self.layout=options.layout.clone();
+
+        match tag_index(options.tagmask)+1 {
+            1 => self.layout=String::from("vtt"),
+            2 => self.layout=String::from("vtth"),
+            _ => self.layout=options.layout.clone(),
+        }
+
         self.windows = Vec::new();
     }
     pub fn restore(&self, options: &Options) {
@@ -144,17 +150,11 @@ impl Tag {
         }
         options.commit();
     }
-    pub fn is_set(&self) -> bool {
-        if self.client_count > 0 {
-            return true;
-        }
-        false
-    }
     pub fn update(&mut self, options: &mut Options) {
         self.init(options);
 
         if options.view_amount > 0 {
-            let layout = options.parse(self);
+            let layout = options.parse_layout(self);
             Frame::new(options).new_layout(options, self.reference, &mut self.main);
 
             let mut i = 0;
@@ -212,11 +212,11 @@ impl Frame {
             match layout {
                 Layout::Tab => {
                     // Add eww titlebar eventually
+                    self.h -= options.view_padding;
                     for _i in 0..client_count {
                         frames.push(self.clone());
                         self.h -= 30;
                         self.y += 30;
-                        self.y -= options.view_padding;
                     }
                 }
                 Layout::Horizontal => {
@@ -225,7 +225,8 @@ impl Frame {
                     let reste = self.h % client_count;
                     if state == State::Frame {
                         main_area.h = if options.main_count > 0
-                            && options.main_index + options.main_count < options.view_amount
+                            && options.main_count < options.view_amount
+                            && options.main_index < options.view_amount
                         {
                             is_main = 1;
                             (self.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
@@ -237,7 +238,8 @@ impl Frame {
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
-                            && options.main_index + options.main_count < options.view_amount
+                            && options.main_count < options.view_amount
+                            && options.main_index < options.view_amount
                         {
                             self.h = main_area.h;
                         } else {
@@ -258,7 +260,8 @@ impl Frame {
                     let reste = self.w % client_count;
                     if state == State::Frame {
                         main_area.w = if options.main_count > 0
-                            && options.main_index + options.main_count < options.view_amount
+                            && options.main_count < options.view_amount
+                            && options.main_index < options.view_amount
                         {
                             is_main = 1;
                             (self.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
@@ -270,7 +273,8 @@ impl Frame {
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
-                            && options.main_index + options.main_count < options.view_amount
+                            && options.main_count < options.view_amount
+                            && options.main_index < options.view_amount
                         {
                             self.w = main_area.w;
                         } else {

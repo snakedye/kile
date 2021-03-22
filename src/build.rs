@@ -1,7 +1,6 @@
 extern crate wayland_scanner;
 
 use wayland_scanner::{Side, generate_code};
-use std::env::var;
 use std::path::Path;
 
 pub fn scanner() {
