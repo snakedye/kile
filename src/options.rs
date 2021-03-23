@@ -1,4 +1,4 @@
-use super::display::{Context, Frame, State, Tag};
+use super::display::{Context, Frame, State};
 use crate::wayland::{
     river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
     river_options_unstable_v1::zriver_option_handle_v1,
@@ -200,14 +200,14 @@ impl Options {
     }
     pub fn layout_frame(&self, layout_frame: String, view_available: u32) -> (Layout, u32, State) {
         let mut orientation = Layout::Full;
-        let total_views = if self.main_amount >= self.view_amount || self.main_amount < 1 {
+        let total_views = if self.main_amount >= self.view_amount {
             println!("reeeeeeeee");
             1
-        } else if self.view_amount > view_available {
+        } else if self.view_amount >= view_available {
             if 1 + self.view_amount - self.main_amount < view_available
                 && self.main_amount > self.view_amount / view_available
             {
-                self.view_amount - self.main_amount
+                1 + self.view_amount - self.main_amount
             } else {
                 view_available
             }

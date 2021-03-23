@@ -175,6 +175,9 @@ impl Tag {
                 }
                 i += 1;
             }
+            for frame in &mut self.windows {
+                frame.apply_padding(options.view_padding);
+            }
         }
         self.restore(options);
         self.client_count = options.view_amount;
@@ -190,10 +193,10 @@ impl Frame {
     pub fn new(options: &Options) -> Frame {
         let mut frame = {
             Frame {
-                x: options.view_padding,
-                y: options.view_padding,
-                w: options.usable_width - options.view_padding,
-                h: options.usable_height - options.view_padding,
+                x: 0,
+                y: 0,
+                w: options.usable_width,
+                h: options.usable_height,
             }
         };
         frame.apply_padding(options.outer_padding);
@@ -219,7 +222,6 @@ impl Frame {
         if client_count > 0 {
             match layout {
                 Layout::Tab => {
-                    self.h -= options.view_padding;
                     for _i in 0..client_count {
                         frames.push(self.clone());
                         self.h -= 30;
@@ -253,13 +255,12 @@ impl Frame {
                         } else {
                             self.h = slave_area.h / (client_count - is_main);
                         }
-                        self.h -= options.view_padding;
                         if i == 0 {
                             self.h += reste;
                         }
 
                         frames.push(*self);
-                        self.y += self.h + options.view_padding;
+                        self.y += self.h;
                     }
                 }
                 Layout::Vertical => {
@@ -278,8 +279,8 @@ impl Frame {
                         };
                         slave_area.w -= main_area.w;
                     }
-                    println!("{:?}", slave_area);
-                    println!("{:?}", main_area);
+                    // println!("{:?}", slave_area);
+                    // println!("{:?}", main_area);
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
@@ -291,17 +292,15 @@ impl Frame {
                         } else {
                             self.w = slave_area.w / (client_count - is_main);
                         }
-                        self.w -= options.view_padding;
                         if i == 0 {
                             self.w += reste;
                         }
 
                         frames.push(*self);
-                        self.x += self.w + options.view_padding;
+                        self.x += self.w;
                     }
                 }
                 Layout::Full => {
-                    self.apply_padding(options.view_padding);
                     for _i in 0..client_count {
                         frames.push(*self);
                     }
