@@ -2,17 +2,13 @@ use super::display::{Context, Frame, State, Tag};
 use crate::wayland::{
     river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
     river_options_unstable_v1::zriver_option_handle_v1,
-    river_status_unstable_v1::{
-        zriver_output_status_v1,
-        zriver_seat_status_v1,
-    },
+    river_status_unstable_v1::{zriver_output_status_v1, zriver_seat_status_v1},
 };
 use wayland_client::DispatchData;
 use wayland_client::Main;
 
 #[derive(Clone, Debug)]
 pub struct Options {
-    pub state: bool,
     pub serial: u32,
     pub tagmask: u32,
     pub zlayout: Option<Main<ZriverLayoutV1>>,
@@ -48,7 +44,6 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
-                state: true,
                 serial: 0,
                 tagmask: 0,
                 zlayout: None,
@@ -77,18 +72,20 @@ impl Options {
                 .expect("Compositor doesn't implement ZriverOptionsManagerV1")
                 .get_river_layout(&new_context.output.unwrap(), new_context.namespace),
         );
-        self.clone().zlayout.unwrap().quick_assign(
-            move |_, event, mut option: DispatchData| match event {
+        self.clone()
+            .zlayout
+            .unwrap()
+            .quick_assign(move |_, event, mut context: DispatchData| match event {
                 zriver_layout_v1::Event::LayoutDemand {
                     view_amount,
                     usable_width,
                     usable_height,
-                    serial
+                    serial,
                 } => {
-                    option.get::<Options>().unwrap().serial = serial;
-                    option.get::<Options>().unwrap().view_amount = view_amount;
-                    option.get::<Options>().unwrap().usable_height = usable_height;
-                    option.get::<Options>().unwrap().usable_width = usable_width;
+                    context.get::<Context>().unwrap().options.serial = serial;
+                    context.get::<Context>().unwrap().options.view_amount = view_amount;
+                    context.get::<Context>().unwrap().options.usable_height = usable_height;
+                    context.get::<Context>().unwrap().options.usable_width = usable_width;
                 }
                 zriver_layout_v1::Event::AdvertiseView {
                     tags,
@@ -97,11 +94,10 @@ impl Options {
                 } => {}
                 zriver_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
-                    option.get::<Options>().unwrap().state = false;
+                    context.get::<Context>().unwrap().running = false;
                 }
                 zriver_layout_v1::Event::AdvertiseDone { serial } => {}
-            },
-        );
+            });
 
         let seat_status = context
             .status_manager
@@ -109,13 +105,15 @@ impl Options {
             .expect("Compositor doesn't implement river_status_unstable_v1")
             .get_river_seat_status(&new_context.seat.clone().unwrap());
 
-        seat_status.quick_assign(move |_, event, mut options| {
+        seat_status.quick_assign(move |_, event, mut context| {
             match event {
-                zriver_seat_status_v1::Event::FocusedView { title }=> {
+                zriver_seat_status_v1::Event::FocusedView { title } => {
                     // options.get::<Options>().unwrap().window_title = title;
                 }
-                zriver_seat_status_v1::Event::FocusedOutput { output }=> { }
-                zriver_seat_status_v1::Event::UnfocusedOutput { output }=> { }
+                zriver_seat_status_v1::Event::FocusedOutput { output } => {
+                    context.get::<Context>().unwrap().output = Some(output);
+                }
+                zriver_seat_status_v1::Event::UnfocusedOutput { output } => {}
             }
         });
 
@@ -125,18 +123,15 @@ impl Options {
             .expect("Compositor doesn't implement river_status_unstable_v1")
             .get_river_output_status(&context.output.clone().unwrap());
 
-        output_status.quick_assign(move |_, event, mut options| {
-            match event {
-                zriver_output_status_v1::Event::FocusedTags { tags }=>{
-                    options.get::<Options>().unwrap().tagmask = tags;
-                    match &options.get::<Options>().unwrap().zlayout {
-                        Some(zlayout) => zlayout.parameters_changed(),
-                        // Some(zlayout) => {},
-                        None => {}
-                    }
+        output_status.quick_assign(move |_, event, mut context| match event {
+            zriver_output_status_v1::Event::FocusedTags { tags } => {
+                context.get::<Context>().unwrap().options.tagmask = tags;
+                match &context.get::<Context>().unwrap().options.zlayout {
+                    Some(zlayout) => zlayout.parameters_changed(),
+                    None => {}
                 }
-                zriver_output_status_v1::Event::ViewTags { tags }=>{}
             }
+            zriver_output_status_v1::Event::ViewTags { tags } => {}
         });
 
         self.get_option("main_factor", &context);
@@ -153,7 +148,7 @@ impl Options {
             .clone()
             .expect("Compositor doesn't implement river_options_unstable_v1")
             .get_option_handle(name.to_owned(), Some(&context.output.as_ref().unwrap()));
-        option.quick_assign(move |_, event, mut options| {
+        option.quick_assign(move |_, event, mut context| {
             let mut option_value: Value = Value { uint: 0 };
             let mut args: String = String::new();
             match event {
@@ -171,42 +166,50 @@ impl Options {
                 }
                 zriver_option_handle_v1::Event::Unset => {}
             }
-            match &options.get::<Options>().unwrap().zlayout {
+            match &context.get::<Context>().unwrap().options.zlayout {
                 Some(zlayout) => zlayout.parameters_changed(),
                 None => {}
             }
             unsafe {
                 match name {
-                    "main_index" => options.get::<Options>().unwrap().main_index = option_value.uint,
-                    "main_amount" => options.get::<Options>().unwrap().main_amount = option_value.uint,
+                    "main_index" => {
+                        context.get::<Context>().unwrap().options.main_index = option_value.uint
+                    }
+                    "main_amount" => {
+                        context.get::<Context>().unwrap().options.main_amount = option_value.uint
+                    }
                     "main_factor" => {
-                        options.get::<Options>().unwrap().main_factor = option_value.double
+                        context.get::<Context>().unwrap().options.main_factor = option_value.double
                     }
                     "view_padding" => {
-                        options.get::<Options>().unwrap().view_padding = option_value.uint
+                        context.get::<Context>().unwrap().options.view_padding = option_value.uint
                     }
                     "outer_padding" => {
-                        options.get::<Options>().unwrap().outer_padding = option_value.uint
+                        context.get::<Context>().unwrap().options.outer_padding = option_value.uint
                     }
                     "kile_frame" => {
-                        options.get::<Options>().unwrap().layout_frame = args;
+                        context.get::<Context>().unwrap().options.layout_frame = args;
                     }
                     "kile_window" => {
-                        options.get::<Options>().unwrap().layout_window = args;
+                        context.get::<Context>().unwrap().options.layout_window = args;
                     }
                     _ => {}
                 }
             }
         });
     }
-    pub fn layout_frame(&self, layout_frame: String, count: u32)->(Layout, u32, State) {
+    pub fn layout_frame(&self, layout_frame: String, view_available: u32) -> (Layout, u32, State) {
         let mut orientation = Layout::Full;
-        let total_views = if self.view_amount >= count as u32 {
-            if self.view_amount > self.main_amount 
-            && self.view_amount - self.main_amount + 1 < count - 1 {
-                count as u32 - (self.view_amount - self.main_amount)
+        let total_views = if self.main_amount >= self.view_amount || self.main_amount < 1 {
+            println!("reeeeeeeee");
+            1
+        } else if self.view_amount > view_available {
+            if 1 + self.view_amount - self.main_amount < view_available
+                && self.main_amount > self.view_amount / view_available
+            {
+                self.view_amount - self.main_amount
             } else {
-                count as u32
+                view_available
             }
         } else {
             self.view_amount
@@ -225,24 +228,25 @@ impl Options {
     pub fn layout_window(&self, string: String, total_views: u32) -> Vec<(Layout, u32, State)> {
         let mut layout = Vec::new();
         let mut orientation = Layout::Full;
-        let main_view =
-            if self.main_index + self.main_amount <= self.view_amount 
-                && self.main_index < total_views
-                && total_views > 1
-                && self.main_amount > 0 {
-                1
-            } else {
-                0
-            };
-        let main_amount = if self.main_index < total_views && self.main_index + self.main_amount > self.view_amount {
+        let main_view = if self.main_index + self.main_amount <= self.view_amount
+            && self.main_index < total_views
+            && total_views > 1
+            && self.main_amount > 0
+        {
+            1
+        } else {
+            0
+        };
+        let main_amount = if self.main_index < total_views
+            && self.main_index + self.main_amount > self.view_amount
+        {
             self.view_amount - self.main_index
         } else {
             self.main_amount
         };
-        let mut reste = (self.view_amount - main_view*main_amount) % (total_views - main_view);
-        println!("{}", main_view);
+        let mut reste = (self.view_amount - main_view * main_amount) % (total_views - main_view);
         let client_count = if total_views > 1 {
-            (self.view_amount - main_view*main_amount) / (total_views - main_view)
+            (self.view_amount - main_view * main_amount) / (total_views - main_view)
         } else {
             self.view_amount
         };
@@ -255,19 +259,24 @@ impl Options {
                 'f' => orientation = Layout::Full,
                 _ => println!("{}: Not a valid character at index {}", c, i),
             }
-            if i == self.main_index as usize && total_views > 1 && main_view==1 {
+            if i == self.main_index as usize && total_views > 1 && main_view == 1 {
                 layout.push((orientation, main_amount, State::Window));
             } else {
-                layout.push((orientation, if reste > 0 {
-                    reste -= 1;
-                    client_count + 1
-                } else { client_count }, State::Window));
+                layout.push((
+                    orientation,
+                    if reste > 0 {
+                        reste -= 1;
+                        client_count + 1
+                    } else {
+                        client_count
+                    },
+                    State::Window,
+                ));
             }
             if i > total_views as usize {
                 break;
             }
         }
-
 
         return layout;
     }

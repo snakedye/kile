@@ -9,13 +9,10 @@ use crate::wayland::{
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
 use display::Context;
-use wayland_client::protocol::{
-    wl_output::WlOutput,
-    wl_seat::WlSeat,
-};
+use std::env;
+use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
 use wayland_client::Main;
 use wayland_client::{Display, GlobalManager};
-use std::env;
 
 fn main() {
     let display = Display::connect_to_env().unwrap();
@@ -27,7 +24,9 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let namespace = if args.len() > 1 {
         args[1].clone()
-    } else { String::from("kile") };
+    } else {
+        String::from("kile")
+    };
 
     let mut context = Context::new(namespace);
 
@@ -83,7 +82,7 @@ fn main() {
 
     while context.running {
         event_queue
-            .dispatch(&mut context.options, |event, object, _| {
+            .dispatch(&mut context, |event, object, _| {
                 panic!(
                     "[callop] Encountered an orphan event: {}@{}: {}",
                     event.interface,

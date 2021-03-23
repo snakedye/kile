@@ -19,7 +19,7 @@ pub mod wayland {
     pub mod client {
         // These imports are used by the generated code
         pub(crate) use wayland_client::protocol::wl_output;
-        pub(crate) use wayland_client::{sys, protocol};
+        pub(crate) use wayland_client::{protocol, sys};
         pub(crate) use wayland_client::{
             AnonymousObject, Attached, Display, GlobalManager, Main, Proxy, ProxyMap,
         };
@@ -29,7 +29,7 @@ pub mod wayland {
         pub(crate) use wayland_commons::{Interface, MessageGroup};
         // If you protocol interacts with objects from other protocols, you'll need to import
         // their modules, like so:
-        pub(crate) use wayland_client::protocol::{wl_region, wl_surface, wl_seat};
+        pub(crate) use wayland_client::protocol::{wl_region, wl_seat, wl_surface};
         include!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/src/wayland/river_options_unstable_v1.rs"

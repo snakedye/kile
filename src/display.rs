@@ -4,10 +4,7 @@ use crate::wayland::{
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
-use wayland_client::protocol::{
-    wl_output::WlOutput,
-    wl_seat::WlSeat,
-};
+use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
 use wayland_client::Main;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -73,13 +70,11 @@ impl Context {
         self.update_focus(tag_index(self.options.tagmask));
     }
     pub fn update(&mut self) {
-        if self.options.state {
-            self.focused=tag_index(self.options.tagmask);
-            self.tags[self.focused as usize].update(&mut self.options);
-        } else {
+        if !self.running {
             self.destroy();
-            self.running=false;
         }
+        self.focused = tag_index(self.options.tagmask);
+        self.tags[self.focused as usize].update(&mut self.options);
     }
     pub fn update_focus(&mut self, tagmask: u32) {
         self.focused = tagmask;
@@ -107,14 +102,16 @@ impl Context {
 }
 
 pub fn tag_index(mut tagmask: u32) -> u32 {
-    let mut tag=0;
-    while tagmask/2 >= 1 {
-        tagmask/=2;
-        tag+=1;
-    };
+    let mut tag = 0;
+    while tagmask / 2 >= 1 {
+        tagmask /= 2;
+        tag += 1;
+    }
     if tag > 32 {
         33
-    } else { tag }
+    } else {
+        tag
+    }
 }
 
 impl Tag {
@@ -135,18 +132,18 @@ impl Tag {
         self.serial = options.serial;
         self.client_count = options.view_amount;
 
-        match tag_index(options.tagmask)+1 {
+        match tag_index(options.tagmask) + 1 {
             4 => {
-                self.layout_frame=String::from("v");
-                self.layout_window=String::from("hhh");
+                self.layout_frame = String::from("v");
+                self.layout_window = String::from("hhh");
             }
             2 => {
-                self.layout_frame=String::from("v");
-                self.layout_window=String::from("tt");
+                self.layout_frame = String::from("v");
+                self.layout_window = String::from("ht");
             }
             _ => {
-                self.layout_frame=options.layout_frame.clone();
-                self.layout_window=options.layout_window.clone();
+                self.layout_frame = options.layout_frame.clone();
+                self.layout_window = options.layout_window.clone();
             }
         }
 
@@ -162,11 +159,12 @@ impl Tag {
         self.init(options);
 
         if options.view_amount > 0 {
-            let layout_frame=options.layout_frame(self.layout_frame.clone(), self.layout_window.len() as u32);
-            Frame::new(options).new_layout(options, layout_frame, &mut self.main);
-            let layout_window=options.layout_window(self.layout_window.clone(), layout_frame.1);
-
+            let layout_frame =
+                options.layout_frame(self.layout_frame.clone(), self.layout_window.len() as u32);
             println!("{:?}", layout_frame);
+            Frame::new(options).new_layout(options, layout_frame, &mut self.main);
+            let layout_window = options.layout_window(self.layout_window.clone(), layout_frame.1);
+
             println!("{:?}", layout_window);
             let mut i = 0;
             for frame in &self.main {
@@ -247,12 +245,13 @@ impl Frame {
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
+                            && options.main_amount > 0
                             && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
                             self.h = main_area.h;
                         } else {
-                            self.h = slave_area.h / ( client_count - is_main );
+                            self.h = slave_area.h / (client_count - is_main);
                         }
                         self.h -= options.view_padding;
                         if i == 0 {
@@ -279,9 +278,12 @@ impl Frame {
                         };
                         slave_area.w -= main_area.w;
                     }
+                    println!("{:?}", slave_area);
+                    println!("{:?}", main_area);
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index
+                            && options.main_amount > 0
                             && options.main_amount < options.view_amount
                             && options.main_index < options.view_amount
                         {
