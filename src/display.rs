@@ -23,7 +23,8 @@ pub struct Context {
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
     pub output: Option<WlOutput>,
     pub seat: Option<WlSeat>,
-    pub tags: Vec<Tag>, // It's the amount of possible tags, it might be too much to set all possible tags
+    // pub tags: Vec<Tag>, // It's the amount of possible tags, it might be too much to set all possible tags
+    pub tags: [Option<Tag>; 32], // It's the amount of possible tags, it might be too much to set all possible tags
     pub focused: u32,
 }
 
@@ -58,15 +59,12 @@ impl Context {
                 output: None,
                 seat: None,
                 focused: 0,
-                tags: Vec::with_capacity(33),
+                tags: Default::default(),
             }
         };
     }
     pub fn init(&mut self) {
         self.options.init(self.clone());
-        for _i in 0..33 {
-            self.tags.push(Tag::new());
-        }
         self.update_focus(tag_index(self.options.tagmask));
     }
     pub fn update(&mut self) {
@@ -74,7 +72,14 @@ impl Context {
             self.destroy();
         }
         self.focused = tag_index(self.options.tagmask);
-        self.tags[self.focused as usize].update(&mut self.options);
+        match self.tags[self.focused as usize].as_mut() {
+            Some(tag) => tag.update(&mut self.options),
+            None => {
+                let mut tag = Tag::new();
+                tag.update(&mut self.options);
+                self.tags[self.focused as usize] = Some(tag);
+            }
+        };
     }
     pub fn update_focus(&mut self, tagmask: u32) {
         self.focused = tagmask;
@@ -87,6 +92,7 @@ impl Context {
         self.destroy_handle("outer_padding");
         self.destroy_handle("kile_window");
         self.destroy_handle("kile_frame");
+        self.destroy_handle("layout_per_tag");
         self.status_manager.as_ref().unwrap().destroy();
         self.layout_manager.as_ref().unwrap().destroy();
         self.options_manager.as_ref().unwrap().destroy();
@@ -132,16 +138,12 @@ impl Tag {
         self.serial = options.serial;
         self.client_count = options.view_amount;
 
-        match tag_index(options.tagmask) + 1 {
-            4 => {
-                self.layout_frame = String::from("v");
-                self.layout_window = String::from("hhh");
+        match &options.layout_per_tag[tag_index(options.tagmask) as usize] {
+            Some(tag) => {
+                self.layout_frame = tag.layout_frame.clone();
+                self.layout_window = tag.layout_window.clone();
             }
-            2 => {
-                self.layout_frame = String::from("v");
-                self.layout_window = String::from("ht");
-            }
-            _ => {
+            None => {
                 self.layout_frame = options.layout_frame.clone();
                 self.layout_window = options.layout_window.clone();
             }
@@ -149,8 +151,9 @@ impl Tag {
 
         self.windows = Vec::new();
     }
-    pub fn restore(&self, options: &Options) {
-        for frame in &self.windows {
+    pub fn restore(&mut self, options: &Options) {
+        for frame in &mut self.windows {
+            frame.apply_padding(options.view_padding);
             options.push_dimensions(&frame);
         }
         options.commit();
@@ -161,11 +164,9 @@ impl Tag {
         if options.view_amount > 0 {
             let layout_frame =
                 options.layout_frame(self.layout_frame.clone(), self.layout_window.len() as u32);
-            println!("{:?}", layout_frame);
             Frame::new(options).new_layout(options, layout_frame, &mut self.main);
             let layout_window = options.layout_window(self.layout_window.clone(), layout_frame.1);
 
-            println!("{:?}", layout_window);
             let mut i = 0;
             for frame in &self.main {
                 if layout_window[i].1 > 0 {
@@ -174,9 +175,6 @@ impl Tag {
                         .new_layout(options, layout_window[i], &mut self.windows);
                 }
                 i += 1;
-            }
-            for frame in &mut self.windows {
-                frame.apply_padding(options.view_padding);
             }
         }
         self.restore(options);
@@ -279,8 +277,6 @@ impl Frame {
                         };
                         slave_area.w -= main_area.w;
                     }
-                    // println!("{:?}", slave_area);
-                    // println!("{:?}", main_area);
                     for i in 0..client_count {
                         if state == State::Frame
                             && i == options.main_index

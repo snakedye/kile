@@ -23,6 +23,14 @@ pub struct Options {
     pub main_amount: u32,
     pub layout_window: String,
     pub layout_frame: String,
+    pub layout_per_tag: [Option<TagRule>; 32],
+}
+
+#[derive(Clone, Debug)]
+pub struct TagRule {
+    pub tag: u32,
+    pub layout_frame: String,
+    pub layout_window: String,
 }
 
 #[derive(Copy, Clone)]
@@ -58,10 +66,10 @@ impl Options {
                 main_amount: 0,
                 layout_window: String::new(),
                 layout_frame: String::new(),
+                layout_per_tag: Default::default(),
             }
         };
     }
-    // Listen to the options and layout and returns an Options when the context is updated
     pub fn init(&mut self, context: Context) {
         let new_context = context.clone();
 
@@ -99,23 +107,23 @@ impl Options {
                 zriver_layout_v1::Event::AdvertiseDone { serial } => {}
             });
 
-        let seat_status = context
-            .status_manager
-            .clone()
-            .expect("Compositor doesn't implement river_status_unstable_v1")
-            .get_river_seat_status(&new_context.seat.clone().unwrap());
+        // let seat_status = context
+        //     .status_manager
+        //     .clone()
+        //     .expect("Compositor doesn't implement river_status_unstable_v1")
+        //     .get_river_seat_status(&new_context.seat.clone().unwrap());
 
-        seat_status.quick_assign(move |_, event, mut context| {
-            match event {
-                zriver_seat_status_v1::Event::FocusedView { title } => {
-                    // options.get::<Options>().unwrap().window_title = title;
-                }
-                zriver_seat_status_v1::Event::FocusedOutput { output } => {
-                    context.get::<Context>().unwrap().output = Some(output);
-                }
-                zriver_seat_status_v1::Event::UnfocusedOutput { output } => {}
-            }
-        });
+        // seat_status.quick_assign(move |_, event, mut context| {
+        //     match event {
+        //         zriver_seat_status_v1::Event::FocusedView { title } => {
+        //             context.get::<Context>().unwrap().options.window_title = title;
+        //         }
+        //         zriver_seat_status_v1::Event::FocusedOutput { output } => {
+        //             context.get::<Context>().unwrap().output = Some(output);
+        //         }
+        //         zriver_seat_status_v1::Event::UnfocusedOutput { output } => {}
+        //     }
+        // });
 
         let output_status = context
             .status_manager
@@ -141,6 +149,7 @@ impl Options {
         self.get_option("outer_padding", &context);
         self.get_option("kile_frame", &context);
         self.get_option("kile_window", &context);
+        self.get_option("layout_per_tag", &context);
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
         let option = context
@@ -193,6 +202,13 @@ impl Options {
                     "kile_window" => {
                         context.get::<Context>().unwrap().options.layout_window = args;
                     }
+                    "layout_per_tag" => {
+                        context
+                            .get::<Context>()
+                            .unwrap()
+                            .options
+                            .parse_layout_per_tag(args);
+                    }
                     _ => {}
                 }
             }
@@ -214,20 +230,13 @@ impl Options {
         } else {
             self.view_amount
         };
-        for (_i, c) in layout_frame.chars().enumerate() {
-            match c {
-                'v' => orientation = Layout::Vertical,
-                'h' => orientation = Layout::Horizontal,
-                't' => orientation = Layout::Tab,
-                'f' => orientation = Layout::Full,
-                _ => println!("{}: Not a valid character", c),
-            }
+        for c in layout_frame.chars() {
+            orientation = Options::layout_parse(&c);
         }
         (orientation, total_views, State::Frame)
     }
     pub fn layout_window(&self, string: String, total_views: u32) -> Vec<(Layout, u32, State)> {
         let mut layout = Vec::new();
-        let mut orientation = Layout::Full;
         let main_view = if self.main_index + self.main_amount <= self.view_amount
             && self.main_index < total_views
             && total_views > 1
@@ -252,13 +261,7 @@ impl Options {
         };
 
         for (i, c) in string.chars().enumerate() {
-            match c {
-                'v' => orientation = Layout::Vertical,
-                'h' => orientation = Layout::Horizontal,
-                't' => orientation = Layout::Tab,
-                'f' => orientation = Layout::Full,
-                _ => println!("{}: Not a valid character at index {}", c, i),
-            }
+            let orientation = Options::layout_parse(&c);
             if i == self.main_index as usize && total_views > 1 && main_view == 1 {
                 layout.push((orientation, main_amount, State::Window));
             } else {
@@ -279,6 +282,71 @@ impl Options {
         }
 
         return layout;
+    }
+    fn layout_parse(c: &char) -> Layout {
+        match c {
+            'v' => Layout::Vertical,
+            'h' => Layout::Horizontal,
+            't' => Layout::Tab,
+            'f' => Layout::Full,
+            _ => {
+                println!("{}: Not a valid character at index", c);
+                Layout::Full
+            }
+        }
+    }
+    pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
+        let mut layout_per_tag = layout_per_tag.split_whitespace();
+        self.layout_per_tag = Default::default();
+        loop {
+            match layout_per_tag.next() {
+                Some(rule) => {
+                    let mut rule = rule.split(':');
+                    let tag: u32 = match rule.next() {
+                        Some(tag) => match tag.parse::<u32>() {
+                            Ok(int) => {
+                                if int > 0 {
+                                    int
+                                } else {
+                                    println!("Invalid tag");
+                                    break;
+                                }
+                            }
+                            Err(_t) => {
+                                println!("Invalid tag");
+                                break;
+                            }
+                        },
+                        None => {
+                            println!("Invalid format");
+                            break;
+                        }
+                    };
+                    let layout_frame = match rule.next() {
+                        Some(layout) => String::from(layout),
+                        None => {
+                            println!("Invalid layout");
+                            break;
+                        }
+                    };
+                    let layout_window = match rule.next() {
+                        Some(layout) => String::from(layout),
+                        None => {
+                            println!("Invalid layout");
+                            break;
+                        }
+                    };
+                    self.layout_per_tag[tag as usize - 1] = Some({
+                        TagRule {
+                            tag: tag,
+                            layout_frame: layout_frame,
+                            layout_window: layout_window,
+                        }
+                    });
+                }
+                None => break,
+            }
+        }
     }
     pub fn push_dimensions(&self, frame: &Frame) {
         self.zlayout.clone().unwrap().push_view_dimensions(
