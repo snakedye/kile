@@ -13,7 +13,6 @@ pub struct Options {
     pub tagmask: u32,
     pub zlayout: Option<Main<ZriverLayoutV1>>,
     pub view_amount: u32,
-    pub window_title: String,
     pub usable_width: u32,
     pub usable_height: u32,
     pub view_padding: u32,
@@ -21,8 +20,8 @@ pub struct Options {
     pub main_index: u32,
     pub main_factor: f64,
     pub main_amount: u32,
-    pub layout_window: String,
     pub layout_frame: String,
+    pub layout_window: String,
     pub layout_per_tag: [Option<TagRule>; 32],
 }
 
@@ -37,7 +36,6 @@ pub struct TagRule {
 pub union Value {
     double: f64,
     uint: u32,
-    int: i32,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -55,7 +53,6 @@ impl Options {
                 serial: 0,
                 tagmask: 0,
                 zlayout: None,
-                window_title: String::new(),
                 view_amount: 0,
                 view_padding: 0,
                 outer_padding: 0,
@@ -71,17 +68,33 @@ impl Options {
         };
     }
     pub fn init(&mut self, context: Context) {
-        let new_context = context.clone();
+
+        let output_status = context
+            .status_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_status_unstable_v1")
+            .get_river_output_status(&context.output.clone().unwrap());
+
+        output_status.quick_assign(move |_, event, mut context| match event {
+            zriver_output_status_v1::Event::FocusedTags { tags } => {
+                context.get::<Context>().unwrap().options.tagmask = tag_index(tags);
+                match &context.get::<Context>().unwrap().options.zlayout {
+                    Some(zlayout) => zlayout.parameters_changed(),
+                    None => {}
+                }
+            }
+            zriver_output_status_v1::Event::ViewTags { tags } => {}
+        });
 
         self.zlayout = Some(
-            new_context
+            context
+                .clone()
                 .layout_manager
-                // .unwrap()
-                .expect("Compositor doesn't implement ZriverOptionsManagerV1")
-                .get_river_layout(&new_context.output.unwrap(), new_context.namespace),
+                .expect("Compositor doesn't implement river_layout_unstable_v1")
+                .get_river_layout(context.output.as_ref().unwrap(), context.namespace.clone()),
         );
-        self.clone()
-            .zlayout
+        self .zlayout
+            .as_ref()
             .unwrap()
             .quick_assign(move |_, event, mut context: DispatchData| match event {
                 zriver_layout_v1::Event::LayoutDemand {
@@ -107,41 +120,6 @@ impl Options {
                 zriver_layout_v1::Event::AdvertiseDone { serial } => {}
             });
 
-        // let seat_status = context
-        //     .status_manager
-        //     .clone()
-        //     .expect("Compositor doesn't implement river_status_unstable_v1")
-        //     .get_river_seat_status(&new_context.seat.clone().unwrap());
-
-        // seat_status.quick_assign(move |_, event, mut context| {
-        //     match event {
-        //         zriver_seat_status_v1::Event::FocusedView { title } => {
-        //             context.get::<Context>().unwrap().options.window_title = title;
-        //         }
-        //         zriver_seat_status_v1::Event::FocusedOutput { output } => {
-        //             context.get::<Context>().unwrap().output = Some(output);
-        //         }
-        //         zriver_seat_status_v1::Event::UnfocusedOutput { output } => {}
-        //     }
-        // });
-
-        let output_status = context
-            .status_manager
-            .clone()
-            .expect("Compositor doesn't implement river_status_unstable_v1")
-            .get_river_output_status(&context.output.clone().unwrap());
-
-        output_status.quick_assign(move |_, event, mut context| match event {
-            zriver_output_status_v1::Event::FocusedTags { tags } => {
-                context.get::<Context>().unwrap().options.tagmask = tags;
-                match &context.get::<Context>().unwrap().options.zlayout {
-                    Some(zlayout) => zlayout.parameters_changed(),
-                    None => {}
-                }
-            }
-            zriver_output_status_v1::Event::ViewTags { tags } => {}
-        });
-
         self.get_option("main_factor", &context);
         self.get_option("main_amount", &context);
         self.get_option("main_index", &context);
@@ -154,9 +132,9 @@ impl Options {
     fn get_option(&mut self, name: &'static str, context: &Context) {
         let option = context
             .options_manager
-            .clone()
+            .as_ref()
             .expect("Compositor doesn't implement river_options_unstable_v1")
-            .get_option_handle(name.to_owned(), Some(&context.output.as_ref().unwrap()));
+            .get_option_handle(name.to_owned(), Some(context.output.as_ref().unwrap()));
         option.quick_assign(move |_, event, mut context| {
             let mut option_value: Value = Value { uint: 0 };
             let mut args: String = String::new();
@@ -217,7 +195,6 @@ impl Options {
     pub fn layout_frame(&self, layout_frame: String, view_available: u32) -> (Layout, u32, State) {
         let mut orientation = Layout::Full;
         let total_views = if self.main_amount >= self.view_amount {
-            println!("reeeeeeeee");
             1
         } else if self.view_amount >= view_available {
             if 1 + self.view_amount - self.main_amount < view_available
@@ -373,10 +350,18 @@ impl Options {
         println!("    kile_frame : {}", self.layout_frame);
         println!("\n  ZriverOutputStatusV1");
         println!("    tagmask : {}", self.tagmask);
-        println!("\n  ZriverSeatStatusV1");
-        println!("    window_title : {}\n", self.window_title);
     }
     pub fn commit(&self) {
         self.zlayout.clone().unwrap().commit(self.serial);
     }
 }
+
+pub fn tag_index(mut tagmask: u32) -> u32 {
+    let mut tag = 0;
+    while tagmask / 2 >= 1 {
+        tagmask /= 2;
+        tag += 1;
+    }
+    tag
+}
+

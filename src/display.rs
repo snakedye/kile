@@ -15,7 +15,7 @@ pub enum State {
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    pub namespace: String, // Namespace is either manual or dynamic
+    pub namespace: String,
     pub running: bool,
     pub options: Options,
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
@@ -23,7 +23,6 @@ pub struct Context {
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
     pub output: Option<WlOutput>,
     pub seat: Option<WlSeat>,
-    // pub tags: Vec<Tag>, // It's the amount of possible tags, it might be too much to set all possible tags
     pub tags: [Option<Tag>; 32], // It's the amount of possible tags, it might be too much to set all possible tags
     pub focused: u32,
 }
@@ -32,7 +31,6 @@ pub struct Context {
 pub struct Tag {
     pub serial: u32,
     pub main: Vec<Frame>,
-    pub client_count: u32,
     pub windows: Vec<Frame>,
     pub layout_frame: String,
     pub layout_window: String,
@@ -50,28 +48,28 @@ impl Context {
     pub fn new(namespace: String) -> Context {
         return {
             Context {
-                layout_manager: None,
-                options: Options::new(),
                 running: false,
+                focused: 0,
+                namespace: namespace,
+                options: Options::new(),
+                layout_manager: None,
                 options_manager: None,
                 status_manager: None,
-                namespace: namespace,
                 output: None,
                 seat: None,
-                focused: 0,
                 tags: Default::default(),
             }
         };
     }
     pub fn init(&mut self) {
         self.options.init(self.clone());
-        self.update_focus(tag_index(self.options.tagmask));
+        self.update_focus(self.options.tagmask);
     }
     pub fn update(&mut self) {
         if !self.running {
             self.destroy();
         }
-        self.focused = tag_index(self.options.tagmask);
+        self.focused = self.options.tagmask;
         match self.tags[self.focused as usize].as_mut() {
             Some(tag) => tag.update(&mut self.options),
             None => {
@@ -107,49 +105,17 @@ impl Context {
     }
 }
 
-pub fn tag_index(mut tagmask: u32) -> u32 {
-    let mut tag = 0;
-    while tagmask / 2 >= 1 {
-        tagmask /= 2;
-        tag += 1;
-    }
-    if tag > 32 {
-        33
-    } else {
-        tag
-    }
-}
-
 impl Tag {
     pub fn new() -> Tag {
         return {
             Tag {
-                main: Vec::new(),
                 serial: 0,
-                client_count: 0,
+                main: Vec::new(),
                 windows: Vec::new(),
                 layout_window: String::new(),
                 layout_frame: String::new(),
             }
         };
-    }
-    pub fn init(&mut self, options: &mut Options) {
-        self.main = Vec::new();
-        self.serial = options.serial;
-        self.client_count = options.view_amount;
-
-        match &options.layout_per_tag[tag_index(options.tagmask) as usize] {
-            Some(tag) => {
-                self.layout_frame = tag.layout_frame.clone();
-                self.layout_window = tag.layout_window.clone();
-            }
-            None => {
-                self.layout_frame = options.layout_frame.clone();
-                self.layout_window = options.layout_window.clone();
-            }
-        }
-
-        self.windows = Vec::new();
     }
     pub fn restore(&mut self, options: &Options) {
         for frame in &mut self.windows {
@@ -159,7 +125,18 @@ impl Tag {
         options.commit();
     }
     pub fn update(&mut self, options: &mut Options) {
-        self.init(options);
+        self.serial = options.serial;
+
+        match &options.layout_per_tag[options.tagmask as usize] {
+            Some(tag) => {
+                self.layout_frame = tag.layout_frame.clone();
+                self.layout_window = tag.layout_window.clone();
+            }
+            None => {
+                self.layout_frame = options.layout_frame.clone();
+                self.layout_window = options.layout_window.clone();
+            }
+        }
 
         if options.view_amount > 0 {
             let layout_frame =
@@ -178,7 +155,6 @@ impl Tag {
             }
         }
         self.restore(options);
-        self.client_count = options.view_amount;
         self.clean();
     }
     pub fn clean(&mut self) {
