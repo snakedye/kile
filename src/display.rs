@@ -29,11 +29,8 @@ pub struct Context {
 
 #[derive(Clone, Debug)]
 pub struct Tag {
-    pub serial: u32,
-    pub main: Vec<Frame>,
+    pub output: Vec<Frame>,
     pub windows: Vec<Frame>,
-    pub layout_frame: String,
-    pub layout_window: String,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -62,7 +59,7 @@ impl Context {
         };
     }
     pub fn init(&mut self) {
-        self.options.init(self.clone());
+        self.options.update(self.clone());
         self.update_focus(self.options.tagmask);
     }
     pub fn update(&mut self) {
@@ -109,62 +106,72 @@ impl Tag {
     pub fn new() -> Tag {
         return {
             Tag {
-                serial: 0,
-                main: Vec::new(),
+                output: Vec::new(),
                 windows: Vec::new(),
-                layout_window: String::new(),
-                layout_frame: String::new(),
             }
         };
     }
     pub fn restore(&mut self, options: &Options) {
         for frame in &mut self.windows {
-            frame.apply_padding(options.view_padding);
+            frame.apply_padding(options.view_padding/2);
             options.push_dimensions(&frame);
         }
         options.commit();
     }
     pub fn update(&mut self, options: &mut Options) {
-        self.serial = options.serial;
 
-        match &options.layout_per_tag[options.tagmask as usize] {
-            Some(tag) => {
-                self.layout_frame = tag.layout_frame.clone();
-                self.layout_window = tag.layout_window.clone();
-            }
+        let layout=match &options.layout_per_tag[options.tagmask as usize] {
+            Some(layout) => { layout.clone() }
             None => {
-                self.layout_frame = options.layout_frame.clone();
-                self.layout_window = options.layout_window.clone();
+                options.default_layout.clone()
             }
-        }
+        };
 
         if options.view_amount > 0 {
-            let layout_frame =
-                options.layout_frame(self.layout_frame.clone(), self.layout_window.len() as u32);
-            Frame::new(options).new_layout(options, layout_frame, &mut self.main);
-            let layout_window = options.layout_window(self.layout_window.clone(), layout_frame.1);
 
-            let mut i = 0;
-            for frame in &self.main {
-                if layout_window[i].1 > 0 {
-                    frame
-                        .clone()
-                        .new_layout(options, layout_window[i], &mut self.windows);
-                }
-                i += 1;
+            let total_views=options.total_views(layout.windows.len() as u32);
+            Frame::from(options).new_layout(options, layout.frame, total_views, &mut self.output);
+
+            let main_amount = options.main_amount(total_views);
+            let main_view=if main_amount>0{1} else {0};
+
+            let mut reste = (options.view_amount - main_view * main_amount) % (total_views - main_view);
+            let slave_count = if total_views > 1 {
+                (options.view_amount - main_view * main_amount) / (total_views - main_view)
+            } else {
+                options.view_amount
+            };
+
+            let mut i = 0; for frame in &self.output {
+                let client_count=if i==options.main_index && main_amount > 0 {
+                    main_amount
+                } else {
+                    if reste > 0 {
+                        reste-=1;
+                        slave_count+1
+                    } else { slave_count }
+                };
+                frame.clone()
+                    .new_layout(
+                    options,
+                    layout.windows[i as usize],
+                    client_count,
+                    &mut self.windows);
+                i+=1;
             }
         }
+
         self.restore(options);
         self.clean();
     }
     pub fn clean(&mut self) {
-        self.main = Vec::new();
+        self.output = Vec::new();
         self.windows = Vec::new();
     }
 }
 
 impl Frame {
-    pub fn new(options: &Options) -> Frame {
+    pub fn from(options: &Options) -> Frame {
         let mut frame = {
             Frame {
                 x: 0,
@@ -187,17 +194,18 @@ impl Frame {
     pub fn new_layout(
         &mut self,
         options: &Options,
-        layout: (Layout, u32, State),
-        frames: &mut Vec<Frame>,
+        layout: (Layout, State),
+        client_count: u32,
+        list: &mut Vec<Frame>,
     ) {
-        let (layout, client_count, state) = layout;
+        let (layout, state) = layout;
         let mut is_main = 0;
 
         if client_count > 0 {
             match layout {
                 Layout::Tab => {
                     for _i in 0..client_count {
-                        frames.push(self.clone());
+                        list.push(self.clone());
                         self.h -= 30;
                         self.y += 30;
                     }
@@ -233,7 +241,7 @@ impl Frame {
                             self.h += reste;
                         }
 
-                        frames.push(*self);
+                        list.push(*self);
                         self.y += self.h;
                     }
                 }
@@ -268,13 +276,13 @@ impl Frame {
                             self.w += reste;
                         }
 
-                        frames.push(*self);
+                        list.push(*self);
                         self.x += self.w;
                     }
                 }
                 Layout::Full => {
                     for _i in 0..client_count {
-                        frames.push(*self);
+                        list.push(*self);
                     }
                 }
             }

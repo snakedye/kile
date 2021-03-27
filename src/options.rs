@@ -2,7 +2,7 @@ use super::display::{Context, Frame, State};
 use crate::wayland::{
     river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
     river_options_unstable_v1::zriver_option_handle_v1,
-    river_status_unstable_v1::{zriver_output_status_v1, zriver_seat_status_v1},
+    river_status_unstable_v1::{zriver_output_status_v1},
 };
 use wayland_client::DispatchData;
 use wayland_client::Main;
@@ -20,16 +20,14 @@ pub struct Options {
     pub main_index: u32,
     pub main_factor: f64,
     pub main_amount: u32,
-    pub layout_frame: String,
-    pub layout_window: String,
+    pub default_layout: TagRule,
     pub layout_per_tag: [Option<TagRule>; 32],
 }
 
 #[derive(Clone, Debug)]
 pub struct TagRule {
-    pub tag: u32,
-    pub layout_frame: String,
-    pub layout_window: String,
+    pub frame: (Layout, State),
+    pub windows: Vec<(Layout, State)>,
 }
 
 #[derive(Copy, Clone)]
@@ -61,13 +59,15 @@ impl Options {
                 main_factor: 0.0,
                 main_index: 0,
                 main_amount: 0,
-                layout_window: String::new(),
-                layout_frame: String::new(),
+                default_layout: {TagRule {
+                    frame: (Layout::Full, State::Frame),
+                    windows: Vec::new(),
+                }},
                 layout_per_tag: Default::default(),
             }
         };
     }
-    pub fn init(&mut self, context: Context) {
+    pub fn update(&mut self, context: Context) {
 
         let output_status = context
             .status_manager
@@ -175,10 +175,12 @@ impl Options {
                         context.get::<Context>().unwrap().options.outer_padding = option_value.uint
                     }
                     "kile_frame" => {
-                        context.get::<Context>().unwrap().options.layout_frame = args;
+                        context.get::<Context>().unwrap().options
+                            .default_layout.frame= Options::layout_frame(args);
                     }
                     "kile_window" => {
-                        context.get::<Context>().unwrap().options.layout_window = args;
+                        context.get::<Context>().unwrap().options
+                            .default_layout.windows=Options::layout_window(args);
                     }
                     "layout_per_tag" => {
                         context
@@ -192,9 +194,9 @@ impl Options {
             }
         });
     }
-    pub fn layout_frame(&self, layout_frame: String, view_available: u32) -> (Layout, u32, State) {
-        let mut orientation = Layout::Full;
-        let total_views = if self.main_amount >= self.view_amount {
+    pub fn total_views(&self, view_available: u32)->u32 {
+
+        if self.main_amount >= self.view_amount {
             1
         } else if self.view_amount >= view_available {
             if 1 + self.view_amount - self.main_amount < view_available
@@ -206,61 +208,46 @@ impl Options {
             }
         } else {
             self.view_amount
-        };
-        for c in layout_frame.chars() {
-            orientation = Options::layout_parse(&c);
         }
-        (orientation, total_views, State::Frame)
     }
-    pub fn layout_window(&self, string: String, total_views: u32) -> Vec<(Layout, u32, State)> {
-        let mut layout = Vec::new();
-        let main_view = if self.main_index + self.main_amount <= self.view_amount
-            && self.main_index < total_views
+    pub fn main_amount(&self, total_views: u32)->u32 {
+        if self.main_index + self.main_amount <= self.view_amount
             && total_views > 1
             && self.main_amount > 0
         {
-            1
+            if self.main_index + self.main_amount > self.view_amount {
+                self.view_amount -self.main_index
+            } else {
+                self.main_amount
+            }
         } else {
             0
-        };
-        let main_amount = if self.main_index < total_views
-            && self.main_index + self.main_amount > self.view_amount
-        {
-            self.view_amount - self.main_index
-        } else {
-            self.main_amount
-        };
-        let mut reste = (self.view_amount - main_view * main_amount) % (total_views - main_view);
-        let client_count = if total_views > 1 {
-            (self.view_amount - main_view * main_amount) / (total_views - main_view)
-        } else {
-            self.view_amount
-        };
+        }
+    }
+    pub fn layout_frame(layout_frame: String)->(Layout, State) {
+        let orientation;
 
-        for (i, c) in string.chars().enumerate() {
-            let orientation = Options::layout_parse(&c);
-            if i == self.main_index as usize && total_views > 1 && main_view == 1 {
-                layout.push((orientation, main_amount, State::Window));
-            } else {
-                layout.push((
-                    orientation,
-                    if reste > 0 {
-                        reste -= 1;
-                        client_count + 1
-                    } else {
-                        client_count
-                    },
-                    State::Window,
-                ));
-            }
-            if i > total_views as usize {
-                break;
-            }
+        match layout_frame.chars().next() {
+            Some(c)=> orientation = Options::layout(c),
+            None=>{ orientation = Layout::Full}
+        }
+        (orientation, State::Frame)
+    }
+    pub fn layout_window(string: String)->Vec<(Layout, State)> {
+
+        let mut layout = Vec::new();
+
+
+        for c in string.chars() {
+            layout.push((
+                Options::layout(c),
+                State::Window,
+            ));
         }
 
-        return layout;
+        layout
     }
-    fn layout_parse(c: &char) -> Layout {
+    fn layout(c: char) -> Layout {
         match c {
             'v' => Layout::Vertical,
             'h' => Layout::Horizontal,
@@ -315,9 +302,8 @@ impl Options {
                     };
                     self.layout_per_tag[tag as usize - 1] = Some({
                         TagRule {
-                            tag: tag,
-                            layout_frame: layout_frame,
-                            layout_window: layout_window,
+                            frame: Options::layout_frame(layout_frame),
+                            windows: Options::layout_window(layout_window),
                         }
                     });
                 }
@@ -346,8 +332,8 @@ impl Options {
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_amount : {}", self.main_amount);
-        println!("    kile_window : {}", self.layout_window);
-        println!("    kile_frame : {}", self.layout_frame);
+        println!("    kile_window : {:?}", self.default_layout.windows);
+        println!("    kile_frame : {:?}", self.default_layout.frame);
         println!("\n  ZriverOutputStatusV1");
         println!("    tagmask : {}", self.tagmask);
     }
