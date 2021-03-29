@@ -120,17 +120,17 @@ impl Options {
         self.get_option("layout_per_tag", &context);
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
-        let option = context
+        let option_handle = context
             .options_manager
             .as_ref()
             .expect("Compositor doesn't implement river_options_unstable_v1")
             .get_option_handle(name.to_owned(), Some(context.output.as_ref().unwrap()));
-        option.quick_assign(move |_, event, mut context| {
+        option_handle.quick_assign(move |_, event, mut context| {
             let mut option_value: Value = Value { uint: 0 };
-            let mut args: String = String::new();
+            let mut string: String = String::new();
             match event {
                 zriver_option_handle_v1::Event::StringValue { value } => {
-                    args = value.unwrap();
+                    string = value.unwrap();
                 }
                 zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
@@ -170,7 +170,7 @@ impl Options {
                             .unwrap()
                             .options
                             .default_layout
-                            .output = Options::layout_output(args);
+                            .output = Options::layout_output(string);
                     }
                     "frames_layout" => {
                         context
@@ -178,14 +178,14 @@ impl Options {
                             .unwrap()
                             .options
                             .default_layout
-                            .frames = Options::layout_frames(args);
+                            .frames = Options::layout_frames(string);
                     }
                     "layout_per_tag" => {
                         context
                             .get::<Context>()
                             .unwrap()
                             .options
-                            .parse_layout_per_tag(args);
+                            .parse_layout_per_tag(string);
                     }
                     _ => {}
                 }
@@ -259,7 +259,7 @@ impl Options {
     }
     pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();
-        // self.tags = Default::default();
+        self.tags = Default::default();
         loop {
             match layout_per_tag.next() {
                 Some(rule) => {
