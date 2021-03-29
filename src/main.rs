@@ -48,7 +48,7 @@ fn main() {
                     kile = "kile"
                 );
                 println!("kile --debug <namespace>");
-                println!("  shows \"Options\" has events occur");
+                println!("  shows \"Options\" has events occur\n");
                 std::process::exit(0);
             }
             "--debug" => {
