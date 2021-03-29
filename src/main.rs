@@ -23,11 +23,11 @@ fn main() {
 
     let args: Vec<String> = env::args().collect();
 
-    let mut debug=false;
+    let mut debug = false;
 
     let namespace = if args.len() > 1 {
         match args[1].as_str() {
-            "--help"=> {
+            "--help" => {
                 println!("\nkile --help");
                 println!("  This is the list of options kile operates with");
                 println!("    view_padding: the padding of each window within the layout.");
@@ -37,17 +37,23 @@ fn main() {
                 println!("    layout_frame: the layout of the frames / how the output is split into different regions.");
                 println!("    layout_window: the layout of the windows within the frames.");
                 println!("    layout_per_tag: the configuration for the layout in each tag, river support up to 32.");
-                println!("      format: \"{format}\"\n", format="1:v:hh 4:h:tt 2:h:hth ...");
+                println!(
+                    "      format: \"{format}\"\n",
+                    format = "1:v:hh 4:h:tt 2:h:hth ..."
+                );
                 println!("kile <namespace>");
                 println!("  namespace: the string you assign to the layout option so kile can receive events.");
-                println!("  By default the namespace is set to \"{kile}\"\n", kile="kile");
+                println!(
+                    "  By default the namespace is set to \"{kile}\"\n",
+                    kile = "kile"
+                );
                 println!("kile --debug <namespace>");
                 println!("  shows \"Options\" has events occur");
                 std::process::exit(0);
             }
-            "--debug"=> {
-                debug=true;
-                if args.len()>2 {
+            "--debug" => {
+                debug = true;
+                if args.len() > 2 {
                     args[2].clone()
                 } else {
                     String::from("kile")
@@ -122,7 +128,9 @@ fn main() {
                 );
             })
             .unwrap();
-        if debug { context.options.debug(); }
+        if debug {
+            context.options.debug();
+        }
         context.update();
     }
 }

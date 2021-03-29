@@ -1,8 +1,8 @@
-use super::display::{Context, Frame, State};
+use super::display::{Context, Rectangle, Tag};
 use crate::wayland::{
     river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
     river_options_unstable_v1::zriver_option_handle_v1,
-    river_status_unstable_v1::{zriver_output_status_v1},
+    river_status_unstable_v1::zriver_output_status_v1,
 };
 use wayland_client::DispatchData;
 use wayland_client::Main;
@@ -20,18 +20,12 @@ pub struct Options {
     pub main_index: u32,
     pub main_factor: f64,
     pub main_amount: u32,
-    pub default_layout: TagRule,
-    pub layout_per_tag: [Option<TagRule>; 32],
-}
-
-#[derive(Clone, Debug)]
-pub struct TagRule {
-    pub frame: (Layout, State),
-    pub windows: Vec<(Layout, State)>,
+    pub default_layout: Tag,
+    pub tags: [Option<Tag>; 32],
 }
 
 #[derive(Copy, Clone)]
-pub union Value {
+union Value {
     double: f64,
     uint: u32,
 }
@@ -59,16 +53,12 @@ impl Options {
                 main_factor: 0.0,
                 main_index: 0,
                 main_amount: 0,
-                default_layout: {TagRule {
-                    frame: (Layout::Full, State::Frame),
-                    windows: Vec::new(),
-                }},
-                layout_per_tag: Default::default(),
+                default_layout: Tag::new(),
+                tags: Default::default(),
             }
         };
     }
     pub fn update(&mut self, context: Context) {
-
         let output_status = context
             .status_manager
             .as_ref()
@@ -93,7 +83,7 @@ impl Options {
                 .expect("Compositor doesn't implement river_layout_unstable_v1")
                 .get_river_layout(context.output.as_ref().unwrap(), context.namespace.clone()),
         );
-        self .zlayout
+        self.zlayout
             .as_ref()
             .unwrap()
             .quick_assign(move |_, event, mut context: DispatchData| match event {
@@ -125,8 +115,8 @@ impl Options {
         self.get_option("main_index", &context);
         self.get_option("view_padding", &context);
         self.get_option("outer_padding", &context);
-        self.get_option("kile_frame", &context);
-        self.get_option("kile_window", &context);
+        self.get_option("output_layout", &context);
+        self.get_option("frames_layout", &context);
         self.get_option("layout_per_tag", &context);
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
@@ -174,13 +164,21 @@ impl Options {
                     "outer_padding" => {
                         context.get::<Context>().unwrap().options.outer_padding = option_value.uint
                     }
-                    "kile_frame" => {
-                        context.get::<Context>().unwrap().options
-                            .default_layout.frame= Options::layout_frame(args);
+                    "output_layout" => {
+                        context
+                            .get::<Context>()
+                            .unwrap()
+                            .options
+                            .default_layout
+                            .output = Options::layout_output(args);
                     }
-                    "kile_window" => {
-                        context.get::<Context>().unwrap().options
-                            .default_layout.windows=Options::layout_window(args);
+                    "frames_layout" => {
+                        context
+                            .get::<Context>()
+                            .unwrap()
+                            .options
+                            .default_layout
+                            .frames = Options::layout_frames(args);
                     }
                     "layout_per_tag" => {
                         context
@@ -194,8 +192,7 @@ impl Options {
             }
         });
     }
-    pub fn total_views(&self, view_available: u32)->u32 {
-
+    pub fn total_views(&self, view_available: u32) -> u32 {
         if self.main_amount >= self.view_amount {
             1
         } else if self.view_amount >= view_available {
@@ -210,13 +207,13 @@ impl Options {
             self.view_amount
         }
     }
-    pub fn main_amount(&self, total_views: u32)->u32 {
+    pub fn main_amount(&self, total_views: u32) -> u32 {
         if self.main_index + self.main_amount <= self.view_amount
             && total_views > 1
             && self.main_amount > 0
         {
             if self.main_index + self.main_amount > self.view_amount {
-                self.view_amount -self.main_index
+                self.view_amount - self.main_index
             } else {
                 self.main_amount
             }
@@ -224,28 +221,29 @@ impl Options {
             0
         }
     }
-    pub fn layout_frame(layout_frame: String)->(Layout, State) {
+    pub fn layout_output(layout_output: String) -> Layout {
         let orientation;
 
-        match layout_frame.chars().next() {
-            Some(c)=> orientation = Options::layout(c),
-            None=>{ orientation = Layout::Full}
+        match layout_output.chars().next() {
+            Some(c) => orientation = Options::layout(c),
+            None => orientation = Layout::Full,
         }
-        (orientation, State::Frame)
+        orientation
     }
-    pub fn layout_window(string: String)->Vec<(Layout, State)> {
-
+    pub fn layout_frames(string: String) -> Vec<Layout> {
         let mut layout = Vec::new();
 
-
         for c in string.chars() {
-            layout.push((
-                Options::layout(c),
-                State::Window,
-            ));
+            layout.push(Options::layout(c));
         }
 
         layout
+    }
+    pub fn set_focused(&mut self, tag: Tag) {
+        self.tags[self.tagmask as usize] = Some(tag);
+    }
+    pub fn focused(&self) -> Option<Tag> {
+        self.tags[self.tagmask as usize].clone()
     }
     fn layout(c: char) -> Layout {
         match c {
@@ -261,7 +259,7 @@ impl Options {
     }
     pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();
-        self.layout_per_tag = Default::default();
+        // self.tags = Default::default();
         loop {
             match layout_per_tag.next() {
                 Some(rule) => {
@@ -286,24 +284,24 @@ impl Options {
                             break;
                         }
                     };
-                    let layout_frame = match rule.next() {
+                    let layout_output = match rule.next() {
                         Some(layout) => String::from(layout),
                         None => {
                             println!("Invalid layout");
                             break;
                         }
                     };
-                    let layout_window = match rule.next() {
+                    let layout_frames = match rule.next() {
                         Some(layout) => String::from(layout),
                         None => {
                             println!("Invalid layout");
                             break;
                         }
                     };
-                    self.layout_per_tag[tag as usize - 1] = Some({
-                        TagRule {
-                            frame: Options::layout_frame(layout_frame),
-                            windows: Options::layout_window(layout_window),
+                    self.tags[tag as usize - 1] = Some({
+                        Tag {
+                            output: Options::layout_output(layout_output),
+                            frames: Options::layout_frames(layout_frames),
                         }
                     });
                 }
@@ -311,13 +309,13 @@ impl Options {
             }
         }
     }
-    pub fn push_dimensions(&self, frame: &Frame) {
+    pub fn push_dimensions(&self, rect: &Rectangle) {
         self.zlayout.clone().unwrap().push_view_dimensions(
             self.serial,
-            frame.x as i32,
-            frame.y as i32,
-            frame.w,
-            frame.h,
+            rect.x as i32,
+            rect.y as i32,
+            rect.w,
+            rect.h,
         )
     }
     pub fn debug(&self) {
@@ -332,10 +330,10 @@ impl Options {
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_amount : {}", self.main_amount);
-        println!("    kile_window : {:?}", self.default_layout.windows);
-        println!("    kile_frame : {:?}", self.default_layout.frame);
+        println!("    layout_output : {:?}", self.default_layout.output);
+        println!("    layout_frames : {:?}", self.default_layout.frames);
         println!("\n  ZriverOutputStatusV1");
-        println!("    tagmask : {}", self.tagmask);
+        println!("    tagmask : {}\n", self.tagmask);
     }
     pub fn commit(&self) {
         self.zlayout.clone().unwrap().commit(self.serial);
@@ -350,4 +348,3 @@ pub fn tag_index(mut tagmask: u32) -> u32 {
     }
     tag
 }
-
