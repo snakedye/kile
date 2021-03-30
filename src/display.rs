@@ -34,7 +34,6 @@ pub struct Rectangle {
 }
 
 pub struct Frame {
-    pub main: bool,
     pub output: bool,
     pub layout: Layout,
     pub client_count: u32,
@@ -72,7 +71,7 @@ impl Context {
                 None => {
                     let mut tag = self.options.default_layout.clone();
                     tag.update(&mut self.options);
-                    self.options.set_focused(tag);
+                    // self.options.set_focused(tag);
                 }
             };
         }
@@ -96,7 +95,7 @@ impl Tag {
     pub fn update(&mut self, options: &mut Options) {
         let total_views = options.total_views(self.frames.len() as u32);
 
-        let mut output = Frame::from(self.output, total_views, None, true, false);
+        let mut output = Frame::from(self.output, total_views, None, true);
         output.generate(options);
 
         let main_amount = options.main_amount(total_views);
@@ -112,14 +111,8 @@ impl Tag {
         let mut i = 0;
         for rect in output.windows {
             if i == options.main_index && main_amount > 0 {
-                Frame::from(
-                    self.frames[i as usize],
-                    main_amount,
-                    Some(rect),
-                    false,
-                    true,
-                )
-                .generate(options);
+                Frame::from(self.frames[i as usize], main_amount, Some(rect), false)
+                    .generate(options);
             } else {
                 let client_count = if reste > 0 {
                     reste -= 1;
@@ -127,14 +120,8 @@ impl Tag {
                 } else {
                     slave_amount
                 };
-                Frame::from(
-                    self.frames[i as usize],
-                    client_count,
-                    Some(rect),
-                    false,
-                    false,
-                )
-                .generate(options);
+                Frame::from(self.frames[i as usize], client_count, Some(rect), false)
+                    .generate(options);
             }
             i += 1;
         }
@@ -167,16 +154,9 @@ impl Rectangle {
 }
 
 impl Frame {
-    pub fn from(
-        layout: Layout,
-        client_count: u32,
-        rect: Option<Rectangle>,
-        output: bool,
-        main: bool,
-    ) -> Frame {
+    pub fn from(layout: Layout, client_count: u32, rect: Option<Rectangle>, output: bool) -> Frame {
         {
             Frame {
-                main: main,
                 output: output,
                 layout: layout,
                 client_count: client_count,
@@ -212,6 +192,7 @@ impl Frame {
                     let reste = rect.h % self.client_count;
                     if self.output {
                         main_area.h = if options.main_amount > 0
+                            && self.client_count > 1
                             && options.main_amount < options.view_amount
                             && options.main_index < self.client_count
                         {
@@ -223,12 +204,7 @@ impl Frame {
                         slave_area.h -= main_area.h;
                     }
                     for i in 0..self.client_count {
-                        if self.output
-                            && i == options.main_index
-                            && options.main_amount > 0
-                            && options.main_amount < options.view_amount
-                            && options.main_index < options.view_amount
-                        {
+                        if self.output && i == options.main_index && main_area.h > 0 {
                             rect.h = main_area.h;
                         } else if self.output && main_area.h > 0 {
                             rect.h = slave_area.h / (self.client_count - 1);
@@ -249,6 +225,7 @@ impl Frame {
                     let reste = rect.w % self.client_count;
                     if self.output {
                         main_area.w = if options.main_amount > 0
+                            && self.client_count > 1
                             && options.main_amount < options.view_amount
                             && options.main_index < self.client_count
                         {
@@ -260,12 +237,7 @@ impl Frame {
                         slave_area.w -= main_area.w;
                     }
                     for i in 0..self.client_count {
-                        if self.output
-                            && i == options.main_index
-                            && options.main_amount > 0
-                            && options.main_amount < options.view_amount
-                            && options.main_index < options.view_amount
-                        {
+                        if self.output && i == options.main_index && main_area.w > 0 {
                             rect.w = main_area.w;
                         } else if self.output && main_area.w > 0 {
                             rect.w = slave_area.w / (self.client_count - 1);

@@ -9,8 +9,16 @@ Kile is entirely configured through river-options.
 
 ## Building
 
-```
-git clone https://gitlab.com/snakedye/rivertiler.git
-cd rivertiler
+```shell
+git clone https://gitlab.com/snakedye/kile.git
+cd kile
 cargo build --release
 ```
+
+## Roadmap
+
+- [ ] Implement the dwindle layout
+- [x] Per tag layout
+- [ ] Basic window rules
+- [ ] Draw titlebar or tabbed window
+- [ ] Manual tiling

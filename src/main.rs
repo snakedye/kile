@@ -28,27 +28,7 @@ fn main() {
     let namespace = if args.len() > 1 {
         match args[1].as_str() {
             "--help" => {
-                println!("\nkile --help");
-                println!("  This is the list of options kile operates with");
-                println!("    view_padding: the padding of each window within the layout.");
-                println!("    outer_padding: the padding of the output.");
-                println!("    main_index: the index of the main frame.");
-                println!("    main_amount: the amount of window in the main frame.");
-                println!("    layout_output: the layout of the frames / how the output is split into different regions.");
-                println!("    layout_frames: the layout of the windows within the frames.");
-                println!("    layout_per_tag: the configuration for the layout in each tag, river support up to 32.");
-                println!(
-                    "      format: \"{format}\"\n",
-                    format = "1:v:hh 4:h:tt 2:h:hth ..."
-                );
-                println!("kile <namespace>");
-                println!("  namespace: the string you assign to the layout option so kile can receive events.");
-                println!(
-                    "  By default the namespace is set to \"{kile}\"\n",
-                    kile = "kile"
-                );
-                println!("kile --debug <namespace>");
-                println!("  shows \"Options\" has events occur\n");
+                help();
                 std::process::exit(0);
             }
             "--debug" => {
@@ -133,4 +113,30 @@ fn main() {
         }
         context.update();
     }
+}
+
+fn help() {
+    println!("\nkile --help");
+    println!("  This is the list of options kile operates with");
+    println!("    view_padding: the padding of each window within the layout.");
+    println!("    outer_padding: the padding of the output.");
+    println!("    main_index: the index of the main frame.");
+    println!("    main_amount: the amount of window in the main frame.");
+    println!("    layout_output: the layout of the frames / how the output is split into different regions.");
+    println!("    layout_frames: the layout of the windows within the frames.");
+    println!(
+        "    layout_per_tag: the configuration for the layout in each tag, river support up to 32."
+    );
+    println!(
+        "      format: \"{format}\"\n",
+        format = "1:v:hh 4:h:tt 2:h:hth ..."
+    );
+    println!("kile <namespace>");
+    println!("  namespace: the string you assign to the layout option so kile can receive events.");
+    println!(
+        "  By default the namespace is set to \"{kile}\"\n",
+        kile = "kile"
+    );
+    println!("kile --debug <namespace>");
+    println!("  shows \"Options\" has events occur\n");
 }

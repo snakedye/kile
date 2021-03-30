@@ -125,7 +125,7 @@ impl Options {
             .as_ref()
             .expect("Compositor doesn't implement river_options_unstable_v1")
             .get_option_handle(name.to_owned(), Some(context.output.as_ref().unwrap()));
-        option_handle.quick_assign(move |_, event, mut context| {
+        option_handle.quick_assign(move |option_handle, event, mut context| {
             let mut option_value: Value = Value { uint: 0 };
             let mut string: String = String::new();
             match event {
@@ -165,6 +165,13 @@ impl Options {
                         context.get::<Context>().unwrap().options.outer_padding = option_value.uint
                     }
                     "output_layout" => {
+                        match string.as_ref() {
+                            "" => {
+                                string = String::from("f");
+                                option_handle.set_string_value(Some(string.clone()));
+                            }
+                            _ => {}
+                        }
                         context
                             .get::<Context>()
                             .unwrap()
@@ -173,6 +180,13 @@ impl Options {
                             .output = Options::layout_output(string);
                     }
                     "frames_layout" => {
+                        match string.as_ref() {
+                            "" => {
+                                string = String::from("f");
+                                option_handle.set_string_value(Some(string.clone()));
+                            }
+                            _ => {}
+                        }
                         context
                             .get::<Context>()
                             .unwrap()
