@@ -21,28 +21,30 @@ fn main() {
 
     let attached_display = (*display).clone().attach(event_queue.token());
 
-    let args: Vec<String> = env::args().collect();
-
     let mut debug = false;
 
-    let namespace = if args.len() > 1 {
-        match args[1].as_str() {
-            "--help" => {
-                help();
-                std::process::exit(0);
-            }
-            "--debug" => {
-                debug = true;
-                if args.len() > 2 {
-                    args[2].clone()
-                } else {
-                    String::from("kile")
+    let namespace = {
+        let mut args = env::args();
+        args.next();
+        match args.next() {
+            Some(str)=> {
+                match str.as_str() {
+                    "--help" | "-h" | "--h" => {
+                        help();
+                        std::process::exit(0);
+                    }
+                    "--debug" | "--d" | "-d" =>{
+                        debug=true;
+                        match args.next() {
+                            Some(namespace)=>namespace,
+                            None=>String::from("kile")
+                        }
+                    }
+                    _=>str,
                 }
             }
-            _ => args[1].clone(),
+            None=>String::from("kile"),
         }
-    } else {
-        String::from("kile")
     };
 
     let mut context = Context::new(namespace);
@@ -118,14 +120,15 @@ fn main() {
 fn help() {
     println!("\nkile --help");
     println!("  This is the list of options kile operates with");
-    println!("    view_padding: the padding of each window within the layout.");
-    println!("    outer_padding: the padding of the output.");
-    println!("    main_index: the index of the main frame.");
-    println!("    main_amount: the amount of window in the main frame.");
-    println!("    layout_output: the layout of the frames / how the output is split into different regions.");
-    println!("    layout_frames: the layout of the windows within the frames.");
+    println!("    view_padding (int): the padding of each window within the layout.");
+    println!("    outer_padding (int): the padding of the output.");
+    println!("    smart_padding (int): disables padding if there's only one view on the output.");
+    println!("    main_index (int): the index of the main frame.");
+    println!("    main_amount (int): the amount of window in the main frame.");
+    println!("    layout_output (string): the layout of the frames / how the output is split into different regions.");
+    println!("    layout_frames (string): the layout of the windows within the frames.");
     println!(
-        "    layout_per_tag: the configuration for the layout in each tag, river support up to 32."
+        "    layout_per_tag (string): the configuration for the layout in each tag, river supports up to 32."
     );
     println!(
         "      format: \"{format}\"\n",
@@ -138,5 +141,5 @@ fn help() {
         kile = "kile"
     );
     println!("kile --debug <namespace>");
-    println!("  shows \"Options\" has events occur\n");
+    println!("  shows \"Options\" as events occur\n");
 }

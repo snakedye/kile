@@ -15,6 +15,7 @@ pub struct Options {
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
+    pub smart_padding: bool,
     pub view_padding: u32,
     pub outer_padding: u32,
     pub main_index: u32,
@@ -46,6 +47,7 @@ impl Options {
                 tagmask: 0,
                 zlayout: None,
                 view_amount: 0,
+                smart_padding: false,
                 view_padding: 0,
                 outer_padding: 0,
                 usable_width: 0,
@@ -65,17 +67,6 @@ impl Options {
             .expect("Compositor doesn't implement river_status_unstable_v1")
             .get_river_output_status(&context.output.clone().unwrap());
 
-        output_status.quick_assign(move |_, event, mut context| match event {
-            zriver_output_status_v1::Event::FocusedTags { tags } => {
-                context.get::<Context>().unwrap().options.tagmask = tag_index(tags);
-                match &context.get::<Context>().unwrap().options.zlayout {
-                    Some(zlayout) => zlayout.parameters_changed(),
-                    None => {}
-                }
-            }
-            zriver_output_status_v1::Event::ViewTags { tags } => {}
-        });
-
         self.zlayout = Some(
             context
                 .clone()
@@ -86,7 +77,7 @@ impl Options {
         self.zlayout
             .as_ref()
             .unwrap()
-            .quick_assign(move |_, event, mut context: DispatchData| match event {
+            .quick_assign(move |zlayout, event, mut context: DispatchData| match event {
                 zriver_layout_v1::Event::LayoutDemand {
                     view_amount,
                     usable_width,
@@ -110,14 +101,27 @@ impl Options {
                 zriver_layout_v1::Event::AdvertiseDone { serial } => {}
             });
 
+        output_status.quick_assign(move |_, event, mut context| match event {
+            zriver_output_status_v1::Event::FocusedTags { tags } => {
+                context.get::<Context>().unwrap().options.tagmask = tag_index(tags);
+                // match &context.get::<Context>().unwrap().options.zlayout {
+                //     Some(zlayout) => zlayout.parameters_changed(),
+                //     None => {}
+                // }
+            }
+            zriver_output_status_v1::Event::ViewTags { tags } => {}
+        });
+
         self.get_option("main_factor", &context);
         self.get_option("main_amount", &context);
         self.get_option("main_index", &context);
         self.get_option("view_padding", &context);
         self.get_option("outer_padding", &context);
+        self.get_option("smart_padding", &context);
         self.get_option("output_layout", &context);
         self.get_option("frames_layout", &context);
         self.get_option("layout_per_tag", &context);
+
     }
     fn get_option(&mut self, name: &'static str, context: &Context) {
         let option_handle = context
@@ -161,6 +165,10 @@ impl Options {
                     "view_padding" => {
                         context.get::<Context>().unwrap().options.view_padding = option_value.uint
                     }
+                    "smart_padding" => match option_value.uint {
+                        1 => context.get::<Context>().unwrap().options.smart_padding = true,
+                        _ => {}
+                    },
                     "outer_padding" => {
                         context.get::<Context>().unwrap().options.outer_padding = option_value.uint
                     }
@@ -341,6 +349,7 @@ impl Options {
         println!("\n  ZriverOptionHandleV1");
         println!("    outer_padding : {}", self.outer_padding);
         println!("    view_padding : {}", self.view_padding);
+        println!("    smart_padding : {}", self.smart_padding);
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_amount : {}", self.main_amount);

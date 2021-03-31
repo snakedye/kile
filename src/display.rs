@@ -57,8 +57,6 @@ impl Context {
         };
     }
     pub fn init(&mut self) {
-        // I need to absolutely set the layout options
-        // Otherwise kile shits himself
         self.options.update(self.clone());
     }
     pub fn update(&mut self) {
@@ -110,8 +108,13 @@ impl Tag {
 
         let mut i = 0;
         for rect in output.windows {
+            let mut iter = self.frames.iter();
+            let layout=match iter.next() {
+                Some(layout)=>layout,
+                None=>&Layout::Full
+            };
             if i == options.main_index && main_amount > 0 {
-                Frame::from(self.frames[i as usize], main_amount, Some(rect), false)
+                Frame::from(*layout, main_amount, Some(rect), false)
                     .generate(options);
             } else {
                 let client_count = if reste > 0 {
@@ -120,7 +123,7 @@ impl Tag {
                 } else {
                     slave_amount
                 };
-                Frame::from(self.frames[i as usize], client_count, Some(rect), false)
+                Frame::from(*layout, client_count, Some(rect), false)
                     .generate(options);
             }
             i += 1;
@@ -132,16 +135,14 @@ impl Tag {
 
 impl Rectangle {
     pub fn from(options: &Options) -> Rectangle {
-        let mut rect = {
+        {
             Rectangle {
                 x: 0,
                 y: 0,
                 w: options.usable_width,
                 h: options.usable_height,
             }
-        };
-        rect.apply_padding(options.outer_padding);
-        rect
+        }
     }
     pub fn apply_padding(&mut self, padding: u32) {
         if 2 * padding < self.h && 2 * padding < self.w {
@@ -167,14 +168,22 @@ impl Frame {
     }
     pub fn push_dimensions(&mut self, options: &Options) {
         for window in &mut self.windows {
-            window.apply_padding(options.view_padding / 2);
+            if !options.smart_padding || options.view_amount > 1 {
+                window.apply_padding(options.view_padding / 2);
+            }
             options.push_dimensions(&window);
         }
     }
     pub fn generate(&mut self, options: &Options) {
         let mut rect = match self.rect {
             Some(rect) => rect,
-            None => Rectangle::from(options),
+            None => {
+                let mut rect = Rectangle::from(options);
+                if !options.smart_padding || (self.output && options.view_amount > 1) {
+                    rect.apply_padding(options.outer_padding);
+                }
+                rect
+            }
         };
 
         if self.client_count > 0 {
