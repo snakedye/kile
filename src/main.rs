@@ -124,6 +124,7 @@ fn help() {
     println!("    outer_padding (int): the padding of the output.");
     println!("    smart_padding (int): disables padding if there's only one view on the output.");
     println!("    main_index (int): the index of the main frame.");
+    println!("    main_factor (fixed): the ratio of the screen dedicated to the main frame.");
     println!("    main_amount (int): the amount of window in the main frame.");
     println!("    layout_output (string): the layout of the frames / how the output is split into different regions.");
     println!("    layout_frames (string): the layout of the windows within the frames.");

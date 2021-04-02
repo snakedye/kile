@@ -22,7 +22,6 @@ pub struct Options {
     pub main_factor: f64,
     pub main_amount: u32,
     pub default_layout: Tag,
-    pub tags: [Option<Tag>; 32],
 }
 
 #[derive(Copy, Clone)]
@@ -56,7 +55,6 @@ impl Options {
                 main_index: 0,
                 main_amount: 0,
                 default_layout: Tag::new(),
-                tags: Default::default(),
             }
         };
     }
@@ -65,7 +63,7 @@ impl Options {
             .status_manager
             .as_ref()
             .expect("Compositor doesn't implement river_status_unstable_v1")
-            .get_river_output_status(&context.output.clone().unwrap());
+            .get_river_output_status(&context.output.as_ref().unwrap());
 
         self.zlayout = Some(
             context
@@ -104,10 +102,6 @@ impl Options {
         output_status.quick_assign(move |_, event, mut context| match event {
             zriver_output_status_v1::Event::FocusedTags { tags } => {
                 context.get::<Context>().unwrap().options.tagmask = tag_index(tags);
-                // match &context.get::<Context>().unwrap().options.zlayout {
-                //     Some(zlayout) => zlayout.parameters_changed(),
-                //     None => {}
-                // }
             }
             zriver_output_status_v1::Event::ViewTags { tags } => {}
         });
@@ -206,7 +200,7 @@ impl Options {
                         context
                             .get::<Context>()
                             .unwrap()
-                            .options
+                            // .options
                             .parse_layout_per_tag(string);
                     }
                     _ => {}
@@ -261,12 +255,6 @@ impl Options {
 
         layout
     }
-    pub fn set_focused(&mut self, tag: Tag) {
-        self.tags[self.tagmask as usize] = Some(tag);
-    }
-    pub fn focused(&self) -> Option<Tag> {
-        self.tags[self.tagmask as usize].clone()
-    }
     fn layout(c: char) -> Layout {
         match c {
             'v' => Layout::Vertical,
@@ -276,58 +264,6 @@ impl Options {
             _ => {
                 println!("{}: Not a valid character at index", c);
                 Layout::Full
-            }
-        }
-    }
-    pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
-        let mut layout_per_tag = layout_per_tag.split_whitespace();
-        self.tags = Default::default();
-        loop {
-            match layout_per_tag.next() {
-                Some(rule) => {
-                    let mut rule = rule.split(':');
-                    let tag: u32 = match rule.next() {
-                        Some(tag) => match tag.parse::<u32>() {
-                            Ok(int) => {
-                                if int > 0 {
-                                    int
-                                } else {
-                                    println!("Invalid tag");
-                                    break;
-                                }
-                            }
-                            Err(_t) => {
-                                println!("Invalid tag");
-                                break;
-                            }
-                        },
-                        None => {
-                            println!("Invalid format");
-                            break;
-                        }
-                    };
-                    let layout_output = match rule.next() {
-                        Some(layout) => String::from(layout),
-                        None => {
-                            println!("Invalid layout");
-                            break;
-                        }
-                    };
-                    let layout_frames = match rule.next() {
-                        Some(layout) => String::from(layout),
-                        None => {
-                            println!("Invalid layout");
-                            break;
-                        }
-                    };
-                    self.tags[tag as usize - 1] = Some({
-                        Tag {
-                            output: Options::layout_output(layout_output),
-                            frames: Options::layout_frames(layout_frames),
-                        }
-                    });
-                }
-                None => break,
             }
         }
     }
@@ -359,7 +295,7 @@ impl Options {
         println!("    tagmask : {}\n", self.tagmask);
     }
     pub fn commit(&self) {
-        self.zlayout.clone().unwrap().commit(self.serial);
+        self.zlayout.as_ref().unwrap().commit(self.serial);
     }
 }
 

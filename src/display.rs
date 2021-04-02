@@ -17,6 +17,7 @@ pub struct Context {
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
     pub output: Option<WlOutput>,
     pub seat: Option<WlSeat>,
+    pub tags: [Option<Tag>; 32],
 }
 
 #[derive(Clone, Debug)]
@@ -33,12 +34,17 @@ pub struct Rectangle {
     pub h: u32,
 }
 
+pub struct Window {
+    pub app_id: String,
+    pub rect: Rectangle
+}
+
 pub struct Frame {
-    pub output: bool,
+    pub parent: bool,
     pub layout: Layout,
     pub client_count: u32,
     pub rect: Option<Rectangle>,
-    pub windows: Vec<Rectangle>,
+    pub rect_list: Vec<Rectangle>,
 }
 
 impl Context {
@@ -53,6 +59,7 @@ impl Context {
                 status_manager: None,
                 output: None,
                 seat: None,
+                tags: Default::default(),
             }
         };
     }
@@ -64,7 +71,7 @@ impl Context {
             self.destroy();
         }
         if self.options.view_amount > 0 {
-            match self.options.focused() {
+            match self.focused() {
                 Some(mut tag) => tag.update(&mut self.options),
                 None => {
                     let mut tag = self.options.default_layout.clone();
@@ -72,6 +79,64 @@ impl Context {
                     // self.options.set_focused(tag);
                 }
             };
+        }
+    }
+    pub fn set_focused(&mut self, tag: Tag) {
+        self.tags[self.options.tagmask as usize] = Some(tag);
+    }
+    pub fn focused(&self) -> Option<Tag> {
+        self.tags[self.options.tagmask as usize].clone()
+    }
+    pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
+        let mut layout_per_tag = layout_per_tag.split_whitespace();
+        self.tags = Default::default();
+        loop {
+            match layout_per_tag.next() {
+                Some(rule) => {
+                    let mut rule = rule.split(':');
+                    let tag: u32 = match rule.next() {
+                        Some(tag) => match tag.parse::<u32>() {
+                            Ok(int) => {
+                                if int > 0 {
+                                    int
+                                } else {
+                                    println!("Invalid tag");
+                                    break;
+                                }
+                            }
+                            Err(_t) => {
+                                println!("Invalid tag");
+                                break;
+                            }
+                        },
+                        None => {
+                            println!("Invalid format");
+                            break;
+                        }
+                    };
+                    let layout_output = match rule.next() {
+                        Some(layout) => String::from(layout),
+                        None => {
+                            println!("Invalid layout");
+                            break;
+                        }
+                    };
+                    let layout_frames = match rule.next() {
+                        Some(layout) => String::from(layout),
+                        None => {
+                            println!("Invalid layout");
+                            break;
+                        }
+                    };
+                    self.tags[tag as usize - 1] = Some({
+                        Tag {
+                            output: Options::layout_output(layout_output),
+                            frames: Options::layout_frames(layout_frames),
+                        }
+                    });
+                }
+                None => break,
+            }
         }
     }
     pub fn destroy(&mut self) {
@@ -99,6 +164,7 @@ impl Tag {
         let main_amount = options.main_amount(total_views);
         let slave_amount;
         let mut reste = if main_amount > 0 {
+            output.zoom(options.main_index);
             slave_amount = (options.view_amount - main_amount) / (output.client_count - 1);
             (options.view_amount - main_amount) % (total_views - 1)
         } else {
@@ -107,13 +173,13 @@ impl Tag {
         };
 
         let mut i = 0;
-        for rect in output.windows {
+        for rect in output.rect_list {
             let mut iter = self.frames.iter();
             let layout=match iter.next() {
                 Some(layout)=>layout,
                 None=>&Layout::Full
             };
-            if i == options.main_index && main_amount > 0 {
+            if i == 0 && main_amount > 0 {
                 Frame::from(*layout, main_amount, Some(rect), false)
                     .generate(options);
             } else {
@@ -155,21 +221,33 @@ impl Rectangle {
 }
 
 impl Frame {
-    pub fn from(layout: Layout, client_count: u32, rect: Option<Rectangle>, output: bool) -> Frame {
+    pub fn from(layout: Layout, client_count: u32, rect: Option<Rectangle>, parent: bool) -> Frame {
         {
             Frame {
-                output: output,
+                parent: parent,
                 layout: layout,
                 client_count: client_count,
                 rect: rect,
-                windows: Vec::new(),
+                rect_list: Vec::new(),
             }
         }
     }
+    pub fn zoom(&mut self, index: u32) {
+        if index < self.client_count {
+            let main = self.rect_list[index as usize];
+            for i in (0..index as usize).rev() {
+                self.rect_list[i+1]=self.rect_list[i];
+            }
+            self.rect_list[0]=main;
+        }
+    }
+    pub fn get_rect(&self, index: u32) -> Rectangle {
+        return self.rect_list[index as usize]
+    }
     pub fn push_dimensions(&mut self, options: &Options) {
-        for window in &mut self.windows {
+        for window in &mut self.rect_list {
             if !options.smart_padding || options.view_amount > 1 {
-                window.apply_padding(options.view_padding / 2);
+                window.apply_padding(options.view_padding);
             }
             options.push_dimensions(&window);
         }
@@ -179,7 +257,7 @@ impl Frame {
             Some(rect) => rect,
             None => {
                 let mut rect = Rectangle::from(options);
-                if !options.smart_padding || (self.output && options.view_amount > 1) {
+                if !options.smart_padding || (self.parent && options.view_amount > 1) {
                     rect.apply_padding(options.outer_padding);
                 }
                 rect
@@ -190,7 +268,7 @@ impl Frame {
             match self.layout {
                 Layout::Tab => {
                     for _i in 0..self.client_count {
-                        self.windows.push(rect);
+                        self.rect_list.push(rect);
                         rect.h -= 30;
                         rect.y += 30;
                     }
@@ -199,7 +277,7 @@ impl Frame {
                     let mut slave_area = rect;
                     let mut main_area = rect;
                     let reste = rect.h % self.client_count;
-                    if self.output {
+                    if self.parent {
                         main_area.h = if options.main_amount > 0
                             && self.client_count > 1
                             && options.main_amount < options.view_amount
@@ -213,9 +291,9 @@ impl Frame {
                         slave_area.h -= main_area.h;
                     }
                     for i in 0..self.client_count {
-                        if self.output && i == options.main_index && main_area.h > 0 {
+                        if self.parent && i == options.main_index && main_area.h > 0 {
                             rect.h = main_area.h;
-                        } else if self.output && main_area.h > 0 {
+                        } else if self.parent && main_area.h > 0 {
                             rect.h = slave_area.h / (self.client_count - 1);
                         } else {
                             rect.h = slave_area.h / self.client_count;
@@ -224,7 +302,7 @@ impl Frame {
                             rect.h += reste;
                         }
 
-                        self.windows.push(rect);
+                        self.rect_list.push(rect);
                         rect.y += rect.h;
                     }
                 }
@@ -232,7 +310,7 @@ impl Frame {
                     let mut slave_area = rect;
                     let mut main_area = rect;
                     let reste = rect.w % self.client_count;
-                    if self.output {
+                    if self.parent {
                         main_area.w = if options.main_amount > 0
                             && self.client_count > 1
                             && options.main_amount < options.view_amount
@@ -246,9 +324,9 @@ impl Frame {
                         slave_area.w -= main_area.w;
                     }
                     for i in 0..self.client_count {
-                        if self.output && i == options.main_index && main_area.w > 0 {
+                        if self.parent && i == options.main_index && main_area.w > 0 {
                             rect.w = main_area.w;
-                        } else if self.output && main_area.w > 0 {
+                        } else if self.parent && main_area.w > 0 {
                             rect.w = slave_area.w / (self.client_count - 1);
                         } else {
                             rect.w = slave_area.w / self.client_count;
@@ -257,17 +335,17 @@ impl Frame {
                             rect.w += reste;
                         }
 
-                        self.windows.push(rect);
+                        self.rect_list.push(rect);
                         rect.x += rect.w;
                     }
                 }
                 Layout::Full => {
                     for _i in 0..self.client_count {
-                        self.windows.push(rect);
+                        self.rect_list.push(rect);
                     }
                 }
             }
-            if !self.output {
+            if !self.parent {
                 self.push_dimensions(options);
             }
         }
