@@ -4,20 +4,37 @@ use crate::wayland::{
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
+use crate::wayland::{
+    river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
+    river_options_unstable_v1::zriver_option_handle_v1,
+    river_status_unstable_v1::zriver_output_status_v1,
+};
 use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
+use wayland_client::DispatchData;
 use wayland_client::Main;
 
 #[derive(Clone, Debug)]
-pub struct Context {
-    pub namespace: String,
-    pub running: bool,
-    pub options: Options,
+pub struct Globals {
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
     pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
+    pub seats: Vec<Option<Main<WlSeat>>>
+}
+
+#[derive(Clone, Debug)]
+pub struct Context {
+    pub running: bool,
+    pub namespace: String,
+    pub outputs: Vec<Output>,
+    pub globals: Globals,
+}
+
+#[derive(Clone, Debug)]
+pub struct Output {
+    pub options: Options,
+    pub updated: bool,
     pub output: Option<WlOutput>,
-    pub seat: Option<WlSeat>,
-    pub tags: [Option<Tag>; 32],
+    pub tags: [Option<Tag>; 32]
 }
 
 #[derive(Clone, Debug)]
@@ -39,6 +56,7 @@ pub struct Window {
     pub rect: Rectangle
 }
 
+#[derive(Clone, Debug)]
 pub struct Frame {
     pub parent: bool,
     pub layout: Layout,
@@ -47,29 +65,80 @@ pub struct Frame {
     pub rect_list: Vec<Rectangle>,
 }
 
+
+#[derive(Copy, Clone)]
+union Value {
+    double: f64,
+    uint: u32,
+}
+
 impl Context {
     pub fn new(namespace: String) -> Context {
         return {
             Context {
                 running: false,
                 namespace: namespace,
-                options: Options::new(),
-                layout_manager: None,
-                options_manager: None,
-                status_manager: None,
-                output: None,
-                seat: None,
-                tags: Default::default(),
+                globals: { Globals {
+                    layout_manager: None,
+                    options_manager: None,
+                    status_manager: None,
+                    seats: Vec::new(),
+                } },
+                outputs: Vec::new(),
             }
         };
     }
     pub fn init(&mut self) {
-        self.options.update(self.clone());
-    }
-    pub fn update(&mut self) {
-        if !self.running {
-            self.destroy();
+        // for i in (0..self.outputs.len()).rev() {
+        //     self.outputs[i].update(&self.globals, self.namespace.clone());
+        // }
+        for output in &mut self.outputs {
+            output.update(&self.globals, self.namespace.clone());
         }
+    }
+    pub fn run(&mut self) {
+        // if !self.running {
+        //     self.destroy();
+        // }
+        for output in &mut self.outputs {
+            if output.updated {
+                output.options.debug();
+                output.update(&self.globals, self.namespace.clone());
+                output.updated = false;
+            }
+        }
+    }
+    pub fn destroy(&mut self) {
+        self.globals.status_manager.as_ref().unwrap().destroy();
+        self.globals.layout_manager.as_ref().unwrap().destroy();
+        self.globals.options_manager.as_ref().unwrap().destroy();
+    }
+}
+
+impl Output {
+    pub fn new(output: WlOutput)->Output {
+        { Output  {
+            options: Options::new(),
+            updated: false,
+            output: Some(output),
+            tags: Default::default(),
+        }}
+    }
+    pub fn update(&mut self, globals: &Globals, namespace: String) {
+
+        self.get_layout(globals, namespace);
+        self.get_tag(globals);
+
+        self.get_option("main_factor", globals);
+        self.get_option("main_amount", globals);
+        self.get_option("main_index", globals);
+        self.get_option("view_padding", globals);
+        self.get_option("outer_padding", globals);
+        self.get_option("smart_padding", globals);
+        self.get_option("output_layout", globals);
+        self.get_option("frames_layout", globals);
+        self.get_option("layout_per_tag", globals);
+
         if self.options.view_amount > 0 {
             match self.focused() {
                 Some(mut tag) => tag.update(&mut self.options),
@@ -86,6 +155,146 @@ impl Context {
     }
     pub fn focused(&self) -> Option<Tag> {
         self.tags[self.options.tagmask as usize].clone()
+    }
+    pub fn get_layout(&mut self, globals: &Globals, namespace: String) {
+        self.options.zlayout = Some(
+            globals
+                .layout_manager
+                .as_ref()
+                .expect("Compositor doesn't implement river_layout_unstable_v1")
+                .get_river_layout(self.output.as_mut().unwrap(), namespace),
+        );
+        self.options.zlayout
+            .as_ref()
+            .unwrap()
+            .quick_assign(move |zlayout, event, mut output: DispatchData| match event {
+                zriver_layout_v1::Event::LayoutDemand {
+                    view_amount,
+                    usable_width,
+                    usable_height,
+                    serial,
+                } => {
+                    output.get::<Output>().unwrap().options.serial = serial;
+                    output.get::<Output>().unwrap().options.view_amount = view_amount;
+                    output.get::<Output>().unwrap().options.usable_height = usable_height;
+                    output.get::<Output>().unwrap().options.usable_width = usable_width;
+                    output.get::<Output>().unwrap().updated = true;
+                }
+                zriver_layout_v1::Event::AdvertiseView {
+                    tags,
+                    app_id,
+                    serial,
+                } => {}
+                zriver_layout_v1::Event::NamespaceInUse => {
+                    println!("Namespace already in use.");
+                    // output.get::<Output>().unwrap().running = false;
+                }
+                zriver_layout_v1::Event::AdvertiseDone { serial } => {}
+            });
+    }
+    fn get_tag(&mut self, globals: &Globals) {
+        let output_status = globals
+            .status_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_status_unstable_v1")
+            .get_river_output_status(self.output.as_mut().unwrap());
+        output_status.quick_assign(move |_, event, mut output| match event {
+            zriver_output_status_v1::Event::FocusedTags { tags } => {
+                output.get::<Output>().unwrap().options.tagmask = tag_index(tags);
+            }
+            zriver_output_status_v1::Event::ViewTags { tags } => {}
+        });
+    }
+    fn get_option(&mut self, name: &'static str, globals: &Globals) {
+        let option_handle = globals
+            .options_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_options_unstable_v1")
+            .get_option_handle(name.to_owned(), Some(self.output.as_mut().unwrap()));
+        option_handle.quick_assign(move |option_handle, event, mut output| {
+            let mut option_value: Value = Value { uint: 0 };
+            let mut string: String = String::new();
+            match event {
+                zriver_option_handle_v1::Event::StringValue { value } => {
+                    string = value.unwrap();
+                }
+                zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
+                zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
+                zriver_option_handle_v1::Event::IntValue { value } => {
+                    if value < 0 {
+                        option_value.uint = 0;
+                    } else {
+                        option_value.uint = value as u32;
+                    }
+                }
+                zriver_option_handle_v1::Event::Unset => { }
+            }
+            // match &output.get::<Output>().unwrap().options.zlayout {
+            //     Some(zlayout) => zlayout.parameters_changed(),
+            //     None => {}
+            // }
+            unsafe {
+                match name {
+                    "main_index" => {
+                        output.get::<Output>().unwrap().options.main_index = option_value.uint
+                    }
+                    "main_amount" => {
+                        output.get::<Output>().unwrap().options.main_amount = option_value.uint
+                    }
+                    "main_factor" => {
+                        output.get::<Output>().unwrap().options.main_factor = option_value.double
+                    }
+                    "view_padding" => {
+                        output.get::<Output>().unwrap().options.view_padding = option_value.uint
+                    }
+                    "smart_padding" => match option_value.uint {
+                        1 => output.get::<Output>().unwrap().options.smart_padding = true,
+                        _ => {}
+                    },
+                    "outer_padding" => {
+                        output.get::<Output>().unwrap().options.outer_padding = option_value.uint
+                    }
+                    "output_layout" => {
+                        match string.as_ref() {
+                            "" => {
+                                string = String::from("f");
+                                option_handle.set_string_value(Some(string.clone()));
+                            }
+                            _ => {}
+                        }
+                        output
+                            .get::<Output>()
+                            .unwrap()
+                            .options
+                            .default_layout
+                            .output = Options::layout_output(string);
+                    }
+                    "frames_layout" => {
+                        match string.as_ref() {
+                            "" => {
+                                string = String::from("f");
+                                option_handle.set_string_value(Some(string.clone()));
+                            }
+                            _ => {}
+                        }
+                        output
+                            .get::<Output>()
+                            .unwrap()
+                            .options
+                            .default_layout
+                            .frames = Options::layout_frames(string);
+                    }
+                    "layout_per_tag" => {
+                        output
+                            .get::<Output>()
+                            .unwrap()
+                            .parse_layout_per_tag(string);
+                    }
+                    _ => {}
+                }
+            }
+            // option_handle.destroy();
+        });
     }
     pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();
@@ -139,11 +348,15 @@ impl Context {
             }
         }
     }
-    pub fn destroy(&mut self) {
-        self.status_manager.as_ref().unwrap().destroy();
-        self.layout_manager.as_ref().unwrap().destroy();
-        self.options_manager.as_ref().unwrap().destroy();
+}
+
+pub fn tag_index(mut tagmask: u32) -> u32 {
+    let mut tag = 0;
+    while tagmask / 2 >= 1 {
+        tagmask /= 2;
+        tag += 1;
     }
+    tag
 }
 
 impl Tag {
@@ -245,8 +458,11 @@ impl Frame {
         return self.rect_list[index as usize]
     }
     pub fn push_dimensions(&mut self, options: &Options) {
+        // options.debug();
+        // println!("options: {:?}", options.serial );
         for window in &mut self.rect_list {
             if !options.smart_padding || options.view_amount > 1 {
+                // println!("window: {:?}", window );
                 window.apply_padding(options.view_padding);
             }
             options.push_dimensions(&window);
