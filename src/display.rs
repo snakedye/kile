@@ -5,8 +5,7 @@ use crate::wayland::{
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
 use crate::wayland::{
-    river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
-    river_options_unstable_v1::zriver_option_handle_v1,
+    river_layout_unstable_v1::zriver_layout_v1, river_options_unstable_v1::zriver_option_handle_v1,
     river_status_unstable_v1::zriver_output_status_v1,
 };
 use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
@@ -18,11 +17,11 @@ pub struct Globals {
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
     pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
-    pub seats: Vec<Option<Main<WlSeat>>>
 }
 
 #[derive(Clone, Debug)]
 pub struct Context {
+    pub debug: bool,
     pub running: bool,
     pub namespace: String,
     pub outputs: Vec<Output>,
@@ -32,9 +31,9 @@ pub struct Context {
 #[derive(Clone, Debug)]
 pub struct Output {
     pub options: Options,
-    pub updated: bool,
+    pub configured: bool,
     pub output: Option<WlOutput>,
-    pub tags: [Option<Tag>; 32]
+    pub tags: [Option<Tag>; 32],
 }
 
 #[derive(Clone, Debug)]
@@ -53,7 +52,7 @@ pub struct Rectangle {
 
 pub struct Window {
     pub app_id: String,
-    pub rect: Rectangle
+    pub rect: Rectangle,
 }
 
 #[derive(Clone, Debug)]
@@ -65,7 +64,6 @@ pub struct Frame {
     pub rect_list: Vec<Rectangle>,
 }
 
-
 #[derive(Copy, Clone)]
 union Value {
     double: f64,
@@ -73,62 +71,60 @@ union Value {
 }
 
 impl Context {
-    pub fn new(namespace: String) -> Context {
+    pub fn new() -> Context {
         return {
             Context {
+                debug: false,
                 running: false,
-                namespace: namespace,
-                globals: { Globals {
-                    layout_manager: None,
-                    options_manager: None,
-                    status_manager: None,
-                    seats: Vec::new(),
-                } },
+                namespace: String::from("kile"),
+                globals: {
+                    Globals {
+                        layout_manager: None,
+                        options_manager: None,
+                        status_manager: None,
+                    }
+                },
                 outputs: Vec::new(),
             }
         };
     }
-    pub fn init(&mut self) {
-        // for i in (0..self.outputs.len()).rev() {
-        //     self.outputs[i].update(&self.globals, self.namespace.clone());
-        // }
-        for output in &mut self.outputs {
-            output.update(&self.globals, self.namespace.clone());
-        }
-    }
-    pub fn run(&mut self) {
-        // if !self.running {
-        //     self.destroy();
-        // }
-        for output in &mut self.outputs {
-            if output.updated {
+    pub fn init(&mut self, monitor_index: usize) {
+        let output: &mut Output = if monitor_index >= self.outputs.len() {
+            &mut self.outputs[monitor_index]
+        } else {&mut self.outputs[0]};
+        if !output.configured {
+            if self.debug {
                 output.options.debug();
-                output.update(&self.globals, self.namespace.clone());
-                output.updated = false;
             }
+            output.configure(&self.globals, self.namespace.clone());
+        } else {
+            self.destroy();
         }
     }
     pub fn destroy(&mut self) {
         self.globals.status_manager.as_ref().unwrap().destroy();
         self.globals.layout_manager.as_ref().unwrap().destroy();
         self.globals.options_manager.as_ref().unwrap().destroy();
+        for output in &self.outputs {
+            output.destroy();
+        }
     }
 }
 
 impl Output {
-    pub fn new(output: WlOutput)->Output {
-        { Output  {
-            options: Options::new(),
-            updated: false,
-            output: Some(output),
-            tags: Default::default(),
-        }}
+    pub fn new(output: WlOutput) -> Output {
+        {
+            Output {
+                options: Options::new(),
+                configured: false,
+                output: Some(output),
+                tags: Default::default(),
+            }
+        }
     }
-    pub fn update(&mut self, globals: &Globals, namespace: String) {
-
+    pub fn configure(&mut self, globals: &Globals, namespace: String) {
         self.get_layout(globals, namespace);
         self.get_tag(globals);
-
         self.get_option("main_factor", globals);
         self.get_option("main_amount", globals);
         self.get_option("main_index", globals);
@@ -138,14 +134,18 @@ impl Output {
         self.get_option("output_layout", globals);
         self.get_option("frames_layout", globals);
         self.get_option("layout_per_tag", globals);
-
+        self.configured = true;
+    }
+    pub fn destroy(&self) {
+        (self.options.zlayout).as_ref().unwrap().destroy();
+    }
+    pub fn update(&mut self) {
         if self.options.view_amount > 0 {
             match self.focused() {
-                Some(mut tag) => tag.update(&mut self.options),
+                Some(mut tag) => tag.update(&self.options),
                 None => {
                     let mut tag = self.options.default_layout.clone();
-                    tag.update(&mut self.options);
-                    // self.options.set_focused(tag);
+                    tag.update(&self.options);
                 }
             };
         }
@@ -164,10 +164,8 @@ impl Output {
                 .expect("Compositor doesn't implement river_layout_unstable_v1")
                 .get_river_layout(self.output.as_mut().unwrap(), namespace),
         );
-        self.options.zlayout
-            .as_ref()
-            .unwrap()
-            .quick_assign(move |zlayout, event, mut output: DispatchData| match event {
+        self.options.zlayout.as_ref().unwrap().quick_assign(
+            move |_, event, mut output: DispatchData| match event {
                 zriver_layout_v1::Event::LayoutDemand {
                     view_amount,
                     usable_width,
@@ -178,7 +176,6 @@ impl Output {
                     output.get::<Output>().unwrap().options.view_amount = view_amount;
                     output.get::<Output>().unwrap().options.usable_height = usable_height;
                     output.get::<Output>().unwrap().options.usable_width = usable_width;
-                    output.get::<Output>().unwrap().updated = true;
                 }
                 zriver_layout_v1::Event::AdvertiseView {
                     tags,
@@ -187,10 +184,10 @@ impl Output {
                 } => {}
                 zriver_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
-                    // output.get::<Output>().unwrap().running = false;
                 }
                 zriver_layout_v1::Event::AdvertiseDone { serial } => {}
-            });
+            },
+        );
     }
     fn get_tag(&mut self, globals: &Globals) {
         let output_status = globals
@@ -212,7 +209,7 @@ impl Output {
             .expect("Compositor doesn't implement river_options_unstable_v1")
             .get_option_handle(name.to_owned(), Some(self.output.as_mut().unwrap()));
         option_handle.quick_assign(move |option_handle, event, mut output| {
-            let mut option_value: Value = Value { uint: 0 };
+            let mut option_value: Value = Value { uint: 1 };
             let mut string: String = String::new();
             match event {
                 zriver_option_handle_v1::Event::StringValue { value } => {
@@ -227,12 +224,8 @@ impl Output {
                         option_value.uint = value as u32;
                     }
                 }
-                zriver_option_handle_v1::Event::Unset => { }
+                zriver_option_handle_v1::Event::Unset => {}
             }
-            // match &output.get::<Output>().unwrap().options.zlayout {
-            //     Some(zlayout) => zlayout.parameters_changed(),
-            //     None => {}
-            // }
             unsafe {
                 match name {
                     "main_index" => {
@@ -285,15 +278,19 @@ impl Output {
                             .frames = Options::layout_frames(string);
                     }
                     "layout_per_tag" => {
-                        output
-                            .get::<Output>()
-                            .unwrap()
-                            .parse_layout_per_tag(string);
+                        output.get::<Output>().unwrap().parse_layout_per_tag(string);
                     }
                     _ => {}
                 }
             }
-            // option_handle.destroy();
+            output
+                .get::<Output>()
+                .unwrap()
+                .options
+                .zlayout
+                .as_ref()
+                .unwrap()
+                .parameters_changed();
         });
     }
     pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
@@ -363,12 +360,12 @@ impl Tag {
     pub fn new() -> Tag {
         {
             Tag {
-                output: Layout::Full,
-                frames: Vec::new(),
+                output: Layout::Vertical,
+                frames: vec![Layout::Horizontal],
             }
         }
     }
-    pub fn update(&mut self, options: &mut Options) {
+    pub fn update(&mut self, options: &Options) {
         let total_views = options.total_views(self.frames.len() as u32);
 
         let mut output = Frame::from(self.output, total_views, None, true);
@@ -388,13 +385,12 @@ impl Tag {
         let mut i = 0;
         for rect in output.rect_list {
             let mut iter = self.frames.iter();
-            let layout=match iter.next() {
-                Some(layout)=>layout,
-                None=>&Layout::Full
+            let layout = match iter.next() {
+                Some(layout) => layout,
+                None => &Layout::Full,
             };
             if i == 0 && main_amount > 0 {
-                Frame::from(*layout, main_amount, Some(rect), false)
-                    .generate(options);
+                Frame::from(*layout, main_amount, Some(rect), false).generate(options);
             } else {
                 let client_count = if reste > 0 {
                     reste -= 1;
@@ -402,8 +398,7 @@ impl Tag {
                 } else {
                     slave_amount
                 };
-                Frame::from(*layout, client_count, Some(rect), false)
-                    .generate(options);
+                Frame::from(*layout, client_count, Some(rect), false).generate(options);
             }
             i += 1;
         }
@@ -449,20 +444,17 @@ impl Frame {
         if index < self.client_count {
             let main = self.rect_list[index as usize];
             for i in (0..index as usize).rev() {
-                self.rect_list[i+1]=self.rect_list[i];
+                self.rect_list[i + 1] = self.rect_list[i];
             }
-            self.rect_list[0]=main;
+            self.rect_list[0] = main;
         }
     }
     pub fn get_rect(&self, index: u32) -> Rectangle {
-        return self.rect_list[index as usize]
+        return self.rect_list[index as usize];
     }
     pub fn push_dimensions(&mut self, options: &Options) {
-        // options.debug();
-        // println!("options: {:?}", options.serial );
         for window in &mut self.rect_list {
             if !options.smart_padding || options.view_amount > 1 {
-                // println!("window: {:?}", window );
                 window.apply_padding(options.view_padding);
             }
             options.push_dimensions(&window);
@@ -485,8 +477,8 @@ impl Frame {
                 Layout::Tab => {
                     for _i in 0..self.client_count {
                         self.rect_list.push(rect);
-                        rect.h -= 30;
-                        rect.y += 30;
+                        rect.h -= 50;
+                        rect.y += 50;
                     }
                 }
                 Layout::Horizontal => {

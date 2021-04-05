@@ -1,9 +1,5 @@
-use super::display::{Context, Rectangle, Tag, Output};
-use crate::wayland::{
-    river_layout_unstable_v1::{zriver_layout_v1, zriver_layout_v1::ZriverLayoutV1},
-    river_options_unstable_v1::zriver_option_handle_v1,
-    river_status_unstable_v1::zriver_output_status_v1,
-};
+use super::display::{Rectangle, Tag};
+use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
 use wayland_client::Main;
 
 #[derive(Clone, Debug)]
@@ -111,7 +107,7 @@ impl Options {
         }
     }
     pub fn push_dimensions(&self, rect: &Rectangle) {
-        self.zlayout.clone().unwrap().push_view_dimensions(
+        self.zlayout.as_ref().unwrap().push_view_dimensions(
             self.serial,
             rect.x as i32,
             rect.y as i32,
@@ -120,7 +116,7 @@ impl Options {
         )
     }
     pub fn debug(&self) {
-        println!("Option - {}", self.serial);
+        println!("Options - {}", self.serial);
         println!("\n  ZriverLayoutV1");
         println!("    view_amount : {}", self.view_amount);
         println!("    usable_width : {}", self.usable_width);
@@ -141,4 +137,3 @@ impl Options {
         self.zlayout.as_ref().unwrap().commit(self.serial);
     }
 }
-

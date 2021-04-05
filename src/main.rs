@@ -3,16 +3,15 @@ mod display;
 mod options;
 mod wayland;
 
+use std::env;
 use crate::wayland::{
     river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
 use display::{Context, Output};
-use std::env;
-use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
-use wayland_client::Main;
-use wayland_client::{Display, EventQueue, GlobalManager};
+use wayland_client::protocol::wl_output::WlOutput;
+use wayland_client::{Display, Main, GlobalManager};
 
 fn main() {
     let display = Display::connect_to_env().unwrap();
@@ -21,33 +20,7 @@ fn main() {
 
     let attached_display = (*display).clone().attach(event_queue.token());
 
-    let mut debug = false;
-
-    let namespace = {
-        let mut args = env::args();
-        args.next();
-        match args.next() {
-            Some(str)=> {
-                match str.as_str() {
-                    "--help" | "-h" | "--h" => {
-                        help();
-                        std::process::exit(0);
-                    }
-                    "--debug" | "--d" | "-d" =>{
-                        debug=true;
-                        match args.next() {
-                            Some(namespace)=>namespace,
-                            None=>String::from("kile")
-                        }
-                    }
-                    _=>str,
-                }
-            }
-            None=>String::from("kile"),
-        }
-    };
-
-    let mut context = Context::new(namespace);
+    let mut context = Context::new();
 
     let _globals = GlobalManager::new_with_cb(
         &attached_display,
@@ -80,15 +53,8 @@ fn main() {
                 ZriverOptionsManagerV1,
                 1,
                 |options_manager: Main<ZriverOptionsManagerV1>, mut context: DispatchData| {
-                    context.get::<Context>().unwrap().globals.options_manager = Some(options_manager);
-                }
-            ],
-            [
-                WlSeat,
-                3,
-                |seat: Main<WlSeat>, mut context: DispatchData| {
-                    seat.quick_assign(move |_, _, _| {});
-                    context.get::<Context>().unwrap().globals.seats.push(Some(seat));
+                    context.get::<Context>().unwrap().globals.options_manager =
+                        Some(options_manager);
                 }
             ]
         ),
@@ -98,22 +64,43 @@ fn main() {
         .sync_roundtrip(&mut context, |_, _, _| unreachable!())
         .unwrap();
 
-    context.init();
+    let mut args = env::args();
+    let mut monitor_index = 0;
+    args.next();
+    loop {
+        match args.next() {
+            Some(flag)=> match flag.as_str() {
+                "--debug" | "--d" | "-d" => context.debug = true,
+                "--namespace" | "--n" | "-n" => context.namespace = args.next().unwrap_or(String::from("kile")),
+                "--monitor" | "--m" | "-m" => {
+                    match args.next().unwrap_or(String::from("0")).parse::<usize>() {
+                        Ok(index) => monitor_index = index,
+                        Err(v) => println!("Invalid output index value: {}", v),
+                    }
+                }
+                "--help" | "-h" | "--h" => {
+                    help();
+                }
+                _=>break
+            }
+            None => break
+        }
+    }
+
+    context.init(monitor_index);
 
     while context.running {
-        for output in &mut context.outputs {
-            event_queue
-                .dispatch(output, |event, object, _| {
-                    panic!(
-                        "[callop] Encountered an orphan event: {}@{}: {}",
-                        event.interface,
-                        object.as_ref().id(),
-                        event.name
-                    );
-                })
-                .unwrap();
-        }
-        context.run();
+        event_queue
+            .dispatch(&mut context.outputs[monitor_index], |event, object, _| {
+                panic!(
+                    "[callop] Encountered an orphan event: {}@{}: {}",
+                    event.interface,
+                    object.as_ref().id(),
+                    event.name
+                );
+            })
+            .unwrap();
+        context.outputs[monitor_index].update();
     }
 }
 
@@ -135,12 +122,11 @@ fn help() {
         "      format: \"{format}\"\n",
         format = "1:v:hh 4:h:tt 2:h:hth ..."
     );
-    println!("kile <namespace>");
-    println!("  namespace: the string you assign to the layout option so kile can receive events.");
-    println!(
-        "  By default the namespace is set to \"{kile}\"\n",
-        kile = "kile"
-    );
-    println!("kile --debug <namespace>");
-    println!("  shows \"Options\" as events occur\n");
+    println!("kile <flags>");
+    println!("  flags");
+    println!("    -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
+    println!("    -d | --d | --debug : displays the content of the Options struct as events occur.");
+    println!("    -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
+    println!("    -h | --h | --help : shows this help menu.\n");
+    std::process::exit(0);
 }
