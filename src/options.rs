@@ -47,24 +47,24 @@ impl Options {
             }
         };
     }
-    pub fn total_views(&self, view_available: u32) -> u32 {
+    pub fn frames_amount(&self, frames_available: u32) -> u32 {
         if self.main_amount >= self.view_amount {
             1
-        } else if self.view_amount >= view_available {
-            if 1 + self.view_amount - self.main_amount < view_available
-                && self.main_amount > self.view_amount / view_available
+        } else if self.view_amount >= frames_available {
+            if 1 + self.view_amount - self.main_amount < frames_available
+                && self.main_amount > self.view_amount / frames_available
             {
                 1 + self.view_amount - self.main_amount
             } else {
-                view_available
+                frames_available
             }
         } else {
             self.view_amount
         }
     }
-    pub fn main_amount(&self, total_views: u32) -> u32 {
+    pub fn main_amount(&self, frames_amount: u32) -> u32 {
         if self.main_index + self.main_amount <= self.view_amount
-            && total_views > 1
+            && frames_amount > 1
             && self.main_amount > 0
         {
             if self.main_index + self.main_amount > self.view_amount {

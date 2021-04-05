@@ -74,8 +74,10 @@ fn main() {
                 "--namespace" | "--n" | "-n" => context.namespace = args.next().unwrap_or(String::from("kile")),
                 "--monitor" | "--m" | "-m" => {
                     match args.next().unwrap_or(String::from("0")).parse::<usize>() {
-                        Ok(index) => monitor_index = index,
-                        Err(v) => println!("Invalid output index value: {}", v),
+                        Ok(index) => monitor_index = if index >= context.outputs.len() {
+                            0
+                        } else { index },
+                        Err(v) => println!("{}", v),
                     }
                 }
                 "--help" | "-h" | "--h" => {

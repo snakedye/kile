@@ -8,18 +8,15 @@ use crate::wayland::{
     river_layout_unstable_v1::zriver_layout_v1, river_options_unstable_v1::zriver_option_handle_v1,
     river_status_unstable_v1::zriver_output_status_v1,
 };
-use wayland_client::protocol::{wl_output::WlOutput, wl_seat::WlSeat};
-use wayland_client::DispatchData;
-use wayland_client::Main;
+use wayland_client::protocol::wl_output::WlOutput;
+use wayland_client::{DispatchData, Main};
 
-#[derive(Clone, Debug)]
 pub struct Globals {
     pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
     pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
     pub status_manager: Option<Main<ZriverStatusManagerV1>>,
 }
 
-#[derive(Clone, Debug)]
 pub struct Context {
     pub debug: bool,
     pub running: bool,
@@ -28,7 +25,6 @@ pub struct Context {
     pub globals: Globals,
 }
 
-#[derive(Clone, Debug)]
 pub struct Output {
     pub options: Options,
     pub configured: bool,
@@ -50,21 +46,20 @@ pub struct Rectangle {
     pub h: u32,
 }
 
-pub struct Window {
-    pub app_id: String,
-    pub rect: Rectangle,
-}
-
 #[derive(Clone, Debug)]
 pub struct Frame {
     pub parent: bool,
     pub layout: Layout,
-    pub client_count: u32,
-    pub rect: Option<Rectangle>,
+    pub rect: Rectangle,
     pub rect_list: Vec<Rectangle>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
+struct Window {
+    pub app_id: String,
+    pub rect: Rectangle,
+}
+
 union Value {
     double: f64,
     uint: u32,
@@ -89,9 +84,7 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
-        let output: &mut Output = if monitor_index >= self.outputs.len() {
-            &mut self.outputs[monitor_index]
-        } else {&mut self.outputs[0]};
+        let output=&mut self.outputs[monitor_index];
         if !output.configured {
             if self.debug {
                 output.options.debug();
@@ -360,47 +353,56 @@ impl Tag {
     pub fn new() -> Tag {
         {
             Tag {
-                output: Layout::Vertical,
-                frames: vec![Layout::Horizontal],
+                output: Layout::Full,
+                frames: Vec::new(),
             }
         }
     }
     pub fn update(&mut self, options: &Options) {
-        let total_views = options.total_views(self.frames.len() as u32);
+        let frames_amount = options.frames_amount(self.frames.len() as u32);
 
-        let mut output = Frame::from(self.output, total_views, None, true);
-        output.generate(options);
+        let mut rect = Rectangle::from(options);
+        if !options.smart_padding || options.view_amount > 1 {
+            rect.apply_padding(options.outer_padding);
+        }
+        let mut output = Frame::from(self.output,rect, true);
+        output.generate(options, frames_amount);
 
-        let main_amount = options.main_amount(total_views);
+        let main_amount = options.main_amount(frames_amount);
         let slave_amount;
+
         let mut reste = if main_amount > 0 {
             output.zoom(options.main_index);
-            slave_amount = (options.view_amount - main_amount) / (output.client_count - 1);
-            (options.view_amount - main_amount) % (total_views - 1)
+            slave_amount = (options.view_amount - main_amount) / (frames_amount - 1);
+            (options.view_amount - main_amount) % (frames_amount - 1)
         } else {
-            slave_amount = options.view_amount / output.client_count;
-            options.view_amount % total_views
+            slave_amount = options.view_amount / frames_amount;
+            options.view_amount % frames_amount
         };
 
-        let mut i = 0;
+        let mut main=false;
         for rect in output.rect_list {
             let mut iter = self.frames.iter();
             let layout = match iter.next() {
                 Some(layout) => layout,
                 None => &Layout::Full,
             };
-            if i == 0 && main_amount > 0 {
-                Frame::from(*layout, main_amount, Some(rect), false).generate(options);
+            let client_count;
+            let mut frame=if main && main_amount > 0 {
+                main=true;
+                client_count=main_amount;
+                Frame::from(*layout, rect, false)
             } else {
-                let client_count = if reste > 0 {
+                client_count = if reste > 0 {
                     reste -= 1;
                     slave_amount + 1
                 } else {
                     slave_amount
                 };
-                Frame::from(*layout, client_count, Some(rect), false).generate(options);
-            }
-            i += 1;
+                Frame::from(*layout, rect, false)
+            };
+            frame.generate(options, client_count);
+            frame.push_dimensions(options);
         }
 
         options.commit();
@@ -429,28 +431,24 @@ impl Rectangle {
 }
 
 impl Frame {
-    pub fn from(layout: Layout, client_count: u32, rect: Option<Rectangle>, parent: bool) -> Frame {
+    pub fn from(layout: Layout, rect: Rectangle, parent: bool) -> Frame {
         {
             Frame {
                 parent: parent,
                 layout: layout,
-                client_count: client_count,
                 rect: rect,
                 rect_list: Vec::new(),
             }
         }
     }
     pub fn zoom(&mut self, index: u32) {
-        if index < self.client_count {
+        if (index as usize) < self.rect_list.len() {
             let main = self.rect_list[index as usize];
             for i in (0..index as usize).rev() {
                 self.rect_list[i + 1] = self.rect_list[i];
             }
             self.rect_list[0] = main;
         }
-    }
-    pub fn get_rect(&self, index: u32) -> Rectangle {
-        return self.rect_list[index as usize];
     }
     pub fn push_dimensions(&mut self, options: &Options) {
         for window in &mut self.rect_list {
@@ -460,22 +458,13 @@ impl Frame {
             options.push_dimensions(&window);
         }
     }
-    pub fn generate(&mut self, options: &Options) {
-        let mut rect = match self.rect {
-            Some(rect) => rect,
-            None => {
-                let mut rect = Rectangle::from(options);
-                if !options.smart_padding || (self.parent && options.view_amount > 1) {
-                    rect.apply_padding(options.outer_padding);
-                }
-                rect
-            }
-        };
+    pub fn generate(&mut self, options: &Options, client_count: u32) {
+        let mut rect = self.rect;
 
-        if self.client_count > 0 {
+        if client_count > 0 {
             match self.layout {
                 Layout::Tab => {
-                    for _i in 0..self.client_count {
+                    for _i in 0..client_count {
                         self.rect_list.push(rect);
                         rect.h -= 50;
                         rect.y += 50;
@@ -484,27 +473,27 @@ impl Frame {
                 Layout::Horizontal => {
                     let mut slave_area = rect;
                     let mut main_area = rect;
-                    let reste = rect.h % self.client_count;
+                    let reste = rect.h % client_count;
                     if self.parent {
                         main_area.h = if options.main_amount > 0
-                            && self.client_count > 1
+                            && client_count > 1
                             && options.main_amount < options.view_amount
-                            && options.main_index < self.client_count
+                            && options.main_index < client_count
                         {
                             (rect.h * (options.main_factor * 100.0) as u32)
-                                / (50 * self.client_count)
+                                / (50 * client_count)
                         } else {
                             0
                         };
                         slave_area.h -= main_area.h;
                     }
-                    for i in 0..self.client_count {
+                    for i in 0..client_count {
                         if self.parent && i == options.main_index && main_area.h > 0 {
                             rect.h = main_area.h;
                         } else if self.parent && main_area.h > 0 {
-                            rect.h = slave_area.h / (self.client_count - 1);
+                            rect.h = slave_area.h / (client_count - 1);
                         } else {
-                            rect.h = slave_area.h / self.client_count;
+                            rect.h = slave_area.h / client_count;
                         }
                         if i == 0 {
                             rect.h += reste;
@@ -517,27 +506,27 @@ impl Frame {
                 Layout::Vertical => {
                     let mut slave_area = rect;
                     let mut main_area = rect;
-                    let reste = rect.w % self.client_count;
+                    let reste = rect.w % client_count;
                     if self.parent {
                         main_area.w = if options.main_amount > 0
-                            && self.client_count > 1
+                            && client_count > 1
                             && options.main_amount < options.view_amount
-                            && options.main_index < self.client_count
+                            && options.main_index < client_count
                         {
                             (rect.w * (options.main_factor * 100.0) as u32)
-                                / (50 * self.client_count)
+                                / (50 * client_count)
                         } else {
                             0
                         };
                         slave_area.w -= main_area.w;
                     }
-                    for i in 0..self.client_count {
+                    for i in 0..client_count {
                         if self.parent && i == options.main_index && main_area.w > 0 {
                             rect.w = main_area.w;
                         } else if self.parent && main_area.w > 0 {
-                            rect.w = slave_area.w / (self.client_count - 1);
+                            rect.w = slave_area.w / (client_count - 1);
                         } else {
-                            rect.w = slave_area.w / self.client_count;
+                            rect.w = slave_area.w / client_count;
                         }
                         if i == 0 {
                             rect.w += reste;
@@ -548,13 +537,10 @@ impl Frame {
                     }
                 }
                 Layout::Full => {
-                    for _i in 0..self.client_count {
+                    for _i in 0..client_count {
                         self.rect_list.push(rect);
                     }
                 }
-            }
-            if !self.parent {
-                self.push_dimensions(options);
             }
         }
     }
