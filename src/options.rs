@@ -16,7 +16,6 @@ pub struct Options {
     pub main_index: u32,
     pub main_factor: f64,
     pub main_amount: u32,
-    pub default_layout: Tag,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -24,6 +23,7 @@ pub enum Layout {
     Tab,
     Full,
     Vertical,
+    Dwindle,
     Horizontal,
 }
 
@@ -43,7 +43,6 @@ impl Options {
                 main_factor: 0.0,
                 main_index: 0,
                 main_amount: 0,
-                default_layout: Tag::new(),
             }
         };
     }
@@ -77,13 +76,10 @@ impl Options {
         }
     }
     pub fn layout_output(layout_output: String) -> Layout {
-        let orientation;
-
         match layout_output.chars().next() {
-            Some(c) => orientation = Options::layout(c),
-            None => orientation = Layout::Full,
+            Some(c) => Options::layout(c),
+            None => Layout::Full,
         }
-        orientation
     }
     pub fn layout_frames(string: String) -> Vec<Layout> {
         let mut layout = Vec::new();
@@ -99,6 +95,7 @@ impl Options {
             'v' => Layout::Vertical,
             'h' => Layout::Horizontal,
             't' => Layout::Tab,
+            'd' => Layout::Dwindle,
             'f' => Layout::Full,
             _ => {
                 println!("{}: Not a valid character at index", c);
@@ -128,8 +125,6 @@ impl Options {
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
         println!("    main_amount : {}", self.main_amount);
-        println!("    layout_output : {:?}", self.default_layout.output);
-        println!("    layout_frames : {:?}", self.default_layout.frames);
         println!("\n  ZriverOutputStatusV1");
         println!("    tagmask : {}\n", self.tagmask);
     }

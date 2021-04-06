@@ -3,15 +3,15 @@ mod display;
 mod options;
 mod wayland;
 
-use std::env;
 use crate::wayland::{
     river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
     river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
 use display::{Context, Output};
+use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
-use wayland_client::{Display, Main, GlobalManager};
+use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
     let display = Display::connect_to_env().unwrap();
@@ -69,23 +69,30 @@ fn main() {
     args.next();
     loop {
         match args.next() {
-            Some(flag)=> match flag.as_str() {
+            Some(flag) => match flag.as_str() {
                 "--debug" | "--d" | "-d" => context.debug = true,
-                "--namespace" | "--n" | "-n" => context.namespace = args.next().unwrap_or(String::from("kile")),
+                "--namespace" | "--n" | "-n" => {
+                    context.namespace = args.next().unwrap_or(String::from("kile"))
+                }
                 "--monitor" | "--m" | "-m" => {
                     match args.next().unwrap_or(String::from("0")).parse::<usize>() {
-                        Ok(index) => monitor_index = if index >= context.outputs.len() {
-                            0
-                        } else { index },
+                        Ok(index) => {
+                            monitor_index = if index >= context.outputs.len() {
+                                0
+                            } else {
+                                index
+                            }
+                        }
                         Err(v) => println!("{}", v),
                     }
                 }
                 "--help" | "-h" | "--h" => {
                     help();
+                    context.running = false;
                 }
-                _=>break
-            }
-            None => break
+                _ => break,
+            },
+            None => break,
         }
     }
 
@@ -127,8 +134,9 @@ fn help() {
     println!("kile <flags>");
     println!("  flags");
     println!("    -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
-    println!("    -d | --d | --debug : displays the content of the Options struct as events occur.");
+    println!(
+        "    -d | --d | --debug : displays the content of the Options struct as events occur."
+    );
     println!("    -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
     println!("    -h | --h | --help : shows this help menu.\n");
-    std::process::exit(0);
 }

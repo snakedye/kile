@@ -28,6 +28,7 @@ pub struct Context {
 pub struct Output {
     pub options: Options,
     pub configured: bool,
+    pub default_layout: Tag,
     pub output: Option<WlOutput>,
     pub tags: [Option<Tag>; 32],
 }
@@ -84,7 +85,7 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
-        let output=&mut self.outputs[monitor_index];
+        let output = &mut self.outputs[monitor_index];
         if !output.configured {
             if self.debug {
                 output.options.debug();
@@ -109,6 +110,7 @@ impl Output {
         {
             Output {
                 options: Options::new(),
+                default_layout: Tag::new(),
                 configured: false,
                 output: Some(output),
                 tags: Default::default(),
@@ -137,8 +139,7 @@ impl Output {
             match self.focused() {
                 Some(mut tag) => tag.update(&self.options),
                 None => {
-                    let mut tag = self.options.default_layout.clone();
-                    tag.update(&self.options);
+                    self.default_layout.update(&self.options);
                 }
             };
         }
@@ -149,7 +150,7 @@ impl Output {
     pub fn focused(&self) -> Option<Tag> {
         self.tags[self.options.tagmask as usize].clone()
     }
-    pub fn get_layout(&mut self, globals: &Globals, namespace: String) {
+    fn get_layout(&mut self, globals: &Globals, namespace: String) {
         self.options.zlayout = Some(
             globals
                 .layout_manager
@@ -251,7 +252,6 @@ impl Output {
                         output
                             .get::<Output>()
                             .unwrap()
-                            .options
                             .default_layout
                             .output = Options::layout_output(string);
                     }
@@ -266,7 +266,6 @@ impl Output {
                         output
                             .get::<Output>()
                             .unwrap()
-                            .options
                             .default_layout
                             .frames = Options::layout_frames(string);
                     }
@@ -286,7 +285,7 @@ impl Output {
                 .parameters_changed();
         });
     }
-    pub fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
+    fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();
         self.tags = Default::default();
         loop {
@@ -303,8 +302,8 @@ impl Output {
                                     break;
                                 }
                             }
-                            Err(_t) => {
-                                println!("Invalid tag");
+                            Err(e) => {
+                                println!("{}", e);
                                 break;
                             }
                         },
@@ -340,7 +339,7 @@ impl Output {
     }
 }
 
-pub fn tag_index(mut tagmask: u32) -> u32 {
+fn tag_index(mut tagmask: u32) -> u32 {
     let mut tag = 0;
     while tagmask / 2 >= 1 {
         tagmask /= 2;
@@ -365,10 +364,10 @@ impl Tag {
         if !options.smart_padding || options.view_amount > 1 {
             rect.apply_padding(options.outer_padding);
         }
-        let mut output = Frame::from(self.output,rect, true);
+        let mut output = Frame::from(self.output, rect, true);
         output.generate(options, frames_amount);
 
-        let main_amount = options.main_amount(frames_amount);
+        let mut main_amount = options.main_amount(frames_amount);
         let slave_amount;
 
         let mut reste = if main_amount > 0 {
@@ -380,17 +379,13 @@ impl Tag {
             options.view_amount % frames_amount
         };
 
-        let mut main=false;
+        let mut frames = self.frames.iter();
         for rect in output.rect_list {
-            let mut iter = self.frames.iter();
-            let layout = match iter.next() {
-                Some(layout) => layout,
-                None => &Layout::Full,
-            };
+            let layout = frames.next().unwrap_or(&Layout::Full);
             let client_count;
-            let mut frame=if main && main_amount > 0 {
-                main=true;
-                client_count=main_amount;
+            let mut frame = if main_amount > 0 {
+                client_count = main_amount;
+                main_amount = 0;
                 Frame::from(*layout, rect, false)
             } else {
                 client_count = if reste > 0 {
@@ -410,6 +405,16 @@ impl Tag {
 }
 
 impl Rectangle {
+    pub fn new() -> Rectangle {
+        {
+            Rectangle {
+                x: 0,
+                y: 0,
+                w: 0,
+                h: 0,
+            }
+        }
+    }
     pub fn from(options: &Options) -> Rectangle {
         {
             Rectangle {
@@ -431,6 +436,16 @@ impl Rectangle {
 }
 
 impl Frame {
+    pub fn new() -> Frame {
+        {
+            Frame {
+                parent: true,
+                layout: Layout::Full,
+                rect: Rectangle::new(),
+                rect_list: Vec::new(),
+            }
+        }
+    }
     pub fn from(layout: Layout, rect: Rectangle, parent: bool) -> Frame {
         {
             Frame {
@@ -440,6 +455,10 @@ impl Frame {
                 rect_list: Vec::new(),
             }
         }
+    }
+    pub fn swap(&mut self, index: usize) {
+        self.rect=self.rect_list[index];
+        self.rect_list.remove(index);
     }
     pub fn zoom(&mut self, index: u32) {
         if (index as usize) < self.rect_list.len() {
@@ -480,8 +499,7 @@ impl Frame {
                             && options.main_amount < options.view_amount
                             && options.main_index < client_count
                         {
-                            (rect.h * (options.main_factor * 100.0) as u32)
-                                / (50 * client_count)
+                            (rect.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
                         } else {
                             0
                         };
@@ -513,8 +531,7 @@ impl Frame {
                             && options.main_amount < options.view_amount
                             && options.main_index < client_count
                         {
-                            (rect.w * (options.main_factor * 100.0) as u32)
-                                / (50 * client_count)
+                            (rect.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
                         } else {
                             0
                         };
@@ -534,6 +551,18 @@ impl Frame {
 
                         self.rect_list.push(rect);
                         rect.x += rect.w;
+                    }
+                }
+                Layout::Dwindle => {
+                    for i in 0..client_count {
+                        self.layout = if i%2==0 {
+                            Layout::Vertical
+                        } else { Layout::Horizontal };
+                        if i < client_count-1 {
+                            self.generate(options, 2);
+                            self.swap(self.rect_list.len()-1);
+                        } else { self.generate(options, 1); }
+                        self.parent=false;
                     }
                 }
                 Layout::Full => {
