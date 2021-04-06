@@ -17,7 +17,7 @@ cargo build --release
 
 ## Roadmap
 
-- [ ] Implement the dwindle layout
+- [x] Implement the dwindle layout
 - [x] Per tag layout
 - [ ] Basic window rules
 - [ ] Draw titlebar on tabbed window
