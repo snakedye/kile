@@ -18,7 +18,6 @@ pub struct Globals {
 }
 
 pub struct Context {
-    pub debug: bool,
     pub running: bool,
     pub namespace: String,
     pub outputs: Vec<Output>,
@@ -55,12 +54,6 @@ pub struct Frame {
     pub rect_list: Vec<Rectangle>,
 }
 
-#[derive(Clone)]
-struct Window {
-    pub app_id: String,
-    pub rect: Rectangle,
-}
-
 union Value {
     double: f64,
     uint: u32,
@@ -70,7 +63,6 @@ impl Context {
     pub fn new() -> Context {
         return {
             Context {
-                debug: false,
                 running: false,
                 namespace: String::from("kile"),
                 globals: {
@@ -87,9 +79,6 @@ impl Context {
     pub fn init(&mut self, monitor_index: usize) {
         let output = &mut self.outputs[monitor_index];
         if !output.configured {
-            if self.debug {
-                output.options.debug();
-            }
             output.configure(&self.globals, self.namespace.clone());
         } else {
             self.destroy();
@@ -120,6 +109,7 @@ impl Output {
     pub fn configure(&mut self, globals: &Globals, namespace: String) {
         self.get_layout(globals, namespace);
         self.get_tag(globals);
+        self.get_option("mode", globals);
         self.get_option("main_factor", globals);
         self.get_option("main_amount", globals);
         self.get_option("main_index", globals);
@@ -143,9 +133,6 @@ impl Output {
                 }
             };
         }
-    }
-    pub fn set_focused(&mut self, tag: Tag) {
-        self.tags[self.options.tagmask as usize] = Some(tag);
     }
     pub fn focused(&self) -> Option<Tag> {
         self.tags[self.options.tagmask as usize].clone()
@@ -190,8 +177,15 @@ impl Output {
             .expect("Compositor doesn't implement river_status_unstable_v1")
             .get_river_output_status(self.output.as_mut().unwrap());
         output_status.quick_assign(move |_, event, mut output| match event {
-            zriver_output_status_v1::Event::FocusedTags { tags } => {
-                output.get::<Output>().unwrap().options.tagmask = tag_index(tags);
+            zriver_output_status_v1::Event::FocusedTags { mut tags } => {
+                output.get::<Output>().unwrap().options.tagmask = {
+                    let mut i = 0;
+                    while tags / 2 >= 1 {
+                        tags /= 2;
+                        i += 1;
+                    }
+                    i
+                }
             }
             zriver_output_status_v1::Event::ViewTags { tags } => {}
         });
@@ -220,27 +214,18 @@ impl Output {
                 }
                 zriver_option_handle_v1::Event::Unset => {}
             }
+            let output_handle = output.get::<Output>().unwrap();
             unsafe {
                 match name {
-                    "main_index" => {
-                        output.get::<Output>().unwrap().options.main_index = option_value.uint
-                    }
-                    "main_amount" => {
-                        output.get::<Output>().unwrap().options.main_amount = option_value.uint
-                    }
-                    "main_factor" => {
-                        output.get::<Output>().unwrap().options.main_factor = option_value.double
-                    }
-                    "view_padding" => {
-                        output.get::<Output>().unwrap().options.view_padding = option_value.uint
-                    }
+                    "main_index" => output_handle.options.main_index = option_value.uint,
+                    "main_amount" => output_handle.options.main_amount = option_value.uint,
+                    "main_factor" => output_handle.options.main_factor = option_value.double,
+                    "view_padding" => output_handle.options.view_padding = option_value.uint,
                     "smart_padding" => match option_value.uint {
-                        1 => output.get::<Output>().unwrap().options.smart_padding = true,
+                        1 => output_handle.options.smart_padding = true,
                         _ => {}
                     },
-                    "outer_padding" => {
-                        output.get::<Output>().unwrap().options.outer_padding = option_value.uint
-                    }
+                    "outer_padding" => output_handle.options.outer_padding = option_value.uint,
                     "output_layout" => {
                         match string.as_ref() {
                             "" => {
@@ -249,11 +234,7 @@ impl Output {
                             }
                             _ => {}
                         }
-                        output
-                            .get::<Output>()
-                            .unwrap()
-                            .default_layout
-                            .output = Options::layout_output(string);
+                        output_handle.default_layout.output = Options::layout_output(string);
                     }
                     "frames_layout" => {
                         match string.as_ref() {
@@ -263,15 +244,9 @@ impl Output {
                             }
                             _ => {}
                         }
-                        output
-                            .get::<Output>()
-                            .unwrap()
-                            .default_layout
-                            .frames = Options::layout_frames(string);
+                        output_handle.default_layout.frames = Options::layout_frames(string);
                     }
-                    "layout_per_tag" => {
-                        output.get::<Output>().unwrap().parse_layout_per_tag(string);
-                    }
+                    "layout_per_tag" => output_handle.parse_layout_per_tag(string),
                     _ => {}
                 }
             }
@@ -339,15 +314,6 @@ impl Output {
     }
 }
 
-fn tag_index(mut tagmask: u32) -> u32 {
-    let mut tag = 0;
-    while tagmask / 2 >= 1 {
-        tagmask /= 2;
-        tag += 1;
-    }
-    tag
-}
-
 impl Tag {
     pub fn new() -> Tag {
         {
@@ -360,16 +326,18 @@ impl Tag {
     pub fn update(&mut self, options: &Options) {
         let frames_amount = options.frames_amount(self.frames.len() as u32);
 
-        let mut rect = Rectangle::from(options);
-        if !options.smart_padding || options.view_amount > 1 {
-            rect.apply_padding(options.outer_padding);
-        }
+        let rect = if !options.smart_padding || options.view_amount > 1 {
+            Rectangle::from(options)
+                .apply_padding(options.outer_padding)
+        } else {
+            Rectangle::from(options)
+        };
         let mut output = Frame::from(self.output, rect, true);
+
         output.generate(options, frames_amount);
 
         let mut main_amount = options.main_amount(frames_amount);
         let slave_amount;
-
         let mut reste = if main_amount > 0 {
             output.zoom(options.main_index);
             slave_amount = (options.view_amount - main_amount) / (frames_amount - 1);
@@ -379,27 +347,25 @@ impl Tag {
             options.view_amount % frames_amount
         };
 
-        let mut frames = self.frames.iter();
-        for rect in output.rect_list {
-            let layout = frames.next().unwrap_or(&Layout::Full);
-            let client_count;
-            let mut frame = if main_amount > 0 {
-                client_count = main_amount;
+        for i in 0..frames_amount {
+            output.swap(0);
+            output.layout = self.frames[i as usize];
+            if main_amount > 0 {
+                output.generate(options, main_amount);
                 main_amount = 0;
-                Frame::from(*layout, rect, false)
             } else {
-                client_count = if reste > 0 {
-                    reste -= 1;
-                    slave_amount + 1
-                } else {
-                    slave_amount
-                };
-                Frame::from(*layout, rect, false)
-            };
-            frame.generate(options, client_count);
-            frame.push_dimensions(options);
+                output.generate(
+                    options,
+                    if reste > 0 {
+                        reste -= 1;
+                        slave_amount + 1
+                    } else {
+                        slave_amount
+                    },
+                );
+            }
         }
-
+        output.push_dimensions(options);
         options.commit();
     }
 }
@@ -425,13 +391,14 @@ impl Rectangle {
             }
         }
     }
-    pub fn apply_padding(&mut self, padding: u32) {
+    pub fn apply_padding(&mut self, padding: u32) -> Rectangle {
         if 2 * padding < self.h && 2 * padding < self.w {
             self.x += padding;
             self.y += padding;
             self.w -= 2 * padding;
             self.h -= 2 * padding;
         }
+        *self
     }
 }
 
@@ -457,7 +424,7 @@ impl Frame {
         }
     }
     pub fn swap(&mut self, index: usize) {
-        self.rect=self.rect_list[index];
+        self.rect = self.rect_list[index];
         self.rect_list.remove(index);
     }
     pub fn zoom(&mut self, index: u32) {
@@ -472,103 +439,113 @@ impl Frame {
     pub fn push_dimensions(&mut self, options: &Options) {
         for window in &mut self.rect_list {
             if !options.smart_padding || options.view_amount > 1 {
-                window.apply_padding(options.view_padding);
+                options.push_dimensions(&window.apply_padding(options.view_padding));
             }
-            options.push_dimensions(&window);
         }
     }
     pub fn generate(&mut self, options: &Options, client_count: u32) {
         let mut rect = self.rect;
 
-        if client_count > 0 {
-            match self.layout {
-                Layout::Tab => {
-                    for _i in 0..client_count {
-                        self.rect_list.push(rect);
-                        rect.h -= 50;
-                        rect.y += 50;
-                    }
+        match self.layout {
+            Layout::Tab => {
+                for _i in 0..client_count {
+                    self.rect_list.push(rect);
+                    rect.h -= 50;
+                    rect.y += 50;
                 }
-                Layout::Horizontal => {
-                    let mut slave_area = rect;
-                    let mut main_area = rect;
-                    let reste = rect.h % client_count;
-                    if self.parent {
-                        main_area.h = if options.main_amount > 0
-                            && client_count > 1
-                            && options.main_amount < options.view_amount
-                            && options.main_index < client_count
-                        {
-                            (rect.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
-                        } else {
-                            0
-                        };
-                        slave_area.h -= main_area.h;
+            }
+            Layout::Horizontal => {
+                let mut slave_area = rect;
+                let mut main_area = rect;
+                let reste = rect.h % client_count;
+                if self.parent {
+                    main_area.h = if options.main_amount > 0
+                        && client_count > 1
+                        && options.main_amount < options.view_amount
+                        && options.main_index < client_count
+                    {
+                        (rect.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
+                    } else {
+                        0
+                    };
+                    slave_area.h -= main_area.h;
+                }
+                for i in 0..client_count {
+                    if self.parent && i == options.main_index && main_area.h > 0 {
+                        rect.h = main_area.h;
+                    } else if self.parent && main_area.h > 0 {
+                        rect.h = slave_area.h / (client_count - 1);
+                    } else {
+                        rect.h = slave_area.h / client_count;
                     }
-                    for i in 0..client_count {
-                        if self.parent && i == options.main_index && main_area.h > 0 {
-                            rect.h = main_area.h;
-                        } else if self.parent && main_area.h > 0 {
-                            rect.h = slave_area.h / (client_count - 1);
-                        } else {
-                            rect.h = slave_area.h / client_count;
-                        }
-                        if i == 0 {
-                            rect.h += reste;
-                        }
+                    if i == 0 {
+                        rect.h += reste;
+                    }
 
-                        self.rect_list.push(rect);
-                        rect.y += rect.h;
-                    }
+                    self.rect_list.push(rect);
+                    rect.y += rect.h;
                 }
-                Layout::Vertical => {
-                    let mut slave_area = rect;
-                    let mut main_area = rect;
-                    let reste = rect.w % client_count;
-                    if self.parent {
-                        main_area.w = if options.main_amount > 0
-                            && client_count > 1
-                            && options.main_amount < options.view_amount
-                            && options.main_index < client_count
-                        {
-                            (rect.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
-                        } else {
-                            0
-                        };
-                        slave_area.w -= main_area.w;
+            }
+            Layout::Vertical => {
+                let mut slave_area = rect;
+                let mut main_area = rect;
+                let reste = rect.w % client_count;
+                if self.parent {
+                    main_area.w = if options.main_amount > 0
+                        && client_count > 1
+                        && options.main_amount < options.view_amount
+                        && options.main_index < client_count
+                    {
+                        (rect.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
+                    } else {
+                        0
+                    };
+                    slave_area.w -= main_area.w;
+                }
+                for i in 0..client_count {
+                    if self.parent && i == options.main_index && main_area.w > 0 {
+                        rect.w = main_area.w;
+                    } else if self.parent && main_area.w > 0 {
+                        rect.w = slave_area.w / (client_count - 1);
+                    } else {
+                        rect.w = slave_area.w / client_count;
                     }
-                    for i in 0..client_count {
-                        if self.parent && i == options.main_index && main_area.w > 0 {
-                            rect.w = main_area.w;
-                        } else if self.parent && main_area.w > 0 {
-                            rect.w = slave_area.w / (client_count - 1);
-                        } else {
-                            rect.w = slave_area.w / client_count;
-                        }
-                        if i == 0 {
-                            rect.w += reste;
-                        }
+                    if i == 0 {
+                        rect.w += reste;
+                    }
 
-                        self.rect_list.push(rect);
-                        rect.x += rect.w;
-                    }
+                    self.rect_list.push(rect);
+                    rect.x += rect.w;
                 }
-                Layout::Dwindle => {
-                    for i in 0..client_count {
-                        self.layout = if i%2==0 {
-                            Layout::Vertical
-                        } else { Layout::Horizontal };
-                        if i < client_count-1 {
-                            self.generate(options, 2);
-                            self.swap(self.rect_list.len()-1);
-                        } else { self.generate(options, 1); }
-                        self.parent=false;
+            }
+            Layout::Recursive { modi, index } => {
+                for i in 0..client_count {
+                    self.layout = if (i + modi) % 2 == 0 {
+                        Layout::Vertical
+                    } else {
+                        Layout::Horizontal
+                    };
+                    if i < client_count - 1 {
+                        self.generate(options, 2);
+                        match index {
+                            Some(index) => {
+                                if index as u32 > i {
+                                    self.swap(i as usize)
+                                } else {
+                                    self.swap(index)
+                                }
+                            }
+                            None => self.swap(i as usize),
+                        }
+                    } else {
+                        self.generate(options, 1);
                     }
+                    self.parent = false;
                 }
-                Layout::Full => {
-                    for _i in 0..client_count {
-                        self.rect_list.push(rect);
-                    }
+            }
+            Layout::Full => {
+                for _i in 0..client_count {
+                    self.rect_list.push(rect);
                 }
             }
         }

@@ -22,7 +22,7 @@ fn main() {
 
     let mut context = Context::new();
 
-    let _globals = GlobalManager::new_with_cb(
+    GlobalManager::new_with_cb(
         &attached_display,
         wayland_client::global_filter!(
             [
@@ -65,12 +65,13 @@ fn main() {
         .unwrap();
 
     let mut args = env::args();
+    let mut debug = false;
     let mut monitor_index = 0;
     args.next();
     loop {
         match args.next() {
             Some(flag) => match flag.as_str() {
-                "--debug" | "--d" | "-d" => context.debug = true,
+                "--debug" | "--d" | "-d" => debug = true,
                 "--namespace" | "--n" | "-n" => {
                     context.namespace = args.next().unwrap_or(String::from("kile"))
                 }
@@ -109,6 +110,9 @@ fn main() {
                 );
             })
             .unwrap();
+        if debug {
+            context.outputs[monitor_index].options.debug();
+        }
         context.outputs[monitor_index].update();
     }
 }

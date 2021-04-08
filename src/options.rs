@@ -23,7 +23,7 @@ pub enum Layout {
     Tab,
     Full,
     Vertical,
-    Dwindle,
+    Recursive { modi: u32, index: Option<usize> },
     Horizontal,
 }
 
@@ -95,7 +95,14 @@ impl Options {
             'v' => Layout::Vertical,
             'h' => Layout::Horizontal,
             't' => Layout::Tab,
-            'd' => Layout::Dwindle,
+            'd' => Layout::Recursive {
+                modi: 0,
+                index: None,
+            },
+            'r' => Layout::Recursive {
+                modi: 0,
+                index: Some(0),
+            },
             'f' => Layout::Full,
             _ => {
                 println!("{}: Not a valid character at index", c);
