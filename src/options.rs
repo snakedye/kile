@@ -13,6 +13,8 @@ pub struct Options {
     pub smart_padding: bool,
     pub view_padding: u32,
     pub outer_padding: u32,
+    pub xoffset: i32,
+    pub yoffset: i32,
     pub main_index: u32,
     pub main_factor: f64,
     pub main_amount: u32,
@@ -38,6 +40,8 @@ impl Options {
                 smart_padding: false,
                 view_padding: 0,
                 outer_padding: 0,
+                xoffset: 0,
+                yoffset: 0,
                 usable_width: 0,
                 usable_height: 0,
                 main_factor: 0.0,
@@ -80,6 +84,24 @@ impl Options {
             Some(c) => Options::layout(c),
             None => Layout::Full,
         }
+    }
+    pub fn usable_width(&self)->u32 {
+        if self.xoffset != 0 || self.xoffset < self.usable_width as i32 {
+            if self.xoffset > 0 {
+                (( self.usable_width as i32 ) - self.xoffset) as u32
+            } else { 
+                (( self.usable_width as i32 ) + self.xoffset) as u32
+            }
+        } else { self.usable_width }
+    }
+    pub fn usable_height(&self)->u32 {
+        if self.yoffset != 0 || self.yoffset < self.usable_height as i32 {
+            if self.yoffset > 0 {
+                (( self.usable_height as i32 ) - self.yoffset) as u32
+            } else { 
+                (( self.usable_height as i32 ) + self.yoffset) as u32
+            }
+        } else { self.usable_height }
     }
     pub fn layout_frames(string: String) -> Vec<Layout> {
         let mut layout = Vec::new();
@@ -128,6 +150,7 @@ impl Options {
         println!("\n  ZriverOptionHandleV1");
         println!("    outer_padding : {}", self.outer_padding);
         println!("    view_padding : {}", self.view_padding);
+        println!("    xoffset : {}", self.xoffset);
         println!("    smart_padding : {}", self.smart_padding);
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);

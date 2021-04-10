@@ -57,6 +57,7 @@ pub struct Frame {
 union Value {
     double: f64,
     uint: u32,
+    int: i32,
 }
 
 impl Context {
@@ -115,6 +116,8 @@ impl Output {
         self.get_option("main_index", globals);
         self.get_option("view_padding", globals);
         self.get_option("outer_padding", globals);
+        self.get_option("xoffset", globals);
+        self.get_option("yoffset", globals);
         self.get_option("smart_padding", globals);
         self.get_option("output_layout", globals);
         self.get_option("frames_layout", globals);
@@ -205,13 +208,7 @@ impl Output {
                 }
                 zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
-                zriver_option_handle_v1::Event::IntValue { value } => {
-                    if value < 0 {
-                        option_value.uint = 0;
-                    } else {
-                        option_value.uint = value as u32;
-                    }
-                }
+                zriver_option_handle_v1::Event::IntValue { value } =>  option_value.int = value,
                 zriver_option_handle_v1::Event::Unset => {}
             }
             let output_handle = output.get::<Output>().unwrap();
@@ -221,6 +218,8 @@ impl Output {
                     "main_amount" => output_handle.options.main_amount = option_value.uint,
                     "main_factor" => output_handle.options.main_factor = option_value.double,
                     "view_padding" => output_handle.options.view_padding = option_value.uint,
+                    "xoffset" => output_handle.options.xoffset = option_value.int,
+                    "yoffset" => output_handle.options.yoffset = option_value.int,
                     "smart_padding" => match option_value.uint {
                         1 => output_handle.options.smart_padding = true,
                         _ => {}
@@ -326,14 +325,7 @@ impl Tag {
     pub fn update(&mut self, options: &Options) {
         let frames_amount = options.frames_amount(self.frames.len() as u32);
 
-        let rect = if !options.smart_padding || options.view_amount > 1 {
-            Rectangle::from(options)
-                .apply_padding(options.outer_padding)
-        } else {
-            Rectangle::from(options)
-        };
-        let mut output = Frame::from(self.output, rect, true);
-
+        let mut output = Frame::from(self.output, Rectangle::from(options), true);
         output.generate(options, frames_amount);
 
         let mut main_amount = options.main_amount(frames_amount);
@@ -349,6 +341,7 @@ impl Tag {
 
         for i in 0..frames_amount {
             output.swap(0);
+            output.parent = false;
             output.layout = self.frames[i as usize];
             if main_amount > 0 {
                 output.generate(options, main_amount);
@@ -382,14 +375,21 @@ impl Rectangle {
         }
     }
     pub fn from(options: &Options) -> Rectangle {
-        {
+        let mut rect = {
             Rectangle {
-                x: 0,
-                y: 0,
-                w: options.usable_width,
-                h: options.usable_height,
+                x: if options.xoffset > 0 {
+                    options.xoffset as u32
+                } else { 0 },
+                y: if options.yoffset > 0 {
+                    options.yoffset as u32
+                } else { 0 },
+                w: options.usable_width(),
+                h: options.usable_height(),
             }
-        }
+        };
+        if !options.smart_padding || options.view_amount > 1 {
+            rect.apply_padding(options.view_padding)
+        } else { rect }
     }
     pub fn apply_padding(&mut self, padding: u32) -> Rectangle {
         if 2 * padding < self.h && 2 * padding < self.w {
@@ -439,8 +439,9 @@ impl Frame {
     pub fn push_dimensions(&mut self, options: &Options) {
         for window in &mut self.rect_list {
             if !options.smart_padding || options.view_amount > 1 {
-                options.push_dimensions(&window.apply_padding(options.view_padding));
+                window.apply_padding(options.view_padding);
             }
+            options.push_dimensions(window);
         }
     }
     pub fn generate(&mut self, options: &Options, client_count: u32) {

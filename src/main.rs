@@ -120,9 +120,12 @@ fn main() {
 fn help() {
     println!("\nkile --help");
     println!("  This is the list of options kile operates with");
-    println!("    view_padding (int): the padding of each window within the layout.");
-    println!("    outer_padding (int): the padding of the output.");
-    println!("    smart_padding (int): disables padding if there's only one view on the output.");
+    println!("    view_padding (uint): the padding of each window within the layout.");
+    println!("    outer_padding (uint): the padding of the output.");
+    println!("    smart_padding (uint): disables padding if there's only one view on the output.");
+    println!("    smart_padding (uint): disables padding if there's only one view on the output.");
+    println!("    xoffset (int): offset from a vertical screen edges");
+    println!("    yoffset (int): offset from a horizontal screen edges");
     println!("    main_index (int): the index of the main frame.");
     println!("    main_factor (fixed): the ratio of the screen dedicated to the main frame.");
     println!("    main_amount (int): the amount of window in the main frame.");
