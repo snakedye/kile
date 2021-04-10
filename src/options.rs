@@ -121,8 +121,16 @@ impl Options {
                 modi: 0,
                 index: None,
             },
+            'D' => Layout::Recursive {
+                modi: 1,
+                index: None,
+            },
             'r' => Layout::Recursive {
                 modi: 0,
+                index: Some(0),
+            },
+            'R' => Layout::Recursive {
+                modi: 1,
                 index: Some(0),
             },
             'f' => Layout::Full,

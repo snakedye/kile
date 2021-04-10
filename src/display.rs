@@ -531,12 +531,12 @@ impl Frame {
                         match index {
                             Some(index) => {
                                 if index as u32 > i {
-                                    self.swap(i as usize)
+                                    self.swap(self.rect_list.len()-1)
                                 } else {
                                     self.swap(index)
                                 }
                             }
-                            None => self.swap(i as usize),
+                            None => self.swap(self.rect_list.len()-1),
                         }
                     } else {
                         self.generate(options, 1);
