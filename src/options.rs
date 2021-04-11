@@ -1,4 +1,4 @@
-use super::display::{Rectangle, Tag};
+use super::display::{Rectangle};
 use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
 use wayland_client::Main;
 
@@ -79,7 +79,7 @@ impl Options {
             0
         }
     }
-    pub fn layout_output(layout_output: String) -> Layout {
+    pub fn outer_layout(layout_output: String) -> Layout {
         match layout_output.chars().next() {
             Some(c) => Options::layout(c),
             None => Layout::Full,
@@ -103,7 +103,7 @@ impl Options {
             }
         } else { self.usable_height }
     }
-    pub fn layout_frames(string: String) -> Vec<Layout> {
+    pub fn inner_layout(string: String) -> Vec<Layout> {
         let mut layout = Vec::new();
 
         for c in string.chars() {
@@ -159,6 +159,7 @@ impl Options {
         println!("    outer_padding : {}", self.outer_padding);
         println!("    view_padding : {}", self.view_padding);
         println!("    xoffset : {}", self.xoffset);
+        println!("    yoffset : {}", self.yoffset);
         println!("    smart_padding : {}", self.smart_padding);
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);

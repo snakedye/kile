@@ -28,14 +28,15 @@ pub struct Output {
     pub options: Options,
     pub configured: bool,
     pub default_layout: Tag,
+    pub app_id: Vec<Option<String>>,
     pub output: Option<WlOutput>,
     pub tags: [Option<Tag>; 32],
 }
 
 #[derive(Clone, Debug)]
 pub struct Tag {
-    pub output: Layout,
-    pub frames: Vec<Layout>,
+    pub outer: Layout,
+    pub inner: Vec<Layout>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -100,6 +101,7 @@ impl Output {
         {
             Output {
                 options: Options::new(),
+                app_id: Vec::new(),
                 default_layout: Tag::new(),
                 configured: false,
                 output: Some(output),
@@ -119,9 +121,9 @@ impl Output {
         self.get_option("xoffset", globals);
         self.get_option("yoffset", globals);
         self.get_option("smart_padding", globals);
-        self.get_option("output_layout", globals);
-        self.get_option("frames_layout", globals);
-        self.get_option("layout_per_tag", globals);
+        self.get_option("outer_layout", globals);
+        self.get_option("inner_layout", globals);
+        self.get_option("tag_config", globals);
         self.configured = true;
     }
     pub fn destroy(&self) {
@@ -165,7 +167,9 @@ impl Output {
                     tags,
                     app_id,
                     serial,
-                } => {}
+                } => { 
+                    output.get::<Output>().unwrap().app_id.push(app_id);
+                }
                 zriver_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
                 }
@@ -225,7 +229,7 @@ impl Output {
                         _ => {}
                     },
                     "outer_padding" => output_handle.options.outer_padding = option_value.uint,
-                    "output_layout" => {
+                    "outer_layout" => {
                         match string.as_ref() {
                             "" => {
                                 string = String::from("f");
@@ -233,9 +237,9 @@ impl Output {
                             }
                             _ => {}
                         }
-                        output_handle.default_layout.output = Options::layout_output(string);
+                        output_handle.default_layout.outer = Options::outer_layout(string);
                     }
-                    "frames_layout" => {
+                    "inner_layout" => {
                         match string.as_ref() {
                             "" => {
                                 string = String::from("f");
@@ -243,9 +247,9 @@ impl Output {
                             }
                             _ => {}
                         }
-                        output_handle.default_layout.frames = Options::layout_frames(string);
+                        output_handle.default_layout.inner = Options::inner_layout(string);
                     }
-                    "layout_per_tag" => output_handle.parse_layout_per_tag(string),
+                    "tag_config" => output_handle.parse_tag_config(string),
                     _ => {}
                 }
             }
@@ -259,7 +263,7 @@ impl Output {
                 .parameters_changed();
         });
     }
-    fn parse_layout_per_tag(&mut self, layout_per_tag: String) {
+    fn parse_tag_config(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();
         self.tags = Default::default();
         loop {
@@ -286,14 +290,14 @@ impl Output {
                             break;
                         }
                     };
-                    let layout_output = match rule.next() {
+                    let outer_layout = match rule.next() {
                         Some(layout) => String::from(layout),
                         None => {
                             println!("Invalid layout");
                             break;
                         }
                     };
-                    let layout_frames = match rule.next() {
+                    let inner_layout = match rule.next() {
                         Some(layout) => String::from(layout),
                         None => {
                             println!("Invalid layout");
@@ -302,8 +306,8 @@ impl Output {
                     };
                     self.tags[tag as usize - 1] = Some({
                         Tag {
-                            output: Options::layout_output(layout_output),
-                            frames: Options::layout_frames(layout_frames),
+                            outer: Options::outer_layout(outer_layout),
+                            inner: Options::inner_layout(inner_layout),
                         }
                     });
                 }
@@ -317,15 +321,15 @@ impl Tag {
     pub fn new() -> Tag {
         {
             Tag {
-                output: Layout::Full,
-                frames: Vec::new(),
+                outer: Layout::Full,
+                inner: Vec::new(),
             }
         }
     }
     pub fn update(&mut self, options: &Options) {
-        let frames_amount = options.frames_amount(self.frames.len() as u32);
+        let frames_amount = options.frames_amount(self.inner.len() as u32);
 
-        let mut output = Frame::from(self.output, Rectangle::from(options), true);
+        let mut output = Frame::from(self.outer, Rectangle::from(options), true);
         output.generate(options, frames_amount);
 
         let mut main_amount = options.main_amount(frames_amount);
@@ -342,7 +346,7 @@ impl Tag {
         for i in 0..frames_amount {
             output.swap(0);
             output.parent = false;
-            output.layout = self.frames[i as usize];
+            output.layout = self.inner[i as usize];
             if main_amount > 0 {
                 output.generate(options, main_amount);
                 main_amount = 0;
