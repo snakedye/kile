@@ -167,7 +167,7 @@ impl Output {
                     tags,
                     app_id,
                     serial,
-                } => { 
+                } => {
                     output.get::<Output>().unwrap().app_id.push(app_id);
                 }
                 zriver_layout_v1::Event::NamespaceInUse => {
@@ -212,7 +212,7 @@ impl Output {
                 }
                 zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
                 zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
-                zriver_option_handle_v1::Event::IntValue { value } =>  option_value.int = value,
+                zriver_option_handle_v1::Event::IntValue { value } => option_value.int = value,
                 zriver_option_handle_v1::Event::Unset => {}
             }
             let output_handle = output.get::<Output>().unwrap();
@@ -383,17 +383,23 @@ impl Rectangle {
             Rectangle {
                 x: if options.xoffset > 0 {
                     options.xoffset as u32
-                } else { 0 },
+                } else {
+                    0
+                },
                 y: if options.yoffset > 0 {
                     options.yoffset as u32
-                } else { 0 },
+                } else {
+                    0
+                },
                 w: options.usable_width(),
                 h: options.usable_height(),
             }
         };
         if !options.smart_padding || options.view_amount > 1 {
-            rect.apply_padding(options.view_padding)
-        } else { rect }
+            rect.apply_padding(options.outer_padding)
+        } else {
+            rect
+        }
     }
     pub fn apply_padding(&mut self, padding: u32) -> Rectangle {
         if 2 * padding < self.h && 2 * padding < self.w {
@@ -535,12 +541,12 @@ impl Frame {
                         match index {
                             Some(index) => {
                                 if index as u32 > i {
-                                    self.swap(self.rect_list.len()-1)
+                                    self.swap(self.rect_list.len() - 1)
                                 } else {
                                     self.swap(index)
                                 }
                             }
-                            None => self.swap(self.rect_list.len()-1),
+                            None => self.swap(self.rect_list.len() - 1),
                         }
                     } else {
                         self.generate(options, 1);

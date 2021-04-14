@@ -1,4 +1,4 @@
-use super::display::{Rectangle};
+use super::display::Rectangle;
 use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
 use wayland_client::Main;
 
@@ -85,23 +85,27 @@ impl Options {
             None => Layout::Full,
         }
     }
-    pub fn usable_width(&self)->u32 {
+    pub fn usable_width(&self) -> u32 {
         if self.xoffset != 0 || self.xoffset < self.usable_width as i32 {
             if self.xoffset > 0 {
-                (( self.usable_width as i32 ) - self.xoffset) as u32
-            } else { 
-                (( self.usable_width as i32 ) + self.xoffset) as u32
+                ((self.usable_width as i32) - self.xoffset) as u32
+            } else {
+                ((self.usable_width as i32) + self.xoffset) as u32
             }
-        } else { self.usable_width }
+        } else {
+            self.usable_width
+        }
     }
-    pub fn usable_height(&self)->u32 {
+    pub fn usable_height(&self) -> u32 {
         if self.yoffset != 0 || self.yoffset < self.usable_height as i32 {
             if self.yoffset > 0 {
-                (( self.usable_height as i32 ) - self.yoffset) as u32
-            } else { 
-                (( self.usable_height as i32 ) + self.yoffset) as u32
+                ((self.usable_height as i32) - self.yoffset) as u32
+            } else {
+                ((self.usable_height as i32) + self.yoffset) as u32
             }
-        } else { self.usable_height }
+        } else {
+            self.usable_height
+        }
     }
     pub fn inner_layout(string: String) -> Vec<Layout> {
         let mut layout = Vec::new();
