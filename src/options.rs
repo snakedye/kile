@@ -1,11 +1,11 @@
-use super::display::Rectangle;
+use super::display::{Area, Rectangle, Window};
 use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
 use wayland_client::Main;
 
-#[derive(Clone, Debug)]
 pub struct Options {
     pub serial: u32,
     pub tagmask: u32,
+    pub windows: Vec<Window>,
     pub zlayout: Option<Main<ZriverLayoutV1>>,
     pub view_amount: u32,
     pub usable_width: u32,
@@ -35,9 +35,10 @@ impl Options {
             Options {
                 serial: 0,
                 tagmask: 0,
+                windows: Vec::new(),
                 zlayout: None,
                 view_amount: 0,
-                smart_padding: false,
+                smart_padding: true,
                 view_padding: 0,
                 outer_padding: 0,
                 xoffset: 0,
@@ -116,6 +117,13 @@ impl Options {
 
         layout
     }
+    pub fn rearrange(&mut self) {
+        if self.windows.len() > self.view_amount as usize {
+            self.windows = self.windows
+                [self.windows.len() - self.view_amount as usize..self.windows.len()]
+                .to_vec();
+        }
+    }
     fn layout(c: char) -> Layout {
         match c {
             'v' => Layout::Vertical,
@@ -144,7 +152,31 @@ impl Options {
             }
         }
     }
-    pub fn push_dimensions(&self, rect: &Rectangle) {
+    pub fn get_output(&self) -> Area {
+        let mut area = {
+            Area {
+                x: if self.xoffset > 0 {
+                    self.xoffset as u32
+                } else {
+                    0
+                },
+                y: if self.yoffset > 0 {
+                    self.yoffset as u32
+                } else {
+                    0
+                },
+                w: self.usable_width(),
+                h: self.usable_height(),
+            }
+        };
+        if !self.smart_padding || self.view_amount > 1 {
+            area.apply_padding(self.outer_padding);
+            area
+        } else {
+            area
+        }
+    }
+    pub fn push_dimensions(&self, rect: &Area) {
         self.zlayout.as_ref().unwrap().push_view_dimensions(
             self.serial,
             rect.x as i32,
@@ -154,7 +186,7 @@ impl Options {
         )
     }
     pub fn debug(&self) {
-        println!("Options - {}", self.serial);
+        println!("self - {}", self.serial);
         println!("\n  ZriverLayoutV1");
         println!("    view_amount : {}", self.view_amount);
         println!("    usable_width : {}", self.usable_width);

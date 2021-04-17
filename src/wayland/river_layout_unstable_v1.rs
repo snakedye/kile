@@ -1,12 +1,3 @@
-use std::os::raw::{c_char, c_void};
-const NULLPTR: *const c_void = 0 as *const c_void;
-static mut types_null: [*const sys::common::wl_interface; 5] = [
-    NULLPTR as *const sys::common::wl_interface,
-    NULLPTR as *const sys::common::wl_interface,
-    NULLPTR as *const sys::common::wl_interface,
-    NULLPTR as *const sys::common::wl_interface,
-    NULLPTR as *const sys::common::wl_interface,
-];
 #[doc = "manage river layout objects\n\nA global factory for river_layout objects."]
 pub mod zriver_layout_manager_v1 {
     use super::sys::client::*;
@@ -457,11 +448,12 @@ pub mod zriver_layout_v1 {
     pub enum Event {
         #[doc = "namespace already in use\n\nThe requested namespace is already used by another river_layout object.\nAfter receiving this event, the client should destroy the river_layout\nobject. Any other request will be ignored."]
         NamespaceInUse,
-        #[doc = "the compositor is in demand of a layout\n\nThe compositor raises this event to inform the client that it requires a\nlayout for a set of views.\n\nThe usable width and height height indicate the space in which the\nclient can safely position views without interfering with desktop\nwidgets such as panels.\n\nThe serial of this event is used to identify subsequent events and\nrequest as belonging to this layout demand. Beware that the client\nmight need to handle multiple layout demands at the same time.\n\nThe server will ignore responses to all but the most recent\nlayout_demand. Thus, clients should only respond to the most recent\nlayout_demand received. If a newer layout_demand is received before the\nclient has finished responding to an old demand, the client should abort\nwork on the old demand as any further work would be wasted."]
+        #[doc = "the compositor is in demand of a layout\n\nThe compositor raises this event to inform the client that it requires a\nlayout for a set of views.\n\nThe usable width and height height indicate the space in which the\nclient can safely position views without interfering with desktop\nwidgets such as panels.\n\nThe serial of this event is used to identify subsequent events and\nrequest as belonging to this layout demand. Beware that the client\nmight need to handle multiple layout demands at the same time.\n\nThe server will ignore responses to all but the most recent\nlayout_demand. Thus, clients should only respond to the most recent\nlayout_demand received. If a newer layout_demand is received before the\nclient has finished responding to an old demand, the client should\nabort. Work on the old demand as any further work would be wasted."]
         LayoutDemand {
             view_amount: u32,
             usable_width: u32,
             usable_height: u32,
+            tags: u32,
             serial: u32,
         },
         #[doc = "make layout client aware of view\n\nThis event is raised by the compositor after a layout_demand event.\nIt contains additional information about one out of the set of views\nfor which a layout has been demanded.\n\nIt is guaranteed that every view in the layout will be advertised\nexactly once, in the exact order of the view list.\n\nA client not interested in the additional information may ignore this\nevent.\n\nThe serial is the same as that of the layout demand this event belongs\nto."]
@@ -485,6 +477,7 @@ pub mod zriver_layout_v1 {
                 name: "layout_demand",
                 since: 1,
                 signature: &[
+                    super::ArgumentType::Uint,
                     super::ArgumentType::Uint,
                     super::ArgumentType::Uint,
                     super::ArgumentType::Uint,
@@ -567,6 +560,13 @@ pub mod zriver_layout_v1 {
                                 return Err(());
                             }
                         },
+                        tags: {
+                            if let Some(Argument::Uint(val)) = args.next() {
+                                val
+                            } else {
+                                return Err(());
+                            }
+                        },
                         serial: {
                             if let Some(Argument::Uint(val)) = args.next() {
                                 val
@@ -635,12 +635,13 @@ pub mod zriver_layout_v1 {
             match opcode {
                 0 => Ok(Event::NamespaceInUse),
                 1 => {
-                    let _args = ::std::slice::from_raw_parts(args, 4);
+                    let _args = ::std::slice::from_raw_parts(args, 5);
                     Ok(Event::LayoutDemand {
                         view_amount: _args[0].u,
                         usable_width: _args[1].u,
                         usable_height: _args[2].u,
-                        serial: _args[3].u,
+                        tags: _args[3].u,
+                        serial: _args[4].u,
                     })
                 }
                 2 => {
@@ -790,7 +791,7 @@ pub mod zriver_layout_v1 {
         },
         wl_message {
             name: b"layout_demand\0" as *const u8 as *const c_char,
-            signature: b"uuuu\0" as *const u8 as *const c_char,
+            signature: b"uuuuu\0" as *const u8 as *const c_char,
             types: unsafe { &types_null as *const _ },
         },
         wl_message {

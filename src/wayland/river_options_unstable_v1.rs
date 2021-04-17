@@ -1,3 +1,7 @@
+use std::os::raw::{c_char, c_void};
+const NULLPTR: *const c_void = 0 as *const c_void;
+static mut types_null: [*const sys::common::wl_interface; 1] =
+    [NULLPTR as *const sys::common::wl_interface];
 #[doc = "set and retrieve options\n\nThis protocol allows clients to access a typed key-value store of\noptions. These options are identified by string keys and are scoped\neither globally or per-output. This protocol does not define any\nsemantic meaning of the options, that is left up to compositors.\n\nCompositors are free to set options themselves at any time, though\nthe type of any given option is immutable once set.\n\nOptions may never be unset once set."]
 pub mod zriver_options_manager_v1 {
     use super::sys::client::*;

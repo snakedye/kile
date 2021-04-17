@@ -4,42 +4,25 @@ use wayland_scanner::{Side, generate_code};
 use std::path::Path;
 
 pub fn scanner() {
+    generate("river_layout_unstable_v1");
+    generate("river_options_unstable_v1");
+}
 
-    // Location of the xml file, relative to the `Cargo.toml`
-    let layout_protocol = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/protocols/river-layout-unstable-v1.xml"
-    );
-    let options_protocol = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/protocols/river-options-unstable-v1.xml"
-    );
-    let status_protocol = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/protocols/river-status-unstable-v1.xml"
-    );
-
-    // Target directory for the generate files
+fn generate(protocol_name:&str) {
     let out_dir = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src/wayland/"));
 
-    println!("{:?}", out_dir);
+    let mut protocol_dir = String::from(concat!(env!("CARGO_MANIFEST_DIR"), "/protocols/"));
+    protocol_dir.push_str(protocol_name);
+    protocol_dir.push_str(".xml");
+    protocol_dir = protocol_dir.replace("_","-");
+
+    let protocol = Path::new(&protocol_dir);
+    let mut protocol_file = protocol_name.to_string();
+    protocol_file.push_str(".rs");
 
     generate_code(
-        layout_protocol,
-        out_dir.join("river_layout_unstable_v1.rs"),
-        Side::Client,
-    );
-
-    generate_code(
-        options_protocol,
-        out_dir.join("river_options_unstable_v1.rs"),
-        Side::Client,
-    );
-
-    generate_code(
-        status_protocol,
-        out_dir.join("river_status_unstable_v1.rs"),
+        protocol,
+        out_dir.join(protocol_name),
         Side::Client,
     );
 }
-

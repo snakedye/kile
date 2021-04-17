@@ -6,7 +6,6 @@ mod wayland;
 use crate::wayland::{
     river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
-    river_status_unstable_v1::zriver_status_manager_v1::ZriverStatusManagerV1,
 };
 use display::{Context, Output};
 use std::env;
@@ -31,13 +30,6 @@ fn main() {
                 |layout_manager: Main<ZriverLayoutManagerV1>, mut context: DispatchData| {
                     context.get::<Context>().unwrap().globals.layout_manager = Some(layout_manager);
                     context.get::<Context>().unwrap().running = true;
-                }
-            ],
-            [
-                ZriverStatusManagerV1,
-                1,
-                |status_manager: Main<ZriverStatusManagerV1>, mut context: DispatchData| {
-                    context.get::<Context>().unwrap().globals.status_manager = Some(status_manager);
                 }
             ],
             [

@@ -112,12 +112,13 @@
         The server will ignore responses to all but the most recent
         layout_demand. Thus, clients should only respond to the most recent
         layout_demand received. If a newer layout_demand is received before the
-        client has finished responding to an old demand, the client should abort
-        work on the old demand as any further work would be wasted.
+        client has finished responding to an old demand, the client should
+        abort. Work on the old demand as any further work would be wasted.
       </description>
       <arg name="view_amount" type="uint" summary="amount of views in the logical view list and therefore the layout"/>
       <arg name="usable_width" type="uint" summary="width of usable area on output"/>
       <arg name="usable_height" type="uint" summary="height of usable area on output"/>
+      <arg name="tags" type="uint" summary="tags of output, 32-bit bitfield"/>
       <arg name="serial" type="uint" summary="serial of demand"/>
     </event>
 
