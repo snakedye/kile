@@ -114,27 +114,16 @@ fn help() {
     println!("  This is the list of options kile operates with");
     println!("    view_padding (uint): the padding of each window within the layout.");
     println!("    outer_padding (uint): the padding of the output.");
-    println!("    smart_padding (uint): disables padding if there's only one view on the output.");
     println!("    xoffset (int): offset from a vertical screen edges");
     println!("    yoffset (int): offset from a horizontal screen edges");
     println!("    main_index (int): the index of the main frame.");
     println!("    main_factor (fixed): the ratio of the screen dedicated to the main frame.");
     println!("    main_amount (int): the amount of window in the main frame.");
-    println!("    outer_layout (string): the layout of the frames / how the output is split into different regions.");
-    println!("    inner_layout (string): the layout of the windows within the frames.");
-    println!(
-        "    tag_config (string): the configuration for the layout in each tag, river supports up to 32."
-    );
-    println!(
-        "      format: \"{format}\"\n",
-        format = "1:v:hh 4:h:tt 2:h:hth ..."
-    );
     println!("kile <flags>");
-    println!("  flags");
-    println!("    -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
+    println!("  -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
     println!(
-        "    -d | --d | --debug : displays the content of the Options struct as events occur."
+        "  -d | --d | --debug : displays the content of the Options struct as events occur."
     );
-    println!("    -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
-    println!("    -h | --h | --help : shows this help menu.\n");
+    println!("  -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
+    println!("  -h | --h | --help : shows this help menu.\n");
 }

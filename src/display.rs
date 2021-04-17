@@ -126,7 +126,6 @@ impl Output {
         self.get_option("outer_padding", globals);
         self.get_option("xoffset", globals);
         self.get_option("yoffset", globals);
-        self.get_option("smart_padding", globals);
         self.get_option("command", globals);
         self.configured = true;
     }
@@ -223,6 +222,7 @@ impl Output {
                     "view_padding" => output_handle.options.view_padding = option_value.uint,
                     "xoffset" => output_handle.options.xoffset = option_value.int,
                     "yoffset" => output_handle.options.yoffset = option_value.int,
+                    "preferred_app" => output_handle.options.preferred_app = string,
                     "outer_padding" => output_handle.options.outer_padding = option_value.uint,
                     "command" => {
                         let mut command = string.split_whitespace();
@@ -329,12 +329,9 @@ impl Tag {
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
         for i in 0..frame.list.len() {
-            match frame.list[i].app_id.as_ref() {
-                "firefox" => {
-                    frame.focus(i);
-                    break;
-                }
-                _ => {}
+            if frame.list[i].app_id.eq(&options.preferred_app) {
+                frame.focus(i);
+                break;
             }
         }
         for window in &mut frame.list {
