@@ -1,5 +1,5 @@
 // mod build;
-mod display;
+mod client;
 mod options;
 mod wayland;
 
@@ -7,7 +7,7 @@ use crate::wayland::{
     river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
     river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
 };
-use display::{Context, Output};
+use client::{Context, Output};
 use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
@@ -110,7 +110,7 @@ fn main() {
 }
 
 fn help() {
-    println!("\nOptions used");
+    println!("Kile: river-options used\n");
     println!("  view_padding (uint): the padding of each window within the layout.");
     println!("  outer_padding (uint): the padding of the output.");
     println!("  xoffset (int): offset from a vertical screen edges");
@@ -118,10 +118,10 @@ fn help() {
     println!("  main_index (int): the index of the main frame.");
     println!("  main_factor (fixed): the ratio of the screen dedicated to the main frame.");
     println!("  main_amount (int): the amount of window in the main frame.");
-    println!("  command (string): takes a kile command, documentation coming soon.");
-    println!("kile <flags>");
+    println!("  command (string): takes a kile command, documentation coming soon.\n");
+    println!("kile <flags>\n");
     println!("  -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
     println!("  -d | --d | --debug : displays the content of the Options struct as events occur.");
     println!("  -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
-    println!("  -h | --h | --help : shows this help menu.\n");
+    println!("  -h | --h | --help : shows this help menu.");
 }

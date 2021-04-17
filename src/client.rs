@@ -24,7 +24,7 @@ pub struct Context {
 pub struct Output {
     pub options: Options,
     pub configured: bool,
-    pub default_layout: Tag,
+    pub default: Tag,
     pub output: Option<WlOutput>,
     pub tags: [Option<Tag>; 32],
 }
@@ -111,7 +111,7 @@ impl Output {
         {
             Output {
                 options: Options::new(),
-                default_layout: Tag::new(),
+                default: Tag::new(),
                 configured: false,
                 output: Some(output),
                 tags: Default::default(),
@@ -139,7 +139,7 @@ impl Output {
             self.options.rearrange();
             match focused {
                 Some(tag) => tag.update(&mut self.options),
-                None => self.default_layout.update(&mut self.options),
+                None => self.default.update(&mut self.options),
             }
         }
     }
@@ -320,6 +320,10 @@ impl Output {
                                     Some(layout) => tag.outer = layout,
                                     None => {}
                                 };
+                                match preferred_app.clone() {
+                                    Some(app_id) => tag.preferred_app = Some(app_id),
+                                    None => {}
+                                };
                             }
                             None => {
                                 self.tags[i as usize] = Some({
@@ -374,7 +378,7 @@ impl Tag {
         self.frame = Some(Frame::new(self.outer, options.get_output()));
         let outer_frame = self.frame.as_mut().unwrap();
         let frame_amount = options.frames_amount(self.inner.len() as u32);
-        outer_frame.generate(frame_amount, options, true);
+        outer_frame.generate(frame_amount, options, true, true);
         let main_amount = options.main_amount(frame_amount);
         let slave_amount;
         let mut reste = if main_amount > 0 {
@@ -390,7 +394,7 @@ impl Tag {
         for (i, window) in outer_frame.list.iter().enumerate() {
             let mut frame = Frame::new(self.inner[i], window.area.unwrap());
             if i == options.main_index as usize && main_amount != 0 as u32 {
-                frame.generate(main_amount, options, false);
+                frame.generate(main_amount, options, false, false);
             } else {
                 frame.generate(
                     if reste > 0 {
@@ -400,6 +404,7 @@ impl Tag {
                         slave_amount
                     },
                     options,
+                    false,
                     false,
                 );
             }
@@ -475,14 +480,14 @@ impl Frame {
                 Window {
                     app_id: String::new(),
                     area: None,
-                    tags: 0,
+                    tags: options.tagmask,
                 }
             }
         };
         window.area = Some(area);
         self.list.push(window);
     }
-    pub fn generate(&mut self, client_count: u32, options: &mut Options, parent: bool) {
+    pub fn generate(&mut self, client_count: u32, options: &mut Options, parent: bool, factor: bool) {
         let mut area = self.area;
 
         match self.layout {
@@ -498,7 +503,7 @@ impl Frame {
                 let mut slave_area = area;
                 let mut main_area = area;
                 let reste = area.h % client_count;
-                if parent {
+                if factor {
                     main_area.h = if options.main_amount > 0
                         && client_count > 1
                         && options.main_amount < options.view_amount
@@ -511,9 +516,9 @@ impl Frame {
                     slave_area.h -= main_area.h;
                 }
                 for i in 0..client_count {
-                    if parent && i == options.main_index && main_area.h > 0 {
+                    if factor && i == options.main_index && main_area.h > 0 {
                         area.h = main_area.h;
-                    } else if parent && main_area.h > 0 {
+                    } else if factor && main_area.h > 0 {
                         area.h = slave_area.h / (client_count - 1);
                     } else {
                         area.h = slave_area.h / client_count;
@@ -530,7 +535,7 @@ impl Frame {
                 let mut slave_area = area;
                 let mut main_area = area;
                 let reste = area.w % client_count;
-                if parent {
+                if factor {
                     main_area.w = if options.main_amount > 0
                         && client_count > 1
                         && options.main_amount < options.view_amount
@@ -543,9 +548,9 @@ impl Frame {
                     slave_area.w -= main_area.w;
                 }
                 for i in 0..client_count {
-                    if parent && i == options.main_index && main_area.w > 0 {
+                    if factor && i == options.main_index && main_area.w > 0 {
                         area.w = main_area.w;
-                    } else if parent && main_area.w > 0 {
+                    } else if factor && main_area.w > 0 {
                         area.w = slave_area.w / (client_count - 1);
                     } else {
                         area.w = slave_area.w / client_count;
@@ -558,36 +563,24 @@ impl Frame {
                     area.x += area.w;
                 }
             }
-            Layout::Recursive { modi, index } => {
+            Layout::Recursive { modi } => {
                 for i in 0..client_count {
-                    let mut frame = Frame::new(
-                        if (i + modi) % 2 == 0 {
-                            Layout::Vertical
-                        } else {
-                            Layout::Horizontal
-                        },
-                        area,
-                    );
-                    if i < client_count - 1 {
-                        frame.generate(2, options, true);
-                        match index {
-                            Some(index) => {
-                                if index as u32 > i {
-                                    self.insert_window(frame.list[0].area.unwrap(), options, false)
-                                } else {
-                                    self.insert_window(
-                                        frame.list[index].area.unwrap(),
-                                        options,
-                                        false,
-                                    )
-                                }
-                            }
-                            None => self.insert_window(frame.list[0].area.unwrap(), options, false),
-                        }
-                        area = frame.list.last().unwrap().area.unwrap();
+                    self.layout = if (i + modi) % 2 == 0 {
+                        Layout::Vertical
                     } else {
-                        frame.generate(1, options, false);
-                        self.insert_window(frame.list[0].area.unwrap(), options, false);
+                        Layout::Horizontal
+                    };
+                    if i < client_count - 1 {
+                        self.generate(2, options, true, factor);
+                        let index = self.list.len() - 1;
+                        self.area = self.list.remove(index).area.unwrap();
+                        if options.windows.len() > 0 {
+                            let mut window = options.windows.remove(0);
+                            window.area = self.list[index - 1].area;
+                            self.list[index - 1] = window;
+                        }
+                    } else {
+                        self.generate(1, options, false, factor);
                     }
                 }
             }

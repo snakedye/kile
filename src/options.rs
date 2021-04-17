@@ -1,4 +1,4 @@
-use super::display::{Area, Rectangle, Window};
+use super::client::{Area, Rectangle, Window};
 use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
 use wayland_client::Main;
 
@@ -25,7 +25,7 @@ pub enum Layout {
     Tab,
     Full,
     Vertical,
-    Recursive { modi: u32, index: Option<usize> },
+    Recursive { modi: u32 },
     Horizontal,
 }
 
@@ -133,22 +133,8 @@ impl Options {
             'v' => Layout::Vertical,
             'h' => Layout::Horizontal,
             't' => Layout::Tab,
-            'd' => Layout::Recursive {
-                modi: 0,
-                index: None,
-            },
-            'D' => Layout::Recursive {
-                modi: 1,
-                index: None,
-            },
-            'r' => Layout::Recursive {
-                modi: 0,
-                index: Some(0),
-            },
-            'R' => Layout::Recursive {
-                modi: 1,
-                index: Some(0),
-            },
+            'd' => Layout::Recursive { modi: 0 },
+            'D' => Layout::Recursive { modi: 1 },
             'f' => Layout::Full,
             _ => {
                 println!("{}: Not a valid character at index", c);
