@@ -34,6 +34,7 @@ pub struct Tag {
     // titlebar: Titlebar,
     pub outer: Layout,
     pub inner: Vec<Layout>,
+    pub preferred_app: Option<String>,
     pub frame: Option<Frame>,
 }
 
@@ -222,7 +223,6 @@ impl Output {
                     "view_padding" => output_handle.options.view_padding = option_value.uint,
                     "xoffset" => output_handle.options.xoffset = option_value.int,
                     "yoffset" => output_handle.options.yoffset = option_value.int,
-                    "preferred_app" => output_handle.options.preferred_app = string,
                     "outer_padding" => output_handle.options.outer_padding = option_value.uint,
                     "command" => {
                         let mut command = string.split_whitespace();
@@ -238,6 +238,12 @@ impl Output {
                                 for arg in command {
                                     output_handle.parse_tag_config(arg.to_string())
                                 }
+                            }
+                            "preferred-app" => {
+                                output_handle.tags[output_handle.options.tagmask as usize]
+                                    .as_mut()
+                                    .unwrap()
+                                    .preferred_app = Some(string)
                             }
                             "clear-tag" => match command.next() {
                                 Some(arg) => match arg {
@@ -274,12 +280,12 @@ impl Output {
                     let mut rule = rule.split(':');
                     let tags = match rule.next() {
                         Some(tag) => match tag {
-                            "focused" => self.options.tagmask..self.options.tagmask+1,
+                            "focused" => self.options.tagmask..self.options.tagmask + 1,
                             "all" => 0..32,
                             _ => match tag.parse::<u32>() {
                                 Ok(int) => {
                                     if int > 0 && int < 32 {
-                                        int..int+1
+                                        int..int + 1
                                     } else {
                                         break;
                                     }
@@ -297,16 +303,35 @@ impl Output {
                     let outer_layout =
                         Options::outer_layout(rule.next().unwrap_or_default().to_string());
                     let inner_layout =
-                        Options::inner_layout(rule.next().unwrap_or("f").to_string());
+                        Options::inner_layout(rule.next().unwrap_or_default().to_string());
+                    let preferred_app = match rule.next() {
+                        Some(app_id) => Some(app_id.to_string()),
+                        None => None,
+                    };
                     for i in tags {
-                        self.tags[i as usize] = Some({
-                            Tag {
-                                // titlebar: None,
-                                outer: outer_layout,
-                                inner: inner_layout.clone(),
-                                frame: None,
+                        let tag = self.tags[i as usize].as_mut();
+                        match tag {
+                            Some(tag) => {
+                                match inner_layout.clone() {
+                                    Some(layout) => tag.inner = layout,
+                                    None => {}
+                                };
+                                match outer_layout {
+                                    Some(layout) => tag.outer = layout,
+                                    None => {}
+                                };
                             }
-                        });
+                            None => {
+                                self.tags[i as usize] = Some({
+                                    Tag {
+                                        outer: outer_layout.unwrap_or(Layout::Full),
+                                        inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
+                                        preferred_app: preferred_app.clone(),
+                                        frame: None,
+                                    }
+                                })
+                            }
+                        }
                     }
                 }
                 None => break,
@@ -319,6 +344,7 @@ impl Tag {
     pub fn new() -> Tag {
         {
             Tag {
+                preferred_app: None,
                 // titlebar: None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
@@ -329,7 +355,12 @@ impl Tag {
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
         for i in 0..frame.list.len() {
-            if frame.list[i].app_id.eq(&options.preferred_app) {
+            if frame.list[i].app_id.eq(&self
+                .preferred_app
+                .as_ref()
+                .unwrap_or(&"".to_string())
+                .as_ref())
+            {
                 frame.focus(i);
                 break;
             }
@@ -347,7 +378,7 @@ impl Tag {
         let main_amount = options.main_amount(frame_amount);
         let slave_amount;
         let mut reste = if main_amount > 0 {
-            outer_frame.focus(options.main_index as usize);
+            outer_frame.zoom(options.main_index as usize);
             slave_amount = (options.view_amount - main_amount) / (frame_amount - 1);
             (options.view_amount - main_amount) % (frame_amount - 1)
         } else {

@@ -6,7 +6,6 @@ pub struct Options {
     pub serial: u32,
     pub tagmask: u32,
     pub windows: Vec<Window>,
-    pub preferred_app: String,
     pub zlayout: Option<Main<ZriverLayoutV1>>,
     pub view_amount: u32,
     pub usable_width: u32,
@@ -37,7 +36,6 @@ impl Options {
                 serial: 0,
                 tagmask: 0,
                 windows: Vec::new(),
-                preferred_app: String::new(),
                 zlayout: None,
                 view_amount: 0,
                 smart_padding: true,
@@ -82,10 +80,10 @@ impl Options {
             0
         }
     }
-    pub fn outer_layout(layout_output: String) -> Layout {
+    pub fn outer_layout(layout_output: String) -> Option<Layout> {
         match layout_output.chars().next() {
-            Some(c) => Options::layout(c),
-            None => Layout::Full,
+            Some(c) => Some(Options::layout(c)),
+            None => None,
         }
     }
     pub fn usable_width(&self) -> u32 {
@@ -110,14 +108,18 @@ impl Options {
             self.usable_height
         }
     }
-    pub fn inner_layout(string: String) -> Vec<Layout> {
+    pub fn inner_layout(string: String) -> Option<Vec<Layout>> {
         let mut layout = Vec::new();
 
         for c in string.chars() {
             layout.push(Options::layout(c));
         }
 
-        layout
+        if layout.len() > 0 {
+            Some(layout)
+        } else {
+            None
+        }
     }
     pub fn rearrange(&mut self) {
         if self.windows.len() > self.view_amount as usize {

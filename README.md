@@ -19,6 +19,6 @@ cargo build --release
 
 - [x] Implement the dwindle layout
 - [x] Per tag layout
-- [ ] Basic window rules
+- [x] Basic window rules
 - [ ] Draw titlebar on tabbed window
 - [ ] Manual tiling
