@@ -86,7 +86,7 @@ impl Options {
             None => None,
         }
     }
-    pub fn usable_width(&self) -> u32 {
+    fn usable_width(&self) -> u32 {
         if self.xoffset != 0 || self.xoffset < self.usable_width as i32 {
             if self.xoffset > 0 {
                 ((self.usable_width as i32) - self.xoffset) as u32
@@ -97,7 +97,7 @@ impl Options {
             self.usable_width
         }
     }
-    pub fn usable_height(&self) -> u32 {
+    fn usable_height(&self) -> u32 {
         if self.yoffset != 0 || self.yoffset < self.usable_height as i32 {
             if self.yoffset > 0 {
                 ((self.usable_height as i32) - self.yoffset) as u32
