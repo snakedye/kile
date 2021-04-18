@@ -234,7 +234,7 @@ impl Output {
                                 },
                                 None => {}
                             },
-                            "set-layout" => {
+                            "set-tag" => {
                                 for arg in command {
                                     output_handle.parse_tag_config(arg.to_string())
                                 }
@@ -248,6 +248,7 @@ impl Output {
                             "clear-tag" => match command.next() {
                                 Some(arg) => match arg {
                                     "all" => output_handle.tags = Default::default(),
+                                    "focused" => output_handle.tags[output_handle.options.tagmask as usize] = None,
                                     _ => match arg.parse::<usize>() {
                                         Ok(int) => output_handle.tags[int] = None,
                                         Err(_) => {}
@@ -487,7 +488,7 @@ impl Frame {
         window.area = Some(area);
         self.list.push(window);
     }
-    pub fn generate(&mut self, client_count: u32, options: &mut Options, parent: bool, factor: bool) {
+    pub fn generate(&mut self, client_count: u32, options: &mut Options, parent: bool, mut factor: bool) {
         let mut area = self.area;
 
         match self.layout {
@@ -574,14 +575,15 @@ impl Frame {
                         self.generate(2, options, true, factor);
                         let index = self.list.len() - 1;
                         self.area = self.list.remove(index).area.unwrap();
-                        if options.windows.len() > 0 {
+                        if !parent && options.windows.len() > 0 {
                             let mut window = options.windows.remove(0);
                             window.area = self.list[index - 1].area;
                             self.list[index - 1] = window;
                         }
                     } else {
-                        self.generate(1, options, false, factor);
+                        self.generate(1, options, parent, factor);
                     }
+                    factor = false;
                 }
             }
             Layout::Full => {

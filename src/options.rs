@@ -176,7 +176,7 @@ impl Options {
         )
     }
     pub fn debug(&self) {
-        println!("self - {}", self.serial);
+        println!("Options - {}", self.serial);
         println!("\n  ZriverLayoutV1");
         println!("    view_amount : {}", self.view_amount);
         println!("    usable_width : {}", self.usable_width);
