@@ -87,6 +87,16 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
+
+        self.globals.declare_uint_option("view_padding", 10);
+        self.globals.declare_uint_option("outer_padding", 10);
+        self.globals.declare_uint_option("main_index", 0);
+        self.globals.declare_uint_option("main_count", 1);
+        self.globals.declare_int_option("xoffset", 0);
+        self.globals.declare_int_option("yoffset", 0);
+        self.globals.declare_fixed_option("main_factor", 0.6);
+        self.globals.declare_string_option("command", None);
+
         let output = &mut self.outputs[monitor_index];
         if !output.configured {
             output.configure(&self.globals, self.namespace.clone());
@@ -103,52 +113,40 @@ impl Context {
     }
 }
 
-impl Output {
-    pub fn new(output: WlOutput) -> Output {
-        {
-            Output {
-                options: Options::new(),
-                default: Tag::new(),
-                configured: false,
-                output: Some(output),
-                tags: Default::default(),
-            }
-        }
+impl Globals {
+    pub fn declare_uint_option(&self, name: &'static str, value: u32) {
+        self.options_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_options_v2")
+            .declare_uint_option(name.to_owned(), value as u32);
     }
-    pub fn configure(&mut self, globals: &Globals, namespace: String) {
-        self.get_layout(globals, namespace);
-        self.get_option("main_factor", globals);
-        self.get_option("main_amount", globals);
-        self.get_option("main_index", globals);
-        self.get_option("view_padding", globals);
-        self.get_option("outer_padding", globals);
-        self.get_option("xoffset", globals);
-        self.get_option("yoffset", globals);
-        self.get_option("command", globals);
-        self.configured = true;
+    pub fn declare_int_option(&self, name: &'static str, value: i32) {
+        self.options_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_options_v2")
+            .declare_int_option(name.to_owned(), value as i32);
     }
-    pub fn destroy(&self) {
-        (self.options.zlayout).as_ref().unwrap().destroy();
+    pub fn declare_string_option(&self, name: &'static str, value: Option<String>) {
+        self.options_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_options_v2")
+            .declare_string_option(name.to_owned(), value);
     }
-    pub fn update(&mut self) {
-        if self.options.view_amount > 0 {
-            let focused = self.tags[self.options.tagmask as usize].as_mut();
-            self.options.rearrange();
-            match focused {
-                Some(tag) => tag.update(&mut self.options),
-                None => self.default.update(&mut self.options),
-            }
-        }
+    pub fn declare_fixed_option(&self, name: &'static str, value: f64) {
+        self.options_manager
+            .as_ref()
+            .expect("Compositor doesn't implement river_options_v2")
+            .declare_fixed_option(name.to_owned(), value);
     }
-    fn get_layout(&mut self, globals: &Globals, namespace: String) {
-        self.options.zlayout = Some(
-            globals
+    pub fn get_layout(&self, output: &mut Output, namespace: String) {
+        output.options.zlayout = Some(
+            self
                 .layout_manager
                 .as_ref()
                 .expect("Compositor doesn't implement river_layout_v1")
-                .get_river_layout(self.output.as_mut().unwrap(), namespace),
+                .get_river_layout(output.output.as_ref().unwrap(), namespace),
         );
-        self.options.zlayout.as_ref().unwrap().quick_assign(
+        output.options.zlayout.as_ref().unwrap().quick_assign(
             move |_, event, mut output: DispatchData| match event {
                 river_layout_v1::Event::LayoutDemand {
                     view_amount,
@@ -168,7 +166,8 @@ impl Output {
                             i += 1;
                         }
                         i as usize
-                    }
+                    };
+                    output.get::<Output>().unwrap().update();
                 }
                 river_layout_v1::Event::AdvertiseView {
                     tags,
@@ -193,12 +192,12 @@ impl Output {
             },
         );
     }
-    fn get_option(&mut self, name: &'static str, globals: &Globals) {
-        let option_handle = globals
+    pub fn get_option(&self, name: &'static str, output: &mut Output) {
+        let option_handle = self
             .options_manager
             .as_ref()
             .expect("Compositor doesn't implement river_options_v2")
-            .get_option_handle(name.to_owned(), Some(self.output.as_mut().unwrap()));
+            .get_option_handle(name.to_owned(), Some(output.output.as_ref().unwrap()));
         option_handle.quick_assign(move |option_handle, event, mut output| {
             let mut option_value: Value = Value { uint: 1 };
             let mut string: Option<String> = None;
@@ -224,12 +223,8 @@ impl Output {
                             Some(command) => {
                                 let mut command = command.split_whitespace();
                                 match command.next().unwrap_or_default() {
-                                    "smart-padding" => match command.next() {
-                                        Some(arg) => match arg.parse::<bool>() {
-                                            Ok(ans) => output_handle.options.smart_padding = ans,
-                                            Err(_) => {}
-                                        },
-                                        None => {}
+                                    "smart-padding" => if let Ok(ans) = command.next().unwrap().parse::<bool>() {
+                                        output_handle.options.smart_padding = ans;
                                     },
                                     "set-tag" => {
                                         for arg in command {
@@ -262,20 +257,61 @@ impl Output {
                             }
                             None => {}
                         }
-                        // option_handle.set_string_value(None);
+                        option_handle.set_string_value(None);
                     }
                     _ => {}
                 }
             }
-            output
-                .get::<Output>()
-                .unwrap()
-                .options
-                .zlayout
-                .as_ref()
-                .unwrap()
-                .parameters_changed();
+            if name != "command" {
+                output
+                    .get::<Output>()
+                    .unwrap()
+                    .options
+                    .zlayout
+                    .as_ref()
+                    .unwrap()
+                    .parameters_changed();
+            }
         });
+    }
+}
+
+impl Output {
+    pub fn new(output: WlOutput) -> Output {
+        {
+            Output {
+                options: Options::new(),
+                default: Tag::new(),
+                configured: false,
+                output: Some(output),
+                tags: Default::default(),
+            }
+        }
+    }
+    pub fn configure(&mut self, globals: &Globals, namespace: String) {
+        globals.get_layout(self, namespace);
+        globals.get_option("main_factor", self);
+        globals.get_option("main_amount", self);
+        globals.get_option("main_index", self);
+        globals.get_option("view_padding", self);
+        globals.get_option("outer_padding", self);
+        globals.get_option("xoffset", self);
+        globals.get_option("yoffset", self);
+        globals.get_option("command", self);
+        self.configured = true;
+    }
+    pub fn destroy(&self) {
+        (self.options.zlayout).as_ref().unwrap().destroy();
+    }
+    pub fn update(&mut self) {
+        if self.options.view_amount > 0 {
+            let focused = self.tags[self.options.tagmask as usize].as_mut();
+            self.options.rearrange();
+            match focused {
+                Some(tag) => tag.update(&mut self.options),
+                None => self.default.update(&mut self.options),
+            }
+        }
     }
     fn parse_tag_config(&mut self, layout_per_tag: String) {
         let mut layout_per_tag = layout_per_tag.split_whitespace();

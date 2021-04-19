@@ -102,10 +102,6 @@ fn main() {
                 );
             })
             .unwrap();
-        if debug {
-            context.outputs[monitor_index].debug();
-        }
-        context.outputs[monitor_index].update();
     }
 }
 
