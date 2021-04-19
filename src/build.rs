@@ -4,8 +4,8 @@ use wayland_scanner::{Side, generate_code};
 use std::path::Path;
 
 pub fn scanner() {
-    generate("river_layout_unstable_v1");
-    generate("river_options_unstable_v1");
+    generate("river_layout_v1");
+    generate("river_options_v2");
 }
 
 fn generate(protocol_name:&str) {
@@ -22,7 +22,7 @@ fn generate(protocol_name:&str) {
 
     generate_code(
         protocol,
-        out_dir.join(protocol_name),
+        out_dir.join(protocol_file),
         Side::Client,
     );
 }

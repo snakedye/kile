@@ -57,19 +57,19 @@ The vertical offset in pixels from the top or bottom screen edge.
 Positive integers create an offset from the top of screen and negatives from the bottom.
 
 *main_amount (uint)*
-An arbitrary positive integer indicating the amount of main views..
+An arbitrary positive integer indicating the amount of main views.
 
 *main_factor (float)*
 A floating point numger indicating the relative size of the area reserved for main views.
 Note that layouts commonly expect values between 0.1 and 0.9.
 
 *command <instruction>*
-	Execute a command within Kile.
+Execute a command within Kile.
 
 You will most like set a command in this format.
 <riverctl set-option -focused-output command "something">.
 
-	That something is
+	That something would be
 	- *smart-padding <true | false>*
 		Enable of disable smart padding i.e gaps only if there's at least one view displayed.
 
@@ -91,7 +91,7 @@ Kile has a special way to generate layouts.
 The screen geometry is split into smaller areas following the outer layout
 and the layout within these areas are determined by the inner layout.
 Inner layouts are generated from left to right in the order they are presented.
-This allows you to create more complex layouts from basic one.
+This allows you to create more complex layouts from the basic ones given.
 
 Kile will never and should never give an empty area,
 no matter how funky your combinations may be.

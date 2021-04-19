@@ -1,5 +1,5 @@
 #[doc = "manage river layout objects\n\nA global factory for river_layout objects."]
-pub mod zriver_layout_manager_v1 {
+pub mod river_layout_manager_v1 {
     use super::sys::client::*;
     use super::sys::common::{wl_argument, wl_array, wl_interface, wl_message};
     use super::{
@@ -63,7 +63,7 @@ pub mod zriver_layout_manager_v1 {
         ) -> Option<Object<Meta>> {
             match opcode {
                 1 => Some(Object::from_interface::<
-                    super::zriver_layout_v1::ZriverLayoutV1,
+                    super::river_layout_v1::RiverLayoutV1,
                 >(version, meta.child())),
                 _ => None,
             }
@@ -167,40 +167,40 @@ pub mod zriver_layout_manager_v1 {
         }
     }
     #[derive(Clone, Eq, PartialEq)]
-    pub struct ZriverLayoutManagerV1(Proxy<ZriverLayoutManagerV1>);
-    impl AsRef<Proxy<ZriverLayoutManagerV1>> for ZriverLayoutManagerV1 {
+    pub struct RiverLayoutManagerV1(Proxy<RiverLayoutManagerV1>);
+    impl AsRef<Proxy<RiverLayoutManagerV1>> for RiverLayoutManagerV1 {
         #[inline]
         fn as_ref(&self) -> &Proxy<Self> {
             &self.0
         }
     }
-    impl From<Proxy<ZriverLayoutManagerV1>> for ZriverLayoutManagerV1 {
+    impl From<Proxy<RiverLayoutManagerV1>> for RiverLayoutManagerV1 {
         #[inline]
         fn from(value: Proxy<Self>) -> Self {
-            ZriverLayoutManagerV1(value)
+            RiverLayoutManagerV1(value)
         }
     }
-    impl From<ZriverLayoutManagerV1> for Proxy<ZriverLayoutManagerV1> {
+    impl From<RiverLayoutManagerV1> for Proxy<RiverLayoutManagerV1> {
         #[inline]
-        fn from(value: ZriverLayoutManagerV1) -> Self {
+        fn from(value: RiverLayoutManagerV1) -> Self {
             value.0
         }
     }
-    impl std::fmt::Debug for ZriverLayoutManagerV1 {
+    impl std::fmt::Debug for RiverLayoutManagerV1 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!("{:?}", self.0))
         }
     }
-    impl Interface for ZriverLayoutManagerV1 {
+    impl Interface for RiverLayoutManagerV1 {
         type Request = Request;
         type Event = Event;
-        const NAME: &'static str = "zriver_layout_manager_v1";
+        const NAME: &'static str = "river_layout_manager_v1";
         const VERSION: u32 = 1;
         fn c_interface() -> *const wl_interface {
-            unsafe { &zriver_layout_manager_v1_interface }
+            unsafe { &river_layout_manager_v1_interface }
         }
     }
-    impl ZriverLayoutManagerV1 {
+    impl RiverLayoutManagerV1 {
         #[doc = "destroy the river_layout_manager object\n\nThis request indicates that the client will not use the\nriver_layout_manager object any more. Objects that have been created\nthrough this instance are not affected.\n\nThis is a destructor, you cannot send requests to this object any longer once this method is called."]
         pub fn destroy(&self) -> () {
             let msg = Request::Destroy;
@@ -211,7 +211,7 @@ pub mod zriver_layout_manager_v1 {
             &self,
             output: &super::wl_output::WlOutput,
             namespace: String,
-        ) -> Main<super::zriver_layout_v1::ZriverLayoutV1> {
+        ) -> Main<super::river_layout_v1::RiverLayoutV1> {
             let msg = Request::GetRiverLayout {
                 output: output.clone(),
                 namespace: namespace,
@@ -223,13 +223,13 @@ pub mod zriver_layout_manager_v1 {
     pub const REQ_DESTROY_SINCE: u32 = 1u32;
     #[doc = r" The minimal object version supporting this request"]
     pub const REQ_GET_RIVER_LAYOUT_SINCE: u32 = 1u32;
-    static mut zriver_layout_manager_v1_requests_get_river_layout_types: [*const wl_interface; 3] = [
-        unsafe { &super::zriver_layout_v1::zriver_layout_v1_interface as *const wl_interface },
+    static mut river_layout_manager_v1_requests_get_river_layout_types: [*const wl_interface; 3] = [
+        unsafe { &super::river_layout_v1::river_layout_v1_interface as *const wl_interface },
         unsafe { &super::wl_output::wl_output_interface as *const wl_interface },
         NULLPTR as *const wl_interface,
     ];
     #[doc = r" C-representation of the messages of this interface, for interop"]
-    pub static mut zriver_layout_manager_v1_requests: [wl_message; 2] = [
+    pub static mut river_layout_manager_v1_requests: [wl_message; 2] = [
         wl_message {
             name: b"destroy\0" as *const u8 as *const c_char,
             signature: b"\0" as *const u8 as *const c_char,
@@ -238,21 +238,21 @@ pub mod zriver_layout_manager_v1 {
         wl_message {
             name: b"get_river_layout\0" as *const u8 as *const c_char,
             signature: b"nos\0" as *const u8 as *const c_char,
-            types: unsafe { &zriver_layout_manager_v1_requests_get_river_layout_types as *const _ },
+            types: unsafe { &river_layout_manager_v1_requests_get_river_layout_types as *const _ },
         },
     ];
     #[doc = r" C representation of this interface, for interop"]
-    pub static mut zriver_layout_manager_v1_interface: wl_interface = wl_interface {
-        name: b"zriver_layout_manager_v1\0" as *const u8 as *const c_char,
+    pub static mut river_layout_manager_v1_interface: wl_interface = wl_interface {
+        name: b"river_layout_manager_v1\0" as *const u8 as *const c_char,
         version: 1,
         request_count: 2,
-        requests: unsafe { &zriver_layout_manager_v1_requests as *const _ },
+        requests: unsafe { &river_layout_manager_v1_requests as *const _ },
         event_count: 0,
         events: NULLPTR as *const wl_message,
     };
 }
 #[doc = "receive and respond to layout demands\n\nThis interface allows clients to receive layout demands from the\ncompositor for a specific output and subsequently propose positions and\ndimensions of individual views."]
-pub mod zriver_layout_v1 {
+pub mod river_layout_v1 {
     use super::sys::client::*;
     use super::sys::common::{wl_argument, wl_array, wl_interface, wl_message};
     use super::{
@@ -448,7 +448,7 @@ pub mod zriver_layout_v1 {
     pub enum Event {
         #[doc = "namespace already in use\n\nThe requested namespace is already used by another river_layout object.\nAfter receiving this event, the client should destroy the river_layout\nobject. Any other request will be ignored."]
         NamespaceInUse,
-        #[doc = "the compositor is in demand of a layout\n\nThe compositor raises this event to inform the client that it requires a\nlayout for a set of views.\n\nThe usable width and height height indicate the space in which the\nclient can safely position views without interfering with desktop\nwidgets such as panels.\n\nThe serial of this event is used to identify subsequent events and\nrequest as belonging to this layout demand. Beware that the client\nmight need to handle multiple layout demands at the same time.\n\nThe server will ignore responses to all but the most recent\nlayout_demand. Thus, clients should only respond to the most recent\nlayout_demand received. If a newer layout_demand is received before the\nclient has finished responding to an old demand, the client should\nabort. Work on the old demand as any further work would be wasted."]
+        #[doc = "the compositor is in demand of a layout\n\nThe compositor raises this event to inform the client that it requires a\nlayout for a set of views.\n\nThe usable width and height height indicate the space in which the\nclient can safely position views without interfering with desktop\nwidgets such as panels.\n\nThe serial of this event is used to identify subsequent events and\nrequest as belonging to this layout demand. Beware that the client\nmight need to handle multiple layout demands at the same time.\n\nThe server will ignore responses to all but the most recent\nlayout_demand. Thus, clients should only respond to the most recent\nlayout_demand received. If a newer layout_demand is received before the\nclient has finished responding to an old demand, the client should\nabort work on the old demand as any further work would be wasted."]
         LayoutDemand {
             view_amount: u32,
             usable_width: u32,
@@ -675,40 +675,40 @@ pub mod zriver_layout_v1 {
         }
     }
     #[derive(Clone, Eq, PartialEq)]
-    pub struct ZriverLayoutV1(Proxy<ZriverLayoutV1>);
-    impl AsRef<Proxy<ZriverLayoutV1>> for ZriverLayoutV1 {
+    pub struct RiverLayoutV1(Proxy<RiverLayoutV1>);
+    impl AsRef<Proxy<RiverLayoutV1>> for RiverLayoutV1 {
         #[inline]
         fn as_ref(&self) -> &Proxy<Self> {
             &self.0
         }
     }
-    impl From<Proxy<ZriverLayoutV1>> for ZriverLayoutV1 {
+    impl From<Proxy<RiverLayoutV1>> for RiverLayoutV1 {
         #[inline]
         fn from(value: Proxy<Self>) -> Self {
-            ZriverLayoutV1(value)
+            RiverLayoutV1(value)
         }
     }
-    impl From<ZriverLayoutV1> for Proxy<ZriverLayoutV1> {
+    impl From<RiverLayoutV1> for Proxy<RiverLayoutV1> {
         #[inline]
-        fn from(value: ZriverLayoutV1) -> Self {
+        fn from(value: RiverLayoutV1) -> Self {
             value.0
         }
     }
-    impl std::fmt::Debug for ZriverLayoutV1 {
+    impl std::fmt::Debug for RiverLayoutV1 {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_fmt(format_args!("{:?}", self.0))
         }
     }
-    impl Interface for ZriverLayoutV1 {
+    impl Interface for RiverLayoutV1 {
         type Request = Request;
         type Event = Event;
-        const NAME: &'static str = "zriver_layout_v1";
+        const NAME: &'static str = "river_layout_v1";
         const VERSION: u32 = 1;
         fn c_interface() -> *const wl_interface {
-            unsafe { &zriver_layout_v1_interface }
+            unsafe { &river_layout_v1_interface }
         }
     }
-    impl ZriverLayoutV1 {
+    impl RiverLayoutV1 {
         #[doc = "destroy the river_layout object\n\nThis request indicates that the client will not use the river_layout\nobject any more.\n\nThis is a destructor, you cannot send requests to this object any longer once this method is called."]
         pub fn destroy(&self) -> () {
             let msg = Request::Destroy;
@@ -760,7 +760,7 @@ pub mod zriver_layout_v1 {
     #[doc = r" The minimal object version supporting this event"]
     pub const EVT_ADVERTISE_DONE_SINCE: u32 = 1u32;
     #[doc = r" C-representation of the messages of this interface, for interop"]
-    pub static mut zriver_layout_v1_requests: [wl_message; 4] = [
+    pub static mut river_layout_v1_requests: [wl_message; 4] = [
         wl_message {
             name: b"destroy\0" as *const u8 as *const c_char,
             signature: b"\0" as *const u8 as *const c_char,
@@ -783,7 +783,7 @@ pub mod zriver_layout_v1 {
         },
     ];
     #[doc = r" C-representation of the messages of this interface, for interop"]
-    pub static mut zriver_layout_v1_events: [wl_message; 4] = [
+    pub static mut river_layout_v1_events: [wl_message; 4] = [
         wl_message {
             name: b"namespace_in_use\0" as *const u8 as *const c_char,
             signature: b"\0" as *const u8 as *const c_char,
@@ -806,12 +806,12 @@ pub mod zriver_layout_v1 {
         },
     ];
     #[doc = r" C representation of this interface, for interop"]
-    pub static mut zriver_layout_v1_interface: wl_interface = wl_interface {
-        name: b"zriver_layout_v1\0" as *const u8 as *const c_char,
+    pub static mut river_layout_v1_interface: wl_interface = wl_interface {
+        name: b"river_layout_v1\0" as *const u8 as *const c_char,
         version: 1,
         request_count: 4,
-        requests: unsafe { &zriver_layout_v1_requests as *const _ },
+        requests: unsafe { &river_layout_v1_requests as *const _ },
         event_count: 4,
-        events: unsafe { &zriver_layout_v1_events as *const _ },
+        events: unsafe { &river_layout_v1_events as *const _ },
     };
 }

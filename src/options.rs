@@ -1,12 +1,12 @@
 use super::client::{Area, Rectangle, Window};
-use crate::wayland::river_layout_unstable_v1::zriver_layout_v1::ZriverLayoutV1;
+use crate::wayland::river_layout_v1::river_layout_v1::RiverLayoutV1;
 use wayland_client::Main;
 
 pub struct Options {
     pub serial: u32,
-    pub tagmask: u32,
+    pub tagmask: usize,
     pub windows: Vec<Window>,
-    pub zlayout: Option<Main<ZriverLayoutV1>>,
+    pub zlayout: Option<Main<RiverLayoutV1>>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
@@ -177,21 +177,18 @@ impl Options {
     }
     pub fn debug(&self) {
         println!("Options - {}", self.serial);
-        println!("\n  ZriverLayoutV1");
+        println!("\n  RiverLayoutV1");
         println!("    view_amount : {}", self.view_amount);
         println!("    usable_width : {}", self.usable_width);
         println!("    usable_height : {}", self.usable_height);
-        println!("\n  ZriverOptionHandleV1");
+        println!("\n  RiverOptionHandleV2");
         println!("    outer_padding : {}", self.outer_padding);
         println!("    view_padding : {}", self.view_padding);
         println!("    xoffset : {}", self.xoffset);
         println!("    yoffset : {}", self.yoffset);
-        println!("    smart_padding : {}", self.smart_padding);
         println!("    main_factor : {}", self.main_factor);
         println!("    main_index : {}", self.main_index);
-        println!("    main_amount : {}", self.main_amount);
-        println!("\n  ZriverOutputStatusV1");
-        println!("    tagmask : {}\n", self.tagmask);
+        println!("    main_amount : {}\n", self.main_amount);
     }
     pub fn commit(&self) {
         self.zlayout.as_ref().unwrap().commit(self.serial);

@@ -1,17 +1,17 @@
 use super::options::{Layout, Options};
 use crate::wayland::{
-    river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
-    river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
+    river_layout_v1::river_layout_manager_v1::RiverLayoutManagerV1,
+    river_options_v2::river_options_manager_v2::RiverOptionsManagerV2,
 };
 use crate::wayland::{
-    river_layout_unstable_v1::zriver_layout_v1, river_options_unstable_v1::zriver_option_handle_v1,
+    river_layout_v1::river_layout_v1, river_options_v2::river_option_handle_v2,
 };
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{DispatchData, Main};
 
 pub struct Globals {
-    pub layout_manager: Option<Main<ZriverLayoutManagerV1>>,
-    pub options_manager: Option<Main<ZriverOptionsManagerV1>>,
+    pub layout_manager: Option<Main<RiverLayoutManagerV1>>,
+    pub options_manager: Option<Main<RiverOptionsManagerV2>>,
 }
 
 pub struct Context {
@@ -31,7 +31,6 @@ pub struct Output {
 
 #[derive(Clone)]
 pub struct Tag {
-    // titlebar: Titlebar,
     pub outer: Layout,
     pub inner: Vec<Layout>,
     pub preferred_app: Option<String>,
@@ -67,10 +66,8 @@ union Value {
 }
 
 pub trait Rectangle {
-    // fn titlebar(&self);
     fn apply_padding(&mut self, padding: u32);
     fn push_dimensions(&mut self, options: &Options);
-    // fn new() -> R;
 }
 
 impl Context {
@@ -148,12 +145,12 @@ impl Output {
             globals
                 .layout_manager
                 .as_ref()
-                .expect("Compositor doesn't implement river_layout_unstable_v1")
+                .expect("Compositor doesn't implement river_layout_v1")
                 .get_river_layout(self.output.as_mut().unwrap(), namespace),
         );
         self.options.zlayout.as_ref().unwrap().quick_assign(
             move |_, event, mut output: DispatchData| match event {
-                zriver_layout_v1::Event::LayoutDemand {
+                river_layout_v1::Event::LayoutDemand {
                     view_amount,
                     usable_width,
                     usable_height,
@@ -170,10 +167,10 @@ impl Output {
                             tags /= 2;
                             i += 1;
                         }
-                        i
+                        i as usize
                     }
                 }
-                zriver_layout_v1::Event::AdvertiseView {
+                river_layout_v1::Event::AdvertiseView {
                     tags,
                     app_id,
                     serial,
@@ -189,10 +186,10 @@ impl Output {
                             tags: tags,
                         });
                 }
-                zriver_layout_v1::Event::NamespaceInUse => {
+                river_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
                 }
-                zriver_layout_v1::Event::AdvertiseDone { serial } => {}
+                river_layout_v1::Event::AdvertiseDone { serial } => {}
             },
         );
     }
@@ -200,19 +197,17 @@ impl Output {
         let option_handle = globals
             .options_manager
             .as_ref()
-            .expect("Compositor doesn't implement river_options_unstable_v1")
+            .expect("Compositor doesn't implement river_options_v2")
             .get_option_handle(name.to_owned(), Some(self.output.as_mut().unwrap()));
         option_handle.quick_assign(move |option_handle, event, mut output| {
             let mut option_value: Value = Value { uint: 1 };
-            let mut string: String = String::new();
+            let mut string: Option<String> = None;
             match event {
-                zriver_option_handle_v1::Event::StringValue { value } => {
-                    string = value.unwrap_or_default();
-                }
-                zriver_option_handle_v1::Event::FixedValue { value } => option_value.double = value,
-                zriver_option_handle_v1::Event::UintValue { value } => option_value.uint = value,
-                zriver_option_handle_v1::Event::IntValue { value } => option_value.int = value,
-                zriver_option_handle_v1::Event::Unset => {}
+                river_option_handle_v2::Event::StringValue { value } => string = value,
+                river_option_handle_v2::Event::FixedValue { value } => option_value.double = value,
+                river_option_handle_v2::Event::UintValue { value } => option_value.uint = value,
+                river_option_handle_v2::Event::IntValue { value } => option_value.int = value,
+                river_option_handle_v2::Event::Undeclared => {}
             }
             let output_handle = output.get::<Output>().unwrap();
             unsafe {
@@ -225,40 +220,49 @@ impl Output {
                     "yoffset" => output_handle.options.yoffset = option_value.int,
                     "outer_padding" => output_handle.options.outer_padding = option_value.uint,
                     "command" => {
-                        let mut command = string.split_whitespace();
-                        match command.next().unwrap_or_default() {
-                            "smart-padding" => match command.next() {
-                                Some(arg) => match arg.parse::<bool>() {
-                                    Ok(ans) => output_handle.options.smart_padding = ans,
-                                    Err(_) => {}
-                                },
-                                None => {}
-                            },
-                            "set-tag" => {
-                                for arg in command {
-                                    output_handle.parse_tag_config(arg.to_string())
+                        match string {
+                            Some(command) => {
+                                let mut command = command.split_whitespace();
+                                match command.next().unwrap_or_default() {
+                                    "smart-padding" => match command.next() {
+                                        Some(arg) => match arg.parse::<bool>() {
+                                            Ok(ans) => output_handle.options.smart_padding = ans,
+                                            Err(_) => {}
+                                        },
+                                        None => {}
+                                    },
+                                    "set-tag" => {
+                                        for arg in command {
+                                            output_handle.parse_tag_config(arg.to_string())
+                                        }
+                                    }
+                                    "preferred-app" => {
+                                        output_handle.tags[output_handle.options.tagmask as usize]
+                                            .as_mut()
+                                            .unwrap()
+                                            .preferred_app =
+                                            Some(command.map(|app_id| app_id.to_string()).collect())
+                                    }
+                                    "clear-tag" => match command.next() {
+                                        Some(arg) => match arg {
+                                            "all" => output_handle.tags = Default::default(),
+                                            "focused" => {
+                                                output_handle.tags
+                                                    [output_handle.options.tagmask as usize] = None
+                                            }
+                                            _ => match arg.parse::<usize>() {
+                                                Ok(int) => output_handle.tags[int] = None,
+                                                Err(_) => {}
+                                            },
+                                        },
+                                        None => {}
+                                    },
+                                    _ => {}
                                 }
                             }
-                            "preferred-app" => {
-                                output_handle.tags[output_handle.options.tagmask as usize]
-                                    .as_mut()
-                                    .unwrap()
-                                    .preferred_app = Some(string)
-                            }
-                            "clear-tag" => match command.next() {
-                                Some(arg) => match arg {
-                                    "all" => output_handle.tags = Default::default(),
-                                    "focused" => output_handle.tags[output_handle.options.tagmask as usize] = None,
-                                    _ => match arg.parse::<usize>() {
-                                        Ok(int) => output_handle.tags[int] = None,
-                                        Err(_) => {}
-                                    },
-                                },
-                                None => {}
-                            },
-                            _ => {}
+                            None => {}
                         }
-                        option_handle.set_string_value(Some("".to_string()));
+                        // option_handle.set_string_value(None);
                     }
                     _ => {}
                 }
@@ -283,18 +287,15 @@ impl Output {
                         Some(tag) => match tag {
                             "focused" => self.options.tagmask..self.options.tagmask + 1,
                             "all" => 0..32,
-                            _ => match tag.parse::<u32>() {
+                            _ => match tag.parse::<usize>() {
                                 Ok(int) => {
-                                    if int > 0 && int < 32 {
-                                        int..int + 1
+                                    if int > 0 && int < 33 {
+                                        int - 1..int
                                     } else {
                                         break;
                                     }
                                 }
-                                Err(e) => {
-                                    println!("{}", e);
-                                    break;
-                                }
+                                Err(_) => break
                             },
                         },
                         None => {
@@ -310,24 +311,19 @@ impl Output {
                         None => None,
                     };
                     for i in tags {
-                        let tag = self.tags[i as usize].as_mut();
+                        let tag = self.tags[i].as_mut();
                         match tag {
                             Some(tag) => {
-                                match inner_layout.clone() {
-                                    Some(layout) => tag.inner = layout,
-                                    None => {}
-                                };
-                                match outer_layout {
-                                    Some(layout) => tag.outer = layout,
-                                    None => {}
-                                };
-                                match preferred_app.clone() {
-                                    Some(app_id) => tag.preferred_app = Some(app_id),
-                                    None => {}
-                                };
+                                if let Some(outer_layout) = outer_layout {
+                                    tag.outer = outer_layout;
+                                }
+                                if let Some(inner_layout) = inner_layout.clone() {
+                                    tag.inner =inner_layout;
+                                }
+                                tag.preferred_app = preferred_app.clone();
                             }
                             None => {
-                                self.tags[i as usize] = Some({
+                                self.tags[i] = Some({
                                     Tag {
                                         outer: outer_layout.unwrap_or(Layout::Full),
                                         inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
@@ -343,6 +339,18 @@ impl Output {
             }
         }
     }
+    pub fn debug(&self) {
+        match &self.tags[self.options.tagmask] {
+            Some(tag) => { println!("Tag - {}\n
+                preferred-app: {:?}\n
+                inner_layout: {:?}\n
+                outer_layout: {:?}\n
+                windows: {:?}",
+                self.options.tagmask, tag.preferred_app, tag.inner, tag.outer, self.options.windows);
+            }
+            None=>{}
+        }
+    }
 }
 
 impl Tag {
@@ -350,7 +358,6 @@ impl Tag {
         {
             Tag {
                 preferred_app: None,
-                // titlebar: None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
                 frame: None,
@@ -417,13 +424,13 @@ impl Tag {
     }
 }
 
-impl Rectangle for Window {
-    fn apply_padding(&mut self, padding: u32) {
+impl Window {
+    pub fn apply_padding(&mut self, padding: u32) {
         let mut area = self.area.unwrap();
         area.apply_padding(padding);
         self.area = Some(area);
     }
-    fn push_dimensions(&mut self, options: &Options) {
+    pub fn push_dimensions(&mut self, options: &Options) {
         if !options.smart_padding || options.view_amount > 1 {
             self.apply_padding(options.view_padding);
         }
@@ -431,17 +438,14 @@ impl Rectangle for Window {
     }
 }
 
-impl Rectangle for Area {
-    fn apply_padding(&mut self, padding: u32) {
+impl Area {
+    pub fn apply_padding(&mut self, padding: u32) {
         if 2 * padding < self.h && 2 * padding < self.w {
             self.x += padding;
             self.y += padding;
             self.w -= 2 * padding;
             self.h -= 2 * padding;
         }
-    }
-    fn push_dimensions(&mut self, options: &Options) {
-        options.push_dimensions(self);
     }
 }
 
@@ -481,14 +485,20 @@ impl Frame {
                 Window {
                     app_id: String::new(),
                     area: None,
-                    tags: options.tagmask,
+                    tags: options.tagmask as u32,
                 }
             }
         };
         window.area = Some(area);
         self.list.push(window);
     }
-    pub fn generate(&mut self, client_count: u32, options: &mut Options, parent: bool, mut factor: bool) {
+    pub fn generate(
+        &mut self,
+        client_count: u32,
+        options: &mut Options,
+        parent: bool,
+        mut factor: bool,
+    ) {
         let mut area = self.area;
 
         match self.layout {
@@ -498,7 +508,6 @@ impl Frame {
                     area.h -= 50;
                     area.y += 50;
                 }
-                // self.area.titlebar(self.list);
             }
             Layout::Horizontal => {
                 let mut slave_area = area;

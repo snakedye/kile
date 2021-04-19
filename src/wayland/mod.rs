@@ -6,8 +6,8 @@ extern crate wayland_commons;
 // and avoid exposing internal details.
 //
 // You can use all the types from my_protocol as if they went from `wayland_client::protocol`.
-pub use wayland::client as river_layout_unstable_v1;
-pub use wayland::client as river_options_unstable_v1;
+pub use wayland::client as river_layout_v1;
+pub use wayland::client as river_options_v2;
 
 pub mod wayland {
     // The generated code tends to trigger a lot of warnings
@@ -31,11 +31,11 @@ pub mod wayland {
         pub(crate) use wayland_client::protocol::{wl_region, wl_seat, wl_surface};
         include!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/src/wayland/river_options_unstable_v1.rs"
+            "/src/wayland/river_options_v2.rs"
         ));
         include!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/src/wayland/river_layout_unstable_v1.rs"
+            "/src/wayland/river_layout_v1.rs"
         ));
     }
 }

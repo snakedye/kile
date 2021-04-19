@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<protocol name="river_layout_unstable_v1">
+<protocol name="river_layout_staging_v1">
   <copyright>
     Copyright 2020 The River Developers
 
@@ -33,9 +33,14 @@
 
     Note that the client may need to handle multiple layout demands per
     river_layout object simultaneously.
+
+    Warning! The protocol described in this file is currently in the testing
+    phase. Backward compatible changes may be added together with the
+    corresponding interface version bump. Backward incompatible changes can
+    only be done by creating a new major version of the extension.
   </description>
 
-  <interface name="zriver_layout_manager_v1" version="1">
+  <interface name="river_layout_manager_v1" version="1">
     <description summary="manage river layout objects">
       A global factory for river_layout objects.
     </description>
@@ -63,13 +68,13 @@
         after creation and ignore all requests on the object aside from the
         destroy request.
       </description>
-      <arg name="id" type="new_id" interface="zriver_layout_v1"/>
+      <arg name="id" type="new_id" interface="river_layout_v1"/>
       <arg name="output" type="object" interface="wl_output"/>
       <arg name="namespace" type="string" summary="namespace of the layout object"/>
     </request>
   </interface>
 
-  <interface name="zriver_layout_v1" version="1">
+  <interface name="river_layout_v1" version="1">
     <description summary="receive and respond to layout demands">
       This interface allows clients to receive layout demands from the
       compositor for a specific output and subsequently propose positions and
@@ -113,7 +118,7 @@
         layout_demand. Thus, clients should only respond to the most recent
         layout_demand received. If a newer layout_demand is received before the
         client has finished responding to an old demand, the client should
-        abort. Work on the old demand as any further work would be wasted.
+        abort work on the old demand as any further work would be wasted.
       </description>
       <arg name="view_amount" type="uint" summary="amount of views in the logical view list and therefore the layout"/>
       <arg name="usable_width" type="uint" summary="width of usable area on output"/>

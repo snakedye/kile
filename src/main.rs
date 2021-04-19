@@ -4,8 +4,8 @@ mod options;
 mod wayland;
 
 use crate::wayland::{
-    river_layout_unstable_v1::zriver_layout_manager_v1::ZriverLayoutManagerV1,
-    river_options_unstable_v1::zriver_options_manager_v1::ZriverOptionsManagerV1,
+    river_layout_v1::river_layout_manager_v1::RiverLayoutManagerV1,
+    river_options_v2::river_options_manager_v2::RiverOptionsManagerV2,
 };
 use client::{Context, Output};
 use std::env;
@@ -25,9 +25,9 @@ fn main() {
         &attached_display,
         wayland_client::global_filter!(
             [
-                ZriverLayoutManagerV1,
+                RiverLayoutManagerV1,
                 1,
-                |layout_manager: Main<ZriverLayoutManagerV1>, mut context: DispatchData| {
+                |layout_manager: Main<RiverLayoutManagerV1>, mut context: DispatchData| {
                     context.get::<Context>().unwrap().globals.layout_manager = Some(layout_manager);
                     context.get::<Context>().unwrap().running = true;
                 }
@@ -42,9 +42,9 @@ fn main() {
                 }
             ],
             [
-                ZriverOptionsManagerV1,
+                RiverOptionsManagerV2,
                 1,
-                |options_manager: Main<ZriverOptionsManagerV1>, mut context: DispatchData| {
+                |options_manager: Main<RiverOptionsManagerV2>, mut context: DispatchData| {
                     context.get::<Context>().unwrap().globals.options_manager =
                         Some(options_manager);
                 }
@@ -103,7 +103,7 @@ fn main() {
             })
             .unwrap();
         if debug {
-            context.outputs[monitor_index].options.debug();
+            context.outputs[monitor_index].debug();
         }
         context.outputs[monitor_index].update();
     }
