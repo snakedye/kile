@@ -23,9 +23,6 @@ river-layout-unstable and river-options-unstable.
 *-h*, *--h*, *--help*
 	Display a help message.
 
-*-d*, *--d*, *--debug*
-	Enable verbose output.
-
 *-n*, *--n*, *--namespace*
 	The namespace of this layout generator.
 
@@ -73,12 +70,12 @@ You will most like set a command in this format.
 	- *smart-padding <true | false>*
 		Enable of disable smart padding i.e gaps only if there's at least one view displayed.
 
-	- *set-tag <focused | all | 0..32 >:<outer-layout>:<inner-layout..>:<app-id>*
+	- *set-tag <focused | all | 1..32 >:<outer-layout>:<inner-layout..>:<app-id>*
 			All of these field are escapable except the first
 			which is the tag this command will be applied too.
 			Layout will be explained later.
 
-	- *clear-tag <all | focused | 0..32 >*
+	- *clear-tag <all | focused | 1..32 >*
 			Clears a tag configuration.
 
 	- *preferred-app <app-id>*

@@ -57,13 +57,11 @@ fn main() {
         .unwrap();
 
     let mut args = env::args();
-    let mut debug = false;
     let mut monitor_index = 0;
     args.next();
     loop {
         match args.next() {
             Some(flag) => match flag.as_str() {
-                "--debug" | "--d" | "-d" => debug = true,
                 "--namespace" | "--n" | "-n" => {
                     context.namespace = args.next().unwrap_or(String::from("kile"))
                 }
@@ -108,7 +106,6 @@ fn main() {
 fn help() {
     println!("Usage: kile [option]\n");
     println!("  -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
-    println!("  -d | --d | --debug : displays the content of the Options struct as events occur.");
     println!("  -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
     println!("  -h | --h | --help : shows this help message.");
 }
