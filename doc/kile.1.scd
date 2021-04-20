@@ -1,12 +1,12 @@
-kile(1)
+KILE(1) "https://gitlab.com/snakedye/kile" "General Commands Manual"
 
+# NAME
 
-#NAME
-Kile - A tiling a layout generator for River
+kile - a tiling a layout generator for river
 
+# DESCRIPTION
 
-#DESCRIPTION
-Kile is a layout generator for River.
+*kile* is a layout generator for *river*.
 
 It receives layout and option events to create a dynamic layout of windows.
 
@@ -16,7 +16,8 @@ Note: Kile could work on any Wayland compositor that implements
 river-layout-unstable and river-options-unstable.
 
 
-#OPTIONS
+# ARGUMENTS
+
 *-m <int>*, *--m <int>*, *--monitor <int>*
 	The index of the monitor Kile will work on.
 
@@ -26,71 +27,66 @@ river-layout-unstable and river-options-unstable.
 *-n*, *--n*, *--namespace*
 	The namespace of this layout generator.
 
+# CONFIGURATION
 
-#CONFIGURATION
-Kile configured through River's option protocol or the riverctl ipc client.
+*kile* is layout generator configured through *river*'s
+option protocol or the riverctl ipc client.
 
-To configure Kile you need to modify or initialize the value of a river option.
-Some of them are already declared by riverctl(1).
+On launch *kile* will declare all the options it needs.
+To configure it you need to modify the value of theses options.
 
-The type following the name of the option is the one you need to give to riverctl
-when you declare these options.
+## OPTIONS
+*layout* _(string)_
+	The layout namespace used to determine which layout should arrange this output.
 
-*layout (string)*
-The layout namespace used to determine which layout should arrange this output.
+*view_padding* _(uint)_
+	The padding in pixels of the each window within the layout.
 
-*view_padding (uint)*
-The padding in pixels of the each window within the layout.
+*outer_padding* (uint)
+	The padding in pixels of the between the layout and the edges of the output.
 
-*outer_padding (uint)*
-The padding in pixels of the between the layout and the edges of the output.
+*xoffset* _(int)_
+	The horizontal offset in pixels from a lateral screen edge.
+	Positive integers create an offset from 
+	the right of screen and negatives from the left.
 
-*xoffset (int)*
-The horizontal offset in pixels from a lateral screen edge.
-Positive integers create an offset from the right of screen and negatives from the left.
+*yoffset* _(int)_
+	The vertical offset in pixels from the top or bottom screen edge.
+	Positive integers create an offset from 
+	the top of screen and negatives from the bottom.
 
-*yoffset (int)*
-The vertical offset in pixels from the top or bottom screen edge.
-Positive integers create an offset from the top of screen and negatives from the bottom.
+*main_amount* _(uint)_
+	An arbitrary positive integer indicating the amount of main views.
 
-*main_amount (uint)*
-An arbitrary positive integer indicating the amount of main views.
+*main_factor* _(float)_
+	A floating point numger indicating the relative size of the area reserved for main views.
+	Note that layouts commonly expect values between 0.1 and 0.9.
 
-*main_factor (float)*
-A floating point numger indicating the relative size of the area reserved for main views.
-Note that layouts commonly expect values between 0.1 and 0.9.
+*command* _<instruction>_
+	Execute a command within Kile.
 
-*command <instruction>*
-Execute a command within Kile.
+## COMMANDS
+Available commands.
 
-You will most like set a command in this format.
-<riverctl set-option -focused-output command "something">.
-
-	That something would be
 	- *smart-padding <true | false>*
-		Enable of disable smart padding i.e gaps only if there's at least one view displayed.
 
 	- *set-tag <focused | all | 1..32 >:<outer-layout>:<inner-layout..>:<app-id>*
-			All of these field are escapable except the first
-			which is the tag this command will be applied too.
-			Layout will be explained later.
 
 	- *clear-tag <all | focused | 1..32 >*
-			Clears a tag configuration.
 
 	- *preferred-app <app-id>*
-			The app id of the application matching this string will be zoomed automatically.
 
 
-##LAYOUT
-Kile has a special way to generate layouts.
+## LAYOUT
+
+kile has a special way to generate layouts.
 
 The screen geometry is split into smaller areas following the outer layout
 and the layout within these areas are determined by the inner layout.
 Inner layouts are generated from left to right in the order they are presented.
 This allows you to create more complex layouts from the basic ones given.
 
-Kile will never and should never give an empty area,
+It will never and should never give an empty area,
 no matter how funky your combinations may be.
 
 The base layouts are the following.
@@ -106,8 +102,9 @@ The base layouts are the following.
 	- *D* : dwindle(horizontal)
 
 *outer-layout*
-A character from the list of layouts above.
+	A character from the list of layouts above.
 
 *inner-layout*
-A string of layouts like "h" or "hDv".
+	A string of layouts like "h" or "hDv".
 
+*riverctl*(1), *river-layouts*(7)
