@@ -3,9 +3,7 @@ use crate::wayland::{
     river_layout_v1::river_layout_manager_v1::RiverLayoutManagerV1,
     river_options_v2::river_options_manager_v2::RiverOptionsManagerV2,
 };
-use crate::wayland::{
-    river_layout_v1::river_layout_v1, river_options_v2::river_option_handle_v2,
-};
+use crate::wayland::{river_layout_v1::river_layout_v1, river_options_v2::river_option_handle_v2};
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{DispatchData, Main};
 
@@ -87,11 +85,10 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
-
         self.globals.declare_uint_option("view_padding", 10);
-        self.globals.declare_uint_option("outer_padding", 10);
+        self.globals.declare_uint_option("outer_padding", 5);
         self.globals.declare_uint_option("main_index", 0);
-        self.globals.declare_uint_option("main_count", 1);
+        self.globals.declare_uint_option("main_amount", 1);
         self.globals.declare_int_option("xoffset", 0);
         self.globals.declare_int_option("yoffset", 0);
         self.globals.declare_fixed_option("main_factor", 0.6);
@@ -118,13 +115,13 @@ impl Globals {
         self.options_manager
             .as_ref()
             .expect("Compositor doesn't implement river_options_v2")
-            .declare_uint_option(name.to_owned(), value as u32);
+            .declare_uint_option(name.to_owned(), value);
     }
     pub fn declare_int_option(&self, name: &'static str, value: i32) {
         self.options_manager
             .as_ref()
             .expect("Compositor doesn't implement river_options_v2")
-            .declare_int_option(name.to_owned(), value as i32);
+            .declare_int_option(name.to_owned(), value);
     }
     pub fn declare_string_option(&self, name: &'static str, value: Option<String>) {
         self.options_manager
@@ -140,8 +137,7 @@ impl Globals {
     }
     pub fn get_layout(&self, output: &mut Output, namespace: String) {
         output.options.zlayout = Some(
-            self
-                .layout_manager
+            self.layout_manager
                 .as_ref()
                 .expect("Compositor doesn't implement river_layout_v1")
                 .get_river_layout(output.output.as_ref().unwrap(), namespace),
@@ -167,7 +163,6 @@ impl Globals {
                         }
                         i as usize
                     };
-                    output.get::<Output>().unwrap().update();
                 }
                 river_layout_v1::Event::AdvertiseView {
                     tags,
@@ -188,7 +183,9 @@ impl Globals {
                 river_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
                 }
-                river_layout_v1::Event::AdvertiseDone { serial } => {}
+                river_layout_v1::Event::AdvertiseDone { serial } => {
+                    output.get::<Output>().unwrap().update()
+                }
             },
         );
     }
@@ -218,60 +215,58 @@ impl Globals {
                     "xoffset" => output_handle.options.xoffset = option_value.int,
                     "yoffset" => output_handle.options.yoffset = option_value.int,
                     "outer_padding" => output_handle.options.outer_padding = option_value.uint,
-                    "command" => {
-                        match string {
-                            Some(command) => {
-                                let mut command = command.split_whitespace();
-                                match command.next().unwrap_or_default() {
-                                    "smart-padding" => if let Ok(ans) = command.next().unwrap().parse::<bool>() {
+                    "command" => match string {
+                        Some(command) => {
+                            let mut command = command.split_whitespace();
+                            match command.next().unwrap_or_default() {
+                                "smart-padding" => {
+                                    if let Ok(ans) = command.next().unwrap().parse::<bool>() {
                                         output_handle.options.smart_padding = ans;
-                                    },
-                                    "set-tag" => {
-                                        for arg in command {
-                                            output_handle.parse_tag_config(arg.to_string())
-                                        }
                                     }
-                                    "preferred-app" => {
-                                        output_handle.tags[output_handle.options.tagmask as usize]
-                                            .as_mut()
-                                            .unwrap()
-                                            .preferred_app =
-                                            Some(command.map(|app_id| app_id.to_string()).collect())
-                                    }
-                                    "clear-tag" => match command.next() {
-                                        Some(arg) => match arg {
-                                            "all" => output_handle.tags = Default::default(),
-                                            "focused" => {
-                                                output_handle.tags
-                                                    [output_handle.options.tagmask as usize] = None
-                                            }
-                                            _ => match arg.parse::<usize>() {
-                                                Ok(int) => output_handle.tags[int] = None,
-                                                Err(_) => {}
-                                            },
-                                        },
-                                        None => {}
-                                    },
-                                    _ => {}
                                 }
+                                "set-tag" => {
+                                    for arg in command {
+                                        output_handle.parse_tag_config(arg.to_string())
+                                    }
+                                }
+                                "preferred-app" => {
+                                    output_handle.tags[output_handle.options.tagmask as usize]
+                                        .as_mut()
+                                        .unwrap()
+                                        .preferred_app =
+                                        Some(command.map(|app_id| app_id.to_string()).collect())
+                                }
+                                "clear-tag" => match command.next() {
+                                    Some(arg) => match arg {
+                                        "all" => output_handle.tags = Default::default(),
+                                        "focused" => {
+                                            output_handle.tags
+                                                [output_handle.options.tagmask as usize] = None
+                                        }
+                                        _ => match arg.parse::<usize>() {
+                                            Ok(int) => output_handle.tags[int] = None,
+                                            Err(_) => {}
+                                        },
+                                    },
+                                    None => {}
+                                },
+                                _ => {}
                             }
-                            None => {}
+                            option_handle.set_string_value(None);
                         }
-                        option_handle.set_string_value(None);
-                    }
+                        None => {}
+                    },
                     _ => {}
                 }
             }
-            if name != "command" {
-                output
-                    .get::<Output>()
-                    .unwrap()
-                    .options
-                    .zlayout
-                    .as_ref()
-                    .unwrap()
-                    .parameters_changed();
-            }
+            output
+                .get::<Output>()
+                .unwrap()
+                .options
+                .zlayout
+                .as_ref()
+                .unwrap()
+                .parameters_changed();
         });
     }
 }
@@ -331,7 +326,7 @@ impl Output {
                                         break;
                                     }
                                 }
-                                Err(_) => break
+                                Err(_) => break,
                             },
                         },
                         None => {
@@ -354,7 +349,7 @@ impl Output {
                                     tag.outer = outer_layout;
                                 }
                                 if let Some(inner_layout) = inner_layout.clone() {
-                                    tag.inner =inner_layout;
+                                    tag.inner = inner_layout;
                                 }
                                 tag.preferred_app = preferred_app.clone();
                             }
@@ -377,14 +372,21 @@ impl Output {
     }
     pub fn debug(&self) {
         match &self.tags[self.options.tagmask] {
-            Some(tag) => { println!("Tag - {}\n
+            Some(tag) => {
+                println!(
+                    "Tag - {}\n
                 preferred-app: {:?}\n
                 inner_layout: {:?}\n
                 outer_layout: {:?}\n
                 windows: {:?}",
-                self.options.tagmask, tag.preferred_app, tag.inner, tag.outer, self.options.windows);
+                    self.options.tagmask,
+                    tag.preferred_app,
+                    tag.inner,
+                    tag.outer,
+                    self.options.windows
+                );
             }
-            None=>{}
+            None => {}
         }
     }
 }
