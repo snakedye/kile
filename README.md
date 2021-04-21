@@ -14,11 +14,3 @@ git clone https://gitlab.com/snakedye/kile.git
 cd kile
 cargo build --release
 ```
-
-## Roadmap
-
-- [x] Implement the dwindle layout
-- [x] Per tag layout
-- [x] Basic window rules
-- [ ] Draw titlebar on tabbed window
-- [ ] Manual tiling

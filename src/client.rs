@@ -439,7 +439,7 @@ impl Tag {
         let mut windows = Vec::new();
         for (i, window) in outer_frame.list.iter().enumerate() {
             let mut frame = Frame::new(self.inner[i], window.area.unwrap());
-            if i == options.main_index as usize && main_amount != 0 as u32 {
+            if i==0 && main_amount != 0 {
                 frame.generate(main_amount, options, false, false);
             } else {
                 frame.generate(

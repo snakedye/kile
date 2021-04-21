@@ -12,14 +12,14 @@ It receives layout and option events to create a dynamic layout of windows.
 
 The layout configuration is entirely done through River's option protocol.
 
-Note: Kile could work on any Wayland compositor that implements
-river-layout-unstable and river-options-unstable.
+Note: *kile* could work on any Wayland compositor that implements
+river-layout-v1 and river-options-v2.
 
 
 # ARGUMENTS
 
-*-m <int>*, *--m <int>*, *--monitor <int>*
-	The index of the monitor Kile will work on.
+*-m* _<int>_, *--m* _<int>_, *--monitor* _<int>_*
+	The index of the monitor *kile* will work on.
 
 *-h*, *--h*, *--help*
 	Display a help message.
@@ -42,7 +42,7 @@ To configure it you need to modify the value of theses options.
 *view_padding* _(uint)_
 	The padding in pixels of the each window within the layout.
 
-*outer_padding* (uint)
+*outer_padding* _(uint)_
 	The padding in pixels of the between the layout and the edges of the output.
 
 *xoffset* _(int)_
@@ -96,6 +96,8 @@ The base layouts are the following.
 	- *h* : horizontal
 
 	- *t* : tab
+
+	- *f* : full
 
 	- *d* : dwindle(vertical)
 
