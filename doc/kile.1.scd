@@ -18,7 +18,7 @@ river-layout-v1 and river-options-v2.
 
 # ARGUMENTS
 
-*-m* _<int>_, *--m* _<int>_, *--monitor* _<int>_*
+*-m* _<int>_, *--m* _<int>_, *--monitor* _<int>_
 	The index of the monitor *kile* will work on.
 
 *-h*, *--h*, *--help*
