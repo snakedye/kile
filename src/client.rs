@@ -404,17 +404,21 @@ impl Tag {
     }
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
-        for i in 0..frame.list.len() {
-            if frame.list[i].app_id.eq(&self
-                .preferred_app
-                .as_ref()
-                .unwrap_or(&"".to_string())
-                .as_ref())
-            {
-                frame.focus(i);
-                break;
+        if let Some(app_id) = &self.preferred_app {
+            let mut i = 0;
+            let mut zoomed = 0;
+            while i < frame.list.len() {
+                let mut j = i;
+                while j < frame.list.len() && zoomed < options.main_amount && frame.list[j].app_id.eq(app_id) {
+                    frame.focus(i);
+                    j+=1;
+                    zoomed+=1;
+                }
+                if i != j {
+                    i = j
+                } else { i+=1 }
             }
-        }
+        };
         for window in &mut frame.list {
             window.push_dimensions(options);
         }

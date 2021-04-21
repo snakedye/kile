@@ -6,8 +6,8 @@ rustPlatform.buildRustPackage rec {
 
   src = fetchFromGitLab {
     owner = "snakedye";
-    repo = pname;
-    rev = "f302612c43d51a405b46104750f1d4f12f59fbb5";
+    repo = kile;
+    rev = "b97b9f1e5b33862b33918efaf23fd1c0c5d7058a";
     sha256 = lib.fakeSha256;
   };
 
