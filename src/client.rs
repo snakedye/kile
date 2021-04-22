@@ -136,13 +136,13 @@ impl Globals {
             .declare_fixed_option(name.to_owned(), value);
     }
     pub fn get_layout(&self, output: &mut Output, namespace: String) {
-        output.options.zlayout = Some(
+        output.options.layout = Some(
             self.layout_manager
                 .as_ref()
                 .expect("Compositor doesn't implement river_layout_v1")
                 .get_river_layout(output.output.as_ref().unwrap(), namespace),
         );
-        output.options.zlayout.as_ref().unwrap().quick_assign(
+        output.options.layout.as_ref().unwrap().quick_assign(
             move |_, event, mut output: DispatchData| match event {
                 river_layout_v1::Event::LayoutDemand {
                     view_amount,
@@ -224,10 +224,8 @@ impl Globals {
                                         output_handle.options.smart_padding = ans;
                                     }
                                 }
-                                "set-tag" => {
-                                    for arg in command {
-                                        output_handle.parse_tag_config(arg.to_string())
-                                    }
+                                "set-tag" => for arg in command {
+                                    output_handle.parse_tag_config(arg.to_string())
                                 }
                                 "preferred-app" => {
                                     output_handle.tags[output_handle.options.tagmask as usize]
@@ -236,8 +234,8 @@ impl Globals {
                                         .preferred_app =
                                         Some(command.map(|app_id| app_id.to_string()).collect())
                                 }
-                                "clear-tag" => match command.next() {
-                                    Some(arg) => match arg {
+                                "clear-tag" => for arg in command {
+                                    match arg {
                                         "all" => output_handle.tags = Default::default(),
                                         "focused" => {
                                             output_handle.tags
@@ -247,9 +245,8 @@ impl Globals {
                                             Ok(int) => output_handle.tags[int] = None,
                                             Err(_) => {}
                                         },
-                                    },
-                                    None => {}
-                                },
+                                    }
+                                }
                                 _ => {}
                             }
                             option_handle.set_string_value(None);
@@ -263,7 +260,7 @@ impl Globals {
                 .get::<Output>()
                 .unwrap()
                 .options
-                .zlayout
+                .layout
                 .as_ref()
                 .unwrap()
                 .parameters_changed();
@@ -296,7 +293,7 @@ impl Output {
         self.configured = true;
     }
     pub fn destroy(&self) {
-        (self.options.zlayout).as_ref().unwrap().destroy();
+        (self.options.layout).as_ref().unwrap().destroy();
     }
     pub fn update(&mut self) {
         if self.options.view_amount > 0 {
@@ -370,25 +367,6 @@ impl Output {
             }
         }
     }
-    pub fn debug(&self) {
-        match &self.tags[self.options.tagmask] {
-            Some(tag) => {
-                println!(
-                    "Tag - {}\n
-                preferred-app: {:?}\n
-                inner_layout: {:?}\n
-                outer_layout: {:?}\n
-                windows: {:?}",
-                    self.options.tagmask,
-                    tag.preferred_app,
-                    tag.inner,
-                    tag.outer,
-                    self.options.windows
-                );
-            }
-            None => {}
-        }
-    }
 }
 
 impl Tag {
@@ -409,14 +387,19 @@ impl Tag {
             let mut zoomed = 0;
             while i < frame.list.len() {
                 let mut j = i;
-                while j < frame.list.len() && zoomed < options.main_amount && frame.list[j].app_id.eq(app_id) {
+                while j < frame.list.len()
+                    && zoomed < options.main_amount
+                    && frame.list[j].app_id.eq(app_id)
+                {
                     frame.focus(i);
-                    j+=1;
-                    zoomed+=1;
+                    j += 1;
+                    zoomed += 1;
                 }
                 if i != j {
                     i = j
-                } else { i+=1 }
+                } else {
+                    i += 1
+                }
             }
         };
         for window in &mut frame.list {
@@ -443,7 +426,7 @@ impl Tag {
         let mut windows = Vec::new();
         for (i, window) in outer_frame.list.iter().enumerate() {
             let mut frame = Frame::new(self.inner[i], window.area.unwrap());
-            if i==0 && main_amount != 0 {
+            if i == 0 && main_amount != 0 {
                 frame.generate(main_amount, options, false, false);
             } else {
                 frame.generate(

@@ -13,7 +13,7 @@ It receives layout and option events to create a dynamic layout of windows.
 The layout configuration is entirely done through River's option protocol.
 
 Note: *kile* could work on any Wayland compositor that implements
-river-layout-v1 and river-options-v2.
+*river-layout-v1* and *river-options-v2*.
 
 
 # ARGUMENTS
@@ -29,7 +29,7 @@ river-layout-v1 and river-options-v2.
 
 # CONFIGURATION
 
-*kile* is layout generator configured through *river*'s
+*kile* is a layout generator configured through *river*'s
 option protocol or the riverctl ipc client.
 
 On launch *kile* will declare all the options it needs.
@@ -63,23 +63,23 @@ To configure it you need to modify the value of theses options.
 	Note that layouts commonly expect values between 0.1 and 0.9.
 
 *command* _<instruction>_
-	Execute a command within Kile.
+	Execute a command within *kile*.
 
 ## COMMANDS
 Available commands.
 
 	- *smart-padding <true | false>*
 
-	- *set-tag <focused | all | 1..32 >:<outer-layout>:<inner-layout..>:<app-id>*
+	- *set-tag <focused | all | 1..32>:<outer-layout>:<inner-layout..>:<app-id>*
 
-	- *clear-tag <all | focused | 1..32 >*
+	- *clear-tag <all | focused | 1..32>*
 
 	- *preferred-app <app-id>*
 
 
 ## LAYOUT
 
-kile has a special way to generate layouts.
+*kile* has a special way to generate layouts.
 
 The screen geometry is split into smaller areas following the outer layout
 and the layout within these areas are determined by the inner layout.
@@ -99,9 +99,9 @@ The base layouts are the following.
 
 	- *f* : full
 
-	- *d* : dwindle(vertical)
+	- *d* : dwindle (vertical)
 
-	- *D* : dwindle(horizontal)
+	- *D* : dwindle (horizontal)
 
 *outer-layout*
 	A character from the list of layouts above.

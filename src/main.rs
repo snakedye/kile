@@ -13,7 +13,6 @@ use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
-
     let display = Display::connect_to_env().unwrap();
 
     let mut event_queue = display.create_event_queue();

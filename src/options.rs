@@ -6,7 +6,7 @@ pub struct Options {
     pub serial: u32,
     pub tagmask: usize,
     pub windows: Vec<Window>,
-    pub zlayout: Option<Main<RiverLayoutV1>>,
+    pub layout: Option<Main<RiverLayoutV1>>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
@@ -36,9 +36,9 @@ impl Options {
                 serial: 0,
                 tagmask: 0,
                 windows: Vec::new(),
-                zlayout: None,
+                layout: None,
                 view_amount: 0,
-                smart_padding: true,
+                smart_padding: false,
                 view_padding: 0,
                 outer_padding: 0,
                 xoffset: 0,
@@ -167,7 +167,7 @@ impl Options {
         }
     }
     pub fn push_dimensions(&self, rect: &Area) {
-        self.zlayout.as_ref().unwrap().push_view_dimensions(
+        self.layout.as_ref().unwrap().push_view_dimensions(
             self.serial,
             rect.x as i32,
             rect.y as i32,
@@ -191,6 +191,6 @@ impl Options {
         println!("    main_amount : {}\n", self.main_amount);
     }
     pub fn commit(&self) {
-        self.zlayout.as_ref().unwrap().commit(self.serial);
+        self.layout.as_ref().unwrap().commit(self.serial);
     }
 }
