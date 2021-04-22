@@ -382,36 +382,24 @@ impl Tag {
     }
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
-        if let Some(app_id) = &self.preferred_app {
-            let mut i = 0;
-            let mut zoomed = 0;
-            while i < frame.list.len() {
-                let mut j = i;
-                while j < frame.list.len()
-                    && zoomed < options.main_amount
-                    && frame.list[j].app_id.eq(app_id)
-                {
-                    frame.focus(i);
-                    j += 1;
-                    zoomed += 1;
-                }
-                if i != j {
-                    i = j
-                } else {
-                    i += 1
-                }
-            }
-        };
+        frame.focus_app(&self.preferred_app, options.main_amount);
         for window in &mut frame.list {
             window.push_dimensions(options);
         }
         options.commit();
     }
     pub fn update(&mut self, options: &mut Options) {
+        // Initialise a frame with the output dimension
         self.frame = Some(Frame::new(self.outer, options.get_output()));
+
+        // Get a reference to the frame
         let outer_frame = self.frame.as_mut().unwrap();
+        // The total amount of frame
         let frame_amount = options.frames_amount(self.inner.len() as u32);
+
+        // Generate the outer layout
         outer_frame.generate(frame_amount, options, true, true);
+
         let main_amount = options.main_amount(frame_amount);
         let slave_amount;
         let mut reste = if main_amount > 0 {
@@ -423,6 +411,7 @@ impl Tag {
             options.view_amount % frame_amount
         };
 
+        // Generate the inner layouts
         let mut windows = Vec::new();
         for (i, window) in outer_frame.list.iter().enumerate() {
             let mut frame = Frame::new(self.inner[i], window.area.unwrap());
@@ -445,6 +434,7 @@ impl Tag {
         }
         outer_frame.list = windows;
 
+        // Push views to the server
         self.push_views(options);
     }
 }
@@ -493,13 +483,41 @@ impl Frame {
             self.list[0].area = main;
         }
     }
-    pub fn focus(&mut self, index: usize) {
+    pub fn focus(&mut self, index: usize, to: usize) {
         if (index as usize) < self.list.len() {
-            let main = self.list[0].area;
-            for i in 0..index {
+            let main = self.list[to].area;
+            for i in to..index {
                 self.list[i].area = self.list[i + 1].area;
             }
             self.list[index].area = main;
+        }
+    }
+    pub fn focus_app(&mut self, app_id: &Option<String>, main_amount: u32) {
+        if let Some(app_id) = app_id {
+            let mut i = self.list.len()-1;
+            let mut zoomed = 0;
+            let to = if self.list[0].app_id.contains(app_id) {
+                zoomed += 1;
+                1
+            } else { 0 };
+            while i > 0 {
+                let mut j = i;
+                while j > 0
+                    && zoomed < main_amount
+                    && self.list[j].app_id.contains(app_id)
+                {
+                    self.focus(i,to);
+                    j -= 1;
+                    zoomed += 1;
+                }
+                if i != j {
+                    i = j
+                } else if zoomed == main_amount {
+                    break
+                } else {
+                    i -= 1
+                }
+            }
         }
     }
     fn insert_window(&mut self, area: Area, options: &mut Options, parent: bool) {

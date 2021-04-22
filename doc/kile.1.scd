@@ -66,6 +66,7 @@ To configure it you need to modify the value of theses options.
 	Execute a command within *kile*.
 
 ## COMMANDS
+
 Available commands.
 
 	- *smart-padding <true | false>*
