@@ -228,11 +228,10 @@ impl Globals {
                                     output_handle.parse_tag_config(arg.to_string())
                                 }
                                 "preferred-app" => {
-                                    output_handle.tags[output_handle.options.tagmask as usize]
-                                        .as_mut()
-                                        .unwrap()
-                                        .preferred_app =
+                                    if let Some(tag) = output_handle.tags[output_handle.options.tagmask as usize].as_mut() {
+                                        tag.preferred_app = 
                                         Some(command.map(|app_id| app_id.to_string()).collect())
+                                    }
                                 }
                                 "clear-tag" => for arg in command {
                                     match arg {
@@ -496,13 +495,13 @@ impl Frame {
         if let Some(app_id) = app_id {
             let mut i = self.list.len()-1;
             let mut zoomed = 0;
-            let to = if self.list[0].app_id.contains(app_id) {
-                zoomed += 1;
-                1
-            } else { 0 };
+            let mut to = 0;
+            while to < i && self.list[to].app_id.eq(app_id) {
+                to+=1;
+            }
             while i > 0 {
                 let mut j = i;
-                while j > 0
+                while j > to
                     && zoomed < main_amount
                     && self.list[j].app_id.contains(app_id)
                 {
@@ -512,8 +511,6 @@ impl Frame {
                 }
                 if i != j {
                     i = j
-                } else if zoomed == main_amount {
-                    break
                 } else {
                     i -= 1
                 }
