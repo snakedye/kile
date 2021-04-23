@@ -1,4 +1,4 @@
-mod build;
+// mod build;
 mod client;
 mod options;
 mod wayland;

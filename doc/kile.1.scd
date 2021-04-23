@@ -55,13 +55,6 @@ To configure it you need to modify the value of theses options.
 	Positive integers create an offset from 
 	the top of screen and negatives from the bottom.
 
-*main_amount* _(uint)_
-	An arbitrary positive integer indicating the amount of main views.
-
-*main_factor* _(float)_
-	A floating point numger indicating the relative size of the area reserved for main views.
-	Note that layouts commonly expect values between 0.1 and 0.9.
-
 *command* _<instruction>_
 	Execute a command within *kile*.
 
@@ -77,10 +70,26 @@ Available commands.
 
 	- *preferred-app <app-id>*
 
+	- *main-amount* (+ | -) _<uint>_
+
+	- *main-index* (+ | -) _<uint>_
+
+	- *main-factor* (+ | -) _<float>_
+
+*main_amount* _(uint)_
+	An arbitrary positive integer indicating the amount of main views.
+
+*main_index* _(uint)_
+	An arbitrary positive integer indicating the index of the main area in the outer layout.
+
+*main_factor* _(float)_
+	A floating point numger indicating the relative size of the area reserved for main views.
+	Note that layouts commonly expect values between 0.1 and 0.9.
+
 
 ## LAYOUT
 
-*kile* has a special way to generate layouts.
+*kile* generate a dynamic layout or window layouts.
 
 The screen geometry is split into smaller areas following the outer layout
 and the layout within these areas are determined by the inner layout.

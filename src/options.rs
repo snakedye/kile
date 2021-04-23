@@ -1,4 +1,4 @@
-use super::client::{Area, Rectangle, Window};
+use super::client::{Area, Window};
 use crate::wayland::river_layout_v1::river_layout_v1::RiverLayoutV1;
 use wayland_client::Main;
 

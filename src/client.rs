@@ -21,6 +21,7 @@ pub struct Context {
 
 pub struct Output {
     pub options: Options,
+    pub focused: usize,
     pub configured: bool,
     pub default: Tag,
     pub output: Option<WlOutput>,
@@ -30,6 +31,9 @@ pub struct Output {
 #[derive(Clone)]
 pub struct Tag {
     pub outer: Layout,
+    pub main_index: u32,
+    pub main_amount: u32,
+    pub main_factor: f64,
     pub inner: Vec<Layout>,
     pub preferred_app: Option<String>,
     pub frame: Option<Frame>,
@@ -85,13 +89,13 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
+        // self.globals.declare_uint_option("main_index", 0);
+        // self.globals.declare_uint_option("main_amount", 1);
+        // self.globals.declare_fixed_option("main_factor", 0.6);
         self.globals.declare_uint_option("view_padding", 10);
         self.globals.declare_uint_option("outer_padding", 5);
-        self.globals.declare_uint_option("main_index", 0);
-        self.globals.declare_uint_option("main_amount", 1);
         self.globals.declare_int_option("xoffset", 0);
         self.globals.declare_int_option("yoffset", 0);
-        self.globals.declare_fixed_option("main_factor", 0.6);
         self.globals.declare_string_option("command", None);
 
         let output = &mut self.outputs[monitor_index];
@@ -155,7 +159,7 @@ impl Globals {
                     output.get::<Output>().unwrap().options.view_amount = view_amount;
                     output.get::<Output>().unwrap().options.usable_height = usable_height;
                     output.get::<Output>().unwrap().options.usable_width = usable_width;
-                    output.get::<Output>().unwrap().options.tagmask = {
+                    output.get::<Output>().unwrap().focused = {
                         let mut i = 0;
                         while tags / 2 >= 1 {
                             tags /= 2;
@@ -208,9 +212,6 @@ impl Globals {
             let output_handle = output.get::<Output>().unwrap();
             unsafe {
                 match name {
-                    "main_index" => output_handle.options.main_index = option_value.uint,
-                    "main_amount" => output_handle.options.main_amount = option_value.uint,
-                    "main_factor" => output_handle.options.main_factor = option_value.double,
                     "view_padding" => output_handle.options.view_padding = option_value.uint,
                     "xoffset" => output_handle.options.xoffset = option_value.int,
                     "yoffset" => output_handle.options.yoffset = option_value.int,
@@ -218,32 +219,93 @@ impl Globals {
                     "command" => match string {
                         Some(command) => {
                             let mut command = command.split_whitespace();
-                            match command.next().unwrap_or_default() {
+                            let command_name = command.next().unwrap_or_default();
+                            match command_name {
                                 "smart-padding" => {
                                     if let Ok(ans) = command.next().unwrap().parse::<bool>() {
                                         output_handle.options.smart_padding = ans;
                                     }
                                 }
-                                "set-tag" => for arg in command {
-                                    output_handle.parse_tag_config(arg.to_string())
-                                }
-                                "preferred-app" => {
-                                    if let Some(tag) = output_handle.tags[output_handle.options.tagmask as usize].as_mut() {
-                                        tag.preferred_app = 
-                                        Some(command.map(|app_id| app_id.to_string()).collect())
+                                "main-amount" | "main-index" | "main-factor" => {
+                                    if let Some(modi) = command.next() {
+                                        if let Some(tag) =
+                                            output_handle.tags[output_handle.focused].as_mut()
+                                        {
+                                            let mut mod_ref = None;
+                                            let mut fact_ref = None;
+                                            match command_name {
+                                                "main-amount" => {
+                                                    mod_ref = Some(&mut tag.main_amount)
+                                                }
+                                                "main-index" => mod_ref = Some(&mut tag.main_index),
+                                                "main-factor" => {
+                                                    fact_ref = Some(&mut tag.main_factor)
+                                                }
+                                                _ => {}
+                                            };
+                                            match modi[0..1].as_ref() {
+                                                "+" | "-" => {
+                                                    let mut modi = modi.chars();
+                                                    let sign = modi.next().unwrap();
+                                                    let arg = modi.collect::<String>();
+                                                    if let Ok(arg) = arg.parse::<u32>() {
+                                                        let uint = mod_ref.unwrap();
+                                                        match sign {
+                                                            '+' => *uint += arg,
+                                                            '-' => {
+                                                                if arg <= *uint {
+                                                                    *uint -= arg
+                                                                }
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    } else if let Ok(arg) = arg.parse::<f64>() {
+                                                        let float = fact_ref.unwrap();
+                                                        match sign {
+                                                            '+' => *float += arg,
+                                                            '-' => {
+                                                                if arg <= *float {
+                                                                    *float -= arg
+                                                                }
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    }
+                                                }
+                                                _ => {
+                                                    if let Ok(arg) = modi.parse::<u32>() {
+                                                        *mod_ref.unwrap() = arg
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                                "clear-tag" => for arg in command {
-                                    match arg {
-                                        "all" => output_handle.tags = Default::default(),
-                                        "focused" => {
-                                            output_handle.tags
-                                                [output_handle.options.tagmask as usize] = None
+                                "set-tag" => {
+                                    for arg in command {
+                                        output_handle.parse_tag_config(arg.to_string())
+                                    }
+                                }
+                                "preferred-app" => {
+                                    if let Some(tag) =
+                                        output_handle.tags[output_handle.focused].as_mut()
+                                    {
+                                        tag.preferred_app =
+                                            Some(command.map(|app_id| app_id.to_string()).collect())
+                                    }
+                                }
+                                "clear-tag" => {
+                                    for arg in command {
+                                        match arg {
+                                            "all" => output_handle.tags = Default::default(),
+                                            "focused" => {
+                                                output_handle.tags[output_handle.focused] = None
+                                            }
+                                            _ => match arg.parse::<usize>() {
+                                                Ok(int) => output_handle.tags[int] = None,
+                                                Err(_) => {}
+                                            },
                                         }
-                                        _ => match arg.parse::<usize>() {
-                                            Ok(int) => output_handle.tags[int] = None,
-                                            Err(_) => {}
-                                        },
                                     }
                                 }
                                 _ => {}
@@ -271,19 +333,20 @@ impl Output {
     pub fn new(output: WlOutput) -> Output {
         {
             Output {
+                configured: false,
+                focused: 0,
                 options: Options::new(),
                 default: Tag::new(),
-                configured: false,
                 output: Some(output),
                 tags: Default::default(),
             }
         }
     }
     pub fn configure(&mut self, globals: &Globals, namespace: String) {
+        // globals.get_option("main_factor", self);
+        // globals.get_option("main_amount", self);
+        // globals.get_option("main_index", self);
         globals.get_layout(self, namespace);
-        globals.get_option("main_factor", self);
-        globals.get_option("main_amount", self);
-        globals.get_option("main_index", self);
         globals.get_option("view_padding", self);
         globals.get_option("outer_padding", self);
         globals.get_option("xoffset", self);
@@ -296,7 +359,7 @@ impl Output {
     }
     pub fn update(&mut self) {
         if self.options.view_amount > 0 {
-            let focused = self.tags[self.options.tagmask as usize].as_mut();
+            let focused = self.tags[self.focused].as_mut();
             self.options.rearrange();
             match focused {
                 Some(tag) => tag.update(&mut self.options),
@@ -312,7 +375,7 @@ impl Output {
                     let mut rule = rule.split(':');
                     let tags = match rule.next() {
                         Some(tag) => match tag {
-                            "focused" => self.options.tagmask..self.options.tagmask + 1,
+                            "focused" => self.focused..self.focused + 1,
                             "all" => 0..32,
                             _ => match tag.parse::<usize>() {
                                 Ok(int) => {
@@ -352,10 +415,13 @@ impl Output {
                             None => {
                                 self.tags[i] = Some({
                                     Tag {
+                                        frame: None,
+                                        main_index: 0,
+                                        main_amount: 1,
+                                        main_factor: 0.5,
+                                        preferred_app: preferred_app.clone(),
                                         outer: outer_layout.unwrap_or(Layout::Full),
                                         inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
-                                        preferred_app: preferred_app.clone(),
-                                        frame: None,
                                     }
                                 })
                             }
@@ -372,22 +438,29 @@ impl Tag {
     pub fn new() -> Tag {
         {
             Tag {
+                frame: None,
+                main_index: 0,
+                main_amount: 1,
+                main_factor: 0.5,
                 preferred_app: None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
-                frame: None,
             }
         }
     }
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
-        frame.focus_app(&self.preferred_app, options.main_amount);
+        frame.focus_all(&self.preferred_app, options.main_amount);
         for window in &mut frame.list {
             window.push_dimensions(options);
         }
         options.commit();
     }
     pub fn update(&mut self, options: &mut Options) {
+        options.main_amount = self.main_amount;
+        options.main_index = self.main_index;
+        options.main_factor = self.main_factor;
+
         // Initialise a frame with the output dimension
         self.frame = Some(Frame::new(self.outer, options.get_output()));
 
@@ -491,21 +564,18 @@ impl Frame {
             self.list[index].area = main;
         }
     }
-    pub fn focus_app(&mut self, app_id: &Option<String>, main_amount: u32) {
+    pub fn focus_all(&mut self, app_id: &Option<String>, main_amount: u32) {
         if let Some(app_id) = app_id {
-            let mut i = self.list.len()-1;
+            let mut i = self.list.len() - 1;
             let mut zoomed = 0;
             let mut to = 0;
             while to < i && self.list[to].app_id.eq(app_id) {
-                to+=1;
+                to += 1;
             }
             while i > 0 {
                 let mut j = i;
-                while j > to
-                    && zoomed < main_amount
-                    && self.list[j].app_id.contains(app_id)
-                {
-                    self.focus(i,to);
+                while j > to && zoomed < main_amount && self.list[j].app_id.eq(app_id) {
+                    self.focus(i, to);
                     j -= 1;
                     zoomed += 1;
                 }
@@ -525,7 +595,7 @@ impl Frame {
                 Window {
                     app_id: String::new(),
                     area: None,
-                    tags: options.tagmask as u32,
+                    tags: 0,
                 }
             }
         };
