@@ -4,10 +4,6 @@
 - rust
 - scdoc ( optional for man page )
 
-## How does it work?
-
-kile creates a dynamic layout of window layouts from an inner and outer layout.
-
 ## Option
 - **layout (string)** :
 The layout namespace used to determine which layout should arrange this output.
