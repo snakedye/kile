@@ -38,6 +38,8 @@ You can send a command to *kile* by setting a value to the `command` option.
 
 ### `set-tag focused:v:Dh:firefox`
 
+![v:Dh](/images/layout.png)
+
 Declares the configuration of a tag.
 
 This command is set the outer layout of the tag to vertical (v)
@@ -51,8 +53,6 @@ which tag you want to declare or edit but can ommit to put something in
 all the other fields.
 
 `set-tag 4::hh` or `set-tag all:::Chromium` are also valid commands.
-
-![v:Dh](/images/layout.png)
 
 ### `clear-tag all`
 
