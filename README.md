@@ -2,10 +2,12 @@
 
 ## How does it work?
 
-Kile is entirely configured through river-options.
+kile creates a dynamic layout of window layouts from an inner and outer layout.
 
-### Help
-`kile --help`.
+## Example
+### `set-tag v:Dh`
+
+![v:Dh](/images/layout.png)
 
 ## Building
 

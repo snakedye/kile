@@ -89,9 +89,6 @@ impl Context {
         };
     }
     pub fn init(&mut self, monitor_index: usize) {
-        // self.globals.declare_uint_option("main_index", 0);
-        // self.globals.declare_uint_option("main_amount", 1);
-        // self.globals.declare_fixed_option("main_factor", 0.6);
         self.globals.declare_uint_option("view_padding", 10);
         self.globals.declare_uint_option("outer_padding", 5);
         self.globals.declare_int_option("xoffset", 0);
@@ -343,9 +340,6 @@ impl Output {
         }
     }
     pub fn configure(&mut self, globals: &Globals, namespace: String) {
-        // globals.get_option("main_factor", self);
-        // globals.get_option("main_amount", self);
-        // globals.get_option("main_index", self);
         globals.get_layout(self, namespace);
         globals.get_option("view_padding", self);
         globals.get_option("outer_padding", self);
