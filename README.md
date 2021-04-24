@@ -65,6 +65,8 @@ Makes `nemo` the preferred application of the focused tag.
 
 Enables or disable smart padding.
 
+See `kile(1)` or `doc/kile.1.scd` for more info.
+
 ## Building
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/kile-wl.svg)](https://repology.org/project/kile-wl/versions)
