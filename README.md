@@ -72,5 +72,5 @@ Enables or disable smart padding.
 ```shell
 git clone https://gitlab.com/snakedye/kile.git
 cd kile
-cargo install kile --path /usr/
+cargo build --release
 ```
