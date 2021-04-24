@@ -2,7 +2,7 @@
 
 ### Dependencies
 - rust
-- scdoc ( optional for manpage )
+- scdoc ( optional for man page )
 
 ## How does it work?
 
@@ -28,7 +28,7 @@ The layout namespace used to determine which layout should arrange this output.
 	Positive integers create an offset from 
 	the top of screen and negatives from the bottom.
 
-## Example
+## Commands
 
 You can send a command to *kile* by setting a value to the `command` option.
 
@@ -50,9 +50,8 @@ will be automatically brought to the main area.
 
 All the fields except the first are escapable i.e you need to say 
 which tag you want to declare or edit but can ommit to put something in
-all the other fields.
-
-`set-tag 4::hh` or `set-tag all:::Chromium` are also valid commands.
+all the other fields. Which means `set-tag 4::hh`
+or `set-tag all:::Chromium` are also valid commands.
 
 ### `clear-tag all`
 
@@ -63,6 +62,10 @@ a full outer and inner layout similar to monocle.
 ### `preferred-app nemo`
 
 Makes `nemo` the preferred application of the focused tag.
+
+### `smart-padding (true | false)`
+
+Enables or disable smart padding.
 
 ## Building
 
