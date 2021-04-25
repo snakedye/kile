@@ -35,7 +35,7 @@ pub struct Tag {
     pub main_amount: u32,
     pub main_factor: f64,
     pub inner: Vec<Layout>,
-    pub preferred_app: Option<String>,
+    pub rule: Rule,
     pub frame: Option<Frame>,
 }
 
@@ -59,6 +59,13 @@ pub struct Area {
     pub y: u32,
     pub w: u32,
     pub h: u32,
+}
+
+#[derive(Clone, Debug)]
+pub enum Rule {
+    AppId{ string: String },
+    Tag{ uint: u32 },
+    None
 }
 
 union Value {
@@ -283,12 +290,18 @@ impl Globals {
                                         output_handle.parse_tag_config(arg.to_string())
                                     }
                                 }
-                                "preferred-app" => {
+                                "window-rule" => {
                                     if let Some(tag) =
                                         output_handle.tags[output_handle.focused].as_mut()
                                     {
-                                        tag.preferred_app =
-                                            Some(command.map(|app_id| app_id.to_string()).collect())
+                                        tag.rule = match command.next() {
+                                            Some(app_id) => if let Ok(tag) = app_id.parse::<u32>() {
+                                                Rule::Tag{uint:tag}
+                                            } else { 
+                                                Rule::AppId{string:app_id.to_string()}
+                                            }
+                                            None => Rule::None,
+                                        };
                                     }
                                 }
                                 "clear-tag" => {
@@ -299,7 +312,9 @@ impl Globals {
                                                 output_handle.tags[output_handle.focused] = None
                                             }
                                             _ => match arg.parse::<usize>() {
-                                                Ok(int) => output_handle.tags[int] = None,
+                                                Ok(int) => if int > 0 {
+                                                    output_handle.tags[int - 1] = None
+                                                }
                                                 Err(_) => {}
                                             },
                                         }
@@ -390,9 +405,13 @@ impl Output {
                         Options::outer_layout(rule.next().unwrap_or_default().to_string());
                     let inner_layout =
                         Options::inner_layout(rule.next().unwrap_or_default().to_string());
-                    let preferred_app = match rule.next() {
-                        Some(app_id) => Some(app_id.to_string()),
-                        None => None,
+                    let window_rule = match rule.next() {
+                        Some(app_id) => if let Ok(tag) = app_id.parse::<u32>() {
+                            Rule::Tag{uint:tag}
+                        } else { 
+                            Rule::AppId{string:app_id.to_string()}
+                        }
+                        None => Rule::None,
                     };
                     for i in tags {
                         let tag = self.tags[i].as_mut();
@@ -404,7 +423,7 @@ impl Output {
                                 if let Some(inner_layout) = inner_layout.clone() {
                                     tag.inner = inner_layout;
                                 }
-                                tag.preferred_app = preferred_app.clone();
+                                tag.rule = window_rule.clone();
                             }
                             None => {
                                 self.tags[i] = Some({
@@ -413,7 +432,7 @@ impl Output {
                                         main_index: 0,
                                         main_amount: 1,
                                         main_factor: 0.5,
-                                        preferred_app: preferred_app.clone(),
+                                        rule: window_rule.clone(),
                                         outer: outer_layout.unwrap_or(Layout::Full),
                                         inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
                                     }
@@ -436,7 +455,7 @@ impl Tag {
                 main_index: 0,
                 main_amount: 1,
                 main_factor: 0.5,
-                preferred_app: None,
+                rule: Rule::None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
             }
@@ -444,7 +463,7 @@ impl Tag {
     }
     fn push_views(&mut self, options: &Options) {
         let frame = self.frame.as_mut().unwrap();
-        frame.focus_all(&self.preferred_app, options.main_amount);
+        frame.focus_all(&self.rule, options.main_amount);
         for window in &mut frame.list {
             window.push_dimensions(options);
         }
@@ -517,6 +536,17 @@ impl Window {
         }
         options.push_dimensions(&self.area.unwrap());
     }
+    fn compare(&self, rule: &Rule) -> bool {
+        match rule {
+            Rule::AppId{ string } =>{
+                string.eq(&self.app_id)
+            }
+            Rule::Tag{ uint } => {
+               self.tags == *uint
+            }
+            _ => false
+        }
+    }
 }
 
 impl Area {
@@ -558,28 +588,27 @@ impl Frame {
             self.list[index].area = main;
         }
     }
-    pub fn focus_all(&mut self, app_id: &Option<String>, main_amount: u32) {
-        if let Some(app_id) = app_id {
-            let mut i = self.list.len() - 1;
-            let mut zoomed = 0;
-            let mut to = 0;
-            while to < i && self.list[to].app_id.eq(app_id) {
-                to += 1;
+    pub fn focus_all(&mut self, rule: &Rule, main_amount: u32) {
+        let mut i = self.list.len() - 1;
+        let mut zoomed = 0;
+        let mut to = 0;
+        while to < i && self.list[to].compare(rule) {
+            to += 1;
+        }
+        while i > 0 {
+            let mut j = i;
+            while j > to && zoomed < main_amount && self.list[i].compare(rule) {
+                self.focus(i, to);
+                j -= 1;
+                zoomed += 1;
             }
-            while i > 0 {
-                let mut j = i;
-                while j > to && zoomed < main_amount && self.list[j].app_id.eq(app_id) {
-                    self.focus(i, to);
-                    j -= 1;
-                    zoomed += 1;
-                }
-                if i != j {
-                    i = j
-                } else {
-                    i -= 1
-                }
+            if i != j {
+                i = j
+            } else {
+                i -= 1
             }
         }
+
     }
     fn insert_window(&mut self, area: Area, options: &mut Options, parent: bool) {
         let mut window = if !parent && options.windows.len() > 0 {

@@ -6,7 +6,7 @@
 
 ## Option
 - **layout (string)** :
-The layout namespace used to determine which layout should arrange this output.
+	The layout namespace used to determine which layout should arrange an output.
 
 - **view_padding (uint)** :
 	The padding in pixels of the each window within the layout.
@@ -39,8 +39,8 @@ Declares the configuration of a tag.
 This command is set the outer layout of the tag to vertical (v)
 and the inner layout to [ dwindle (D), horizontal (h) ].
 
-The `app_id` at the end the preferred application. The application matching that app_id
-will be automatically brought to the main area.
+The last element is the window. An application matching that 
+app_id or tagmask will be automatically brought to the main area.
 
 All the fields except the first are escapable i.e you need to say 
 which tag you want to declare or edit but can ommit to put something in
@@ -53,9 +53,11 @@ Clears the configuration of all the tag.
 The default configuration is `f:f` which would be 
 a full outer and inner layout similar to monocle.
 
-### `preferred-app nemo`
+### `window-rule ( app_id | tagmask )`
 
-Makes `nemo` the preferred application of the focused tag.
+The **app_id** is the preferred application of the focused tag.
+The **tagmask** is the bitwise integer corresponding to a tag.
+Apps from this tag will be zoomed
 
 ### `smart-padding (true | false)`
 

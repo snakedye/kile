@@ -68,7 +68,7 @@ Available commands.
 
 	- *clear-tag <all | focused | 1..32>*
 
-	- *preferred-app <app-id>*
+	- *window-rule <app-id | tagmask>*
 
 	- *main-amount* (+ | -) _<uint>_
 
