@@ -4,7 +4,6 @@ use wayland_client::Main;
 
 pub struct Options {
     pub serial: u32,
-    pub tagmask: usize,
     pub windows: Vec<Window>,
     pub layout: Option<Main<RiverLayoutV1>>,
     pub view_amount: u32,
@@ -34,7 +33,6 @@ impl Options {
         return {
             Options {
                 serial: 0,
-                tagmask: 0,
                 windows: Vec::new(),
                 layout: None,
                 view_amount: 0,
@@ -174,21 +172,6 @@ impl Options {
             rect.w,
             rect.h,
         )
-    }
-    pub fn debug(&self) {
-        println!("Options - {}", self.serial);
-        println!("\n  RiverLayoutV1");
-        println!("    view_amount : {}", self.view_amount);
-        println!("    usable_width : {}", self.usable_width);
-        println!("    usable_height : {}", self.usable_height);
-        println!("\n  RiverOptionHandleV2");
-        println!("    outer_padding : {}", self.outer_padding);
-        println!("    view_padding : {}", self.view_padding);
-        println!("    xoffset : {}", self.xoffset);
-        println!("    yoffset : {}", self.yoffset);
-        println!("    main_factor : {}", self.main_factor);
-        println!("    main_index : {}", self.main_index);
-        println!("    main_amount : {}\n", self.main_amount);
     }
     pub fn commit(&self) {
         self.layout.as_ref().unwrap().commit(self.serial);

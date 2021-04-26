@@ -63,15 +63,9 @@ pub struct Area {
 
 #[derive(Clone, Debug)]
 pub enum Rule {
-    AppId{ string: String },
-    Tag{ uint: u32 },
-    None
-}
-
-union Value {
-    double: f64,
-    uint: u32,
-    int: i32,
+    AppId ( String ),
+    Tag ( u32 ),
+    None,
 }
 
 pub trait Rectangle {
@@ -165,7 +159,7 @@ impl Globals {
                     output.get::<Output>().unwrap().options.usable_width = usable_width;
                     output.get::<Output>().unwrap().focused = {
                         let mut i = 0;
-                        while tags / 2 >= 1 {
+                        while tags > 1 {
                             tags /= 2;
                             i += 1;
                         }
@@ -175,7 +169,7 @@ impl Globals {
                 river_layout_v1::Event::AdvertiseView {
                     tags,
                     app_id,
-                    serial,
+                    serial: _,
                 } => {
                     output
                         .get::<Output>()
@@ -191,7 +185,7 @@ impl Globals {
                 river_layout_v1::Event::NamespaceInUse => {
                     println!("Namespace already in use.");
                 }
-                river_layout_v1::Event::AdvertiseDone { serial } => {
+                river_layout_v1::Event::AdvertiseDone { serial: _ } => {
                     output.get::<Output>().unwrap().update()
                 }
             },
@@ -204,130 +198,130 @@ impl Globals {
             .expect("Compositor doesn't implement river_options_v2")
             .get_option_handle(name.to_owned(), Some(output.output.as_ref().unwrap()));
         option_handle.quick_assign(move |option_handle, event, mut output| {
-            let mut option_value: Value = Value { uint: 1 };
-            let mut string: Option<String> = None;
-            match event {
-                river_option_handle_v2::Event::StringValue { value } => string = value,
-                river_option_handle_v2::Event::FixedValue { value } => option_value.double = value,
-                river_option_handle_v2::Event::UintValue { value } => option_value.uint = value,
-                river_option_handle_v2::Event::IntValue { value } => option_value.int = value,
-                river_option_handle_v2::Event::Undeclared => {}
-            }
             let output_handle = output.get::<Output>().unwrap();
-            unsafe {
-                match name {
-                    "view_padding" => output_handle.options.view_padding = option_value.uint,
-                    "xoffset" => output_handle.options.xoffset = option_value.int,
-                    "yoffset" => output_handle.options.yoffset = option_value.int,
-                    "outer_padding" => output_handle.options.outer_padding = option_value.uint,
-                    "command" => match string {
-                        Some(command) => {
-                            let mut command = command.split_whitespace();
-                            let command_name = command.next().unwrap_or_default();
-                            match command_name {
-                                "smart-padding" => {
-                                    if let Ok(ans) = command.next().unwrap().parse::<bool>() {
-                                        output_handle.options.smart_padding = ans;
-                                    }
+            match event {
+                river_option_handle_v2::Event::StringValue { value } => match value {
+                    Some(command) => {
+                        let mut command = command.split_whitespace();
+                        let command_name = command.next().unwrap_or_default();
+                        match command_name {
+                            "smart-padding" => {
+                                if let Ok(ans) = command.next().unwrap().parse::<bool>() {
+                                    output_handle.options.smart_padding = ans;
                                 }
-                                "main-amount" | "main-index" | "main-factor" => {
-                                    if let Some(modi) = command.next() {
-                                        if let Some(tag) =
-                                            output_handle.tags[output_handle.focused].as_mut()
-                                        {
-                                            let mut mod_ref = None;
-                                            let mut fact_ref = None;
-                                            match command_name {
-                                                "main-amount" => {
-                                                    mod_ref = Some(&mut tag.main_amount)
-                                                }
-                                                "main-index" => mod_ref = Some(&mut tag.main_index),
-                                                "main-factor" => {
-                                                    fact_ref = Some(&mut tag.main_factor)
-                                                }
-                                                _ => {}
-                                            };
-                                            match modi[0..1].as_ref() {
-                                                "+" | "-" => {
-                                                    let mut modi = modi.chars();
-                                                    let sign = modi.next().unwrap();
-                                                    let arg = modi.collect::<String>();
-                                                    if let Ok(arg) = arg.parse::<u32>() {
-                                                        let uint = mod_ref.unwrap();
-                                                        match sign {
-                                                            '+' => *uint += arg,
-                                                            '-' => {
-                                                                if arg <= *uint {
-                                                                    *uint -= arg
-                                                                }
-                                                            }
-                                                            _ => {}
-                                                        }
-                                                    } else if let Ok(arg) = arg.parse::<f64>() {
-                                                        let float = fact_ref.unwrap();
-                                                        match sign {
-                                                            '+' => *float += arg,
-                                                            '-' => {
-                                                                if arg <= *float {
-                                                                    *float -= arg
-                                                                }
-                                                            }
-                                                            _ => {}
-                                                        }
-                                                    }
-                                                }
-                                                _ => {
-                                                    if let Ok(arg) = modi.parse::<u32>() {
-                                                        *mod_ref.unwrap() = arg
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                "set-tag" => {
-                                    for arg in command {
-                                        output_handle.parse_tag_config(arg.to_string())
-                                    }
-                                }
-                                "window-rule" => {
+                            }
+                            "main-amount" | "main-index" | "main-factor" => {
+                                if let Some(modi) = command.next() {
                                     if let Some(tag) =
                                         output_handle.tags[output_handle.focused].as_mut()
                                     {
-                                        tag.rule = match command.next() {
-                                            Some(app_id) => if let Ok(tag) = app_id.parse::<u32>() {
-                                                Rule::Tag{uint:tag}
-                                            } else { 
-                                                Rule::AppId{string:app_id.to_string()}
+                                        let mut mod_ref = None;
+                                        let mut fact_ref = None;
+                                        match command_name {
+                                            "main-amount" => {
+                                                mod_ref = Some(&mut tag.main_amount)
                                             }
-                                            None => Rule::None,
+                                            "main-index" => mod_ref = Some(&mut tag.main_index),
+                                            "main-factor" => {
+                                                fact_ref = Some(&mut tag.main_factor)
+                                            }
+                                            _ => {}
                                         };
-                                    }
-                                }
-                                "clear-tag" => {
-                                    for arg in command {
-                                        match arg {
-                                            "all" => output_handle.tags = Default::default(),
-                                            "focused" => {
-                                                output_handle.tags[output_handle.focused] = None
-                                            }
-                                            _ => match arg.parse::<usize>() {
-                                                Ok(int) => if int > 0 {
-                                                    output_handle.tags[int - 1] = None
+                                        match modi[0..1].as_ref() {
+                                            "+" | "-" => {
+                                                let mut modi = modi.chars();
+                                                let sign = modi.next().unwrap();
+                                                let arg = modi.collect::<String>();
+                                                if let Ok(arg) = arg.parse::<u32>() {
+                                                    let uint = mod_ref.unwrap();
+                                                    match sign {
+                                                        '+' => *uint += arg,
+                                                        '-' => {
+                                                            if arg <= *uint {
+                                                                *uint -= arg
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                } else if let Ok(arg) = arg.parse::<f64>() {
+                                                    let float = fact_ref.unwrap();
+                                                    match sign {
+                                                        '+' => *float += arg,
+                                                        '-' => {
+                                                            if arg <= *float {
+                                                                *float -= arg
+                                                            }
+                                                        }
+                                                        _ => {}
+                                                    }
                                                 }
-                                                Err(_) => {}
-                                            },
+                                            }
+                                            _ => {
+                                                if let Ok(arg) = modi.parse::<u32>() {
+                                                    *mod_ref.unwrap() = arg
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                                _ => {}
                             }
-                            option_handle.set_string_value(None);
+                            "set-tag" => {
+                                for arg in command {
+                                    output_handle.parse_tag_config(arg.to_string())
+                                }
+                            }
+                            "window-rule" => {
+                                if let Some(tag) =
+                                    output_handle.tags[output_handle.focused].as_mut()
+                                {
+                                    tag.rule = match command.next() {
+                                        Some(app_id) => {
+                                            if let Ok(tag) = app_id.parse::<u32>() {
+                                                Rule::Tag ( tag )
+                                            } else {
+                                                Rule::AppId ( app_id.to_string() )
+                                            }
+                                        }
+                                        None => Rule::None,
+                                    };
+                                }
+                            }
+                            "clear-tag" => {
+                                for arg in command {
+                                    match arg {
+                                        "all" => output_handle.tags = Default::default(),
+                                        "focused" => {
+                                            output_handle.tags[output_handle.focused] = None
+                                        }
+                                        _ => match arg.parse::<usize>() {
+                                            Ok(int) => {
+                                                if int > 0 {
+                                                    output_handle.tags[int - 1] = None
+                                                }
+                                            }
+                                            Err(_) => {}
+                                        },
+                                    }
+                                }
+                            }
+                            _ => {}
                         }
-                        None => {}
-                    },
+                        option_handle.set_string_value(None);
+                    }
+                    None => {}
+                }
+                river_option_handle_v2::Event::FixedValue { value } => {}
+                river_option_handle_v2::Event::UintValue { value } => match name {
+                    "outer_padding" => output_handle.options.outer_padding = value,
+                    "view_padding" => output_handle.options.view_padding = value,
                     _ => {}
                 }
+                river_option_handle_v2::Event::IntValue { value } => match name {
+                    "xoffset" => output_handle.options.xoffset = value,
+                    "yoffset" => output_handle.options.yoffset = value,
+                    _ => {}
+                },
+                river_option_handle_v2::Event::Undeclared => {}
             }
             output
                 .get::<Output>()
@@ -406,10 +400,12 @@ impl Output {
                     let inner_layout =
                         Options::inner_layout(rule.next().unwrap_or_default().to_string());
                     let window_rule = match rule.next() {
-                        Some(app_id) => if let Ok(tag) = app_id.parse::<u32>() {
-                            Rule::Tag{uint:tag}
-                        } else { 
-                            Rule::AppId{string:app_id.to_string()}
+                        Some(app_id) => {
+                            if let Ok(tag) = app_id.parse::<u32>() {
+                                Rule::Tag ( tag )
+                            } else {
+                                Rule::AppId ( app_id.to_string(), )
+                            }
                         }
                         None => Rule::None,
                     };
@@ -431,7 +427,7 @@ impl Output {
                                         frame: None,
                                         main_index: 0,
                                         main_amount: 1,
-                                        main_factor: 0.5,
+                                        main_factor: 0.6,
                                         rule: window_rule.clone(),
                                         outer: outer_layout.unwrap_or(Layout::Full),
                                         inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
@@ -454,7 +450,7 @@ impl Tag {
                 frame: None,
                 main_index: 0,
                 main_amount: 1,
-                main_factor: 0.5,
+                main_factor: 0.6,
                 rule: Rule::None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
@@ -538,13 +534,9 @@ impl Window {
     }
     fn compare(&self, rule: &Rule) -> bool {
         match rule {
-            Rule::AppId{ string } =>{
-                string.eq(&self.app_id)
-            }
-            Rule::Tag{ uint } => {
-               self.tags == *uint
-            }
-            _ => false
+            Rule::AppId ( string ) => string.eq(&self.app_id),
+            Rule::Tag ( uint ) => self.tags == *uint,
+            _ => false,
         }
     }
 }
@@ -608,7 +600,6 @@ impl Frame {
                 i -= 1
             }
         }
-
     }
     fn insert_window(&mut self, area: Area, options: &mut Options, parent: bool) {
         let mut window = if !parent && options.windows.len() > 0 {
@@ -633,6 +624,8 @@ impl Frame {
         mut factor: bool,
     ) {
         let mut area = self.area;
+        let mut slave_area = area;
+        let mut main_area = area;
 
         match self.layout {
             Layout::Tab => {
@@ -643,8 +636,6 @@ impl Frame {
                 }
             }
             Layout::Horizontal => {
-                let mut slave_area = area;
-                let mut main_area = area;
                 let reste = area.h % client_count;
                 if factor {
                     main_area.h = if options.main_amount > 0
@@ -659,13 +650,13 @@ impl Frame {
                     slave_area.h -= main_area.h;
                 }
                 for i in 0..client_count {
-                    if factor && i == options.main_index && main_area.h > 0 {
-                        area.h = main_area.h;
+                    area.h = if factor && i == options.main_index && main_area.h > 0 {
+                        main_area.h
                     } else if factor && main_area.h > 0 {
-                        area.h = slave_area.h / (client_count - 1);
+                        slave_area.h / (client_count - 1)
                     } else {
-                        area.h = slave_area.h / client_count;
-                    }
+                        slave_area.h / client_count
+                    };
                     if i == 0 {
                         area.h += reste;
                     }
@@ -675,8 +666,6 @@ impl Frame {
                 }
             }
             Layout::Vertical => {
-                let mut slave_area = area;
-                let mut main_area = area;
                 let reste = area.w % client_count;
                 if factor {
                     main_area.w = if options.main_amount > 0
@@ -691,13 +680,13 @@ impl Frame {
                     slave_area.w -= main_area.w;
                 }
                 for i in 0..client_count {
-                    if factor && i == options.main_index && main_area.w > 0 {
-                        area.w = main_area.w;
+                    area.w = if factor && i == options.main_index && main_area.w > 0 {
+                        main_area.w
                     } else if factor && main_area.w > 0 {
-                        area.w = slave_area.w / (client_count - 1);
+                        slave_area.w / (client_count - 1)
                     } else {
-                        area.w = slave_area.w / client_count;
-                    }
+                        slave_area.w / client_count
+                    };
                     if i == 0 {
                         area.w += reste;
                     }
