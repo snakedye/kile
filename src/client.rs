@@ -2,14 +2,12 @@ use super::parser;
 use super::options::{Layout, Options};
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-    river_layout_v2::river_layout_v2::Event,
+    river_layout_v2::river_layout_v2::{RiverLayoutV2, Event},
 };
 use wayland_client::protocol::wl_output::WlOutput;
-use wayland_client::{DispatchData, Main};
+use wayland_client::{Main};
 
 pub struct Context {
-    pub running: bool,
-    pub namespace: String,
     pub outputs: Vec<Output>,
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
@@ -19,7 +17,8 @@ pub struct Output {
     pub focused: usize,
     pub configured: bool,
     pub default: Tag,
-    pub output: Option<WlOutput>,
+    pub layout: Option<Main<RiverLayoutV2>>,
+    pub output: WlOutput,
     pub tags: [Option<Tag>; 32],
 }
 
@@ -72,21 +71,10 @@ impl Context {
     pub fn new() -> Context {
         return {
             Context {
-                running: false,
-                namespace: String::from("kile"),
                 layout_manager: None,
                 outputs: Vec::new(),
             }
         };
-    }
-    pub fn init(&mut self, monitor_index: usize) {
-        for output in &mut self.outputs {
-            if !output.configured {
-                output.get_layout(self.layout_manager.as_ref(), self.namespace.clone());
-            } else {
-                output.destroy();
-            }
-        }
     }
 }
 
@@ -96,36 +84,48 @@ impl Output {
             Output {
                 configured: false,
                 focused: 0,
+                layout: None,
                 options: Options::new(),
                 default: Tag::new(),
-                output: Some(output),
+                output: output,
                 tags: Default::default(),
             }
         }
     }
     pub fn destroy(&self) {
-        (self.options.layout).as_ref().unwrap().destroy();
+        (self.layout).as_ref().unwrap().destroy();
     }
     pub fn update(&mut self) {
         if self.options.view_amount > 0 {
-            // self.options.debug();
             let focused = self.tags[self.focused].as_mut();
-            self.options.rearrange();
-            match focused {
+            let mut frame = match focused {
                 Some(tag) => tag.update(&mut self.options),
                 None => self.default.update(&mut self.options),
+            };
+            for window in &mut frame.list {
+                if !self.options.smart_padding || self.options.view_amount > 1 {
+                    window.apply_padding(self.options.view_padding);
+                }
+                let rect = window.area.unwrap();
+                self.layout.as_ref().unwrap().push_view_dimensions(
+                    self.options.serial,
+                    rect.x as i32,
+                    rect.y as i32,
+                    rect.w,
+                    rect.h,
+                )
             }
+            self.layout.as_ref().unwrap().commit(self.options.serial);
         }
     }
-    pub fn get_layout(&mut self, layout_manager: Option<&Main<RiverLayoutManagerV2>>, namespace: String) {
-        self.options.layout = Some(
+    pub fn layout_filter(mut self, layout_manager: Option<&Main<RiverLayoutManagerV2>>, namespace: String) {
+        self.layout = Some(
             layout_manager
                 .expect("Compositor doesn't implement river_layout_v2")
-                .get_layout(self.output.as_ref().unwrap(), namespace),
+                .get_layout(&self.output, namespace),
         );
-        self.options.layout.as_ref().unwrap().quick_assign(
-            move |_, event, mut output: DispatchData| { 
-                let output_handle = output.get::<Output>().unwrap();
+        self.layout.clone().unwrap().quick_assign(
+            move |_, event, _| { 
                 match event {
                     Event::LayoutDemand {
                         view_count,
@@ -134,11 +134,11 @@ impl Output {
                         serial,
                         mut tags,
                     } => {
-                        output_handle.options.serial = serial;
-                        output_handle.options.view_amount = view_count;
-                        output_handle.options.usable_height = usable_height;
-                        output_handle.options.usable_width = usable_width;
-                        output_handle.focused = {
+                        self.options.serial = serial;
+                        self.options.view_amount = view_count;
+                        self.options.usable_height = usable_height;
+                        self.options.usable_width = usable_width;
+                        self.focused = {
                             let mut i = 0;
                             while tags > 1 {
                                 tags /= 2;
@@ -152,7 +152,7 @@ impl Output {
                         app_id,
                         serial: _,
                     } => {
-                        output_handle
+                        self
                             .options
                             .windows
                             .push(Window {
@@ -165,49 +165,49 @@ impl Output {
                         println!("Namespace already in use.");
                     }
                     Event::AdvertiseDone { serial } => {
-                        output_handle.update()
+                        self.update()
                     }
                     Event::SetIntValue{ name , value } => match name.as_ref() {
                         "main_amount" | "main_index" => {
                             if let Some(tag) =
-                                output_handle.tags[output_handle.focused].as_mut()
+                                self.tags[self.focused].as_mut()
                             {
-                                if value > 0 {
+                                if value >= 0 {
                                     match name.as_ref() {
-                                        "main-amount" => tag.main_amount = value as u32,
-                                        "main-index" => tag.main_index = value as u32,
+                                        "main_amount" => tag.main_amount = value as u32,
+                                        "main_index" => tag.main_index = value as u32,
                                         _ => {}
                                     }
                                 }
                             }
                         }
-                        "view_padding" => output_handle.options.view_padding = value as u32,
-                        "outer_padding" => output_handle.options.outer_padding = value as u32,
-                        "xoffset" => output_handle.options.xoffset = value,
-                        "yoffset" => output_handle.options.yoffset = value,
+                        "view_padding" => self.options.view_padding = value as u32,
+                        "outer_padding" => self.options.outer_padding = value as u32,
+                        "xoffset" => self.options.xoffset = value,
+                        "yoffset" => self.options.yoffset = value,
                         _ => {}
                     },
                     Event::ModIntValue{ name , delta } => match name.as_ref() {
                         "main_amount" | "main_index" => {
                             if let Some(tag) =
-                                output_handle.tags[output_handle.focused].as_mut()
+                                self.tags[self.focused].as_mut()
                             {
                                 match name.as_ref() {
                                     "main_amount" => tag.main_amount = ((tag.main_amount as i32) + delta) as u32,
-                                    "main_index" => tag.main_index = ((tag.main_amount as i32) + delta) as u32,
+                                    "main_index" => tag.main_index = ((tag.main_index as i32) + delta) as u32,
                                     _ => {}
                                 }
                             }
                         }
-                        "view_padding" => output_handle.options.view_padding = ((output_handle.options.view_padding as i32) + delta) as u32,
-                        "outer_padding" => output_handle.options.outer_padding = ((output_handle.options.outer_padding as i32) + delta) as u32,
-                        "xoffset" => output_handle.options.xoffset += delta,
-                        "yoffset" => output_handle.options.yoffset += delta,
+                        "view_padding" => self.options.view_padding = ((self.options.view_padding as i32) + delta) as u32,
+                        "outer_padding" => self.options.outer_padding = ((self.options.outer_padding as i32) + delta) as u32,
+                        "xoffset" => self.options.xoffset += delta,
+                        "yoffset" => self.options.yoffset += delta,
                         _ => {}
                     },
                     Event::SetFixedValue{ name , value } => if name == "main_factor" { 
                         if let Some(tag) =
-                            output_handle.tags[output_handle.focused].as_mut()
+                            self.tags[self.focused].as_mut()
                         {
                             if value > 0.0 && value < 1.0 {
                                 tag.main_factor = value
@@ -216,14 +216,14 @@ impl Output {
                     },
                     Event::ModFixedValue{ name , delta } => if name == "main_factor" { 
                         if let Some(tag) =
-                            output_handle.tags[output_handle.focused].as_mut()
+                            self.tags[self.focused].as_mut()
                         {
                             if delta <= tag.main_factor {
                                 tag.main_factor += delta;
                             }
                         }
                     },
-                    Event::SetStringValue{ name , value } => if name == "command" { parser::main(output_handle, value) },
+                    Event::SetStringValue{ name , value } => if name == "command" { parser::main(&mut self, value) },
                 }
             }
         );
@@ -244,15 +244,7 @@ impl Tag {
             }
         }
     }
-    fn push_views(&mut self, options: &Options) {
-        let frame = self.frame.as_mut().unwrap();
-        frame.focus_all(&self.rule, options.main_amount);
-        for window in &mut frame.list {
-            window.push_dimensions(options);
-        }
-        options.commit();
-    }
-    pub fn update(&mut self, options: &mut Options) {
+    pub fn update(&mut self, options: &mut Options) -> &mut Frame {
         options.main_amount = self.main_amount;
         options.main_index = self.main_index;
         options.main_factor = self.main_factor;
@@ -261,17 +253,17 @@ impl Tag {
         self.frame = Some(Frame::new(self.outer, options.get_output()));
 
         // Get a reference to the frame
-        let outer_frame = self.frame.as_mut().unwrap();
+        let frame = self.frame.as_mut().unwrap();
         // The total amount of frame
         let frame_amount = options.frames_amount(self.inner.len() as u32);
 
         // Generate the outer layout
-        outer_frame.generate(frame_amount, options, true, true);
+        frame.generate(frame_amount, options, true, true);
 
         let main_amount = options.main_amount(frame_amount);
         let slave_amount;
         let mut reste = if main_amount > 0 {
-            outer_frame.zoom(options.main_index as usize);
+            frame.zoom(options.main_index as usize);
             slave_amount = (options.view_amount - main_amount) / (frame_amount - 1);
             (options.view_amount - main_amount) % (frame_amount - 1)
         } else {
@@ -281,7 +273,7 @@ impl Tag {
 
         // Generate the inner layouts
         let mut windows = Vec::new();
-        for (i, window) in outer_frame.list.iter().enumerate() {
+        for (i, window) in frame.list.iter().enumerate() {
             let mut frame = Frame::new(self.inner[i], window.area.unwrap());
             if i == 0 && main_amount != 0 {
                 frame.generate(main_amount, options, false, false);
@@ -300,10 +292,10 @@ impl Tag {
             }
             windows.append(&mut frame.list);
         }
-        outer_frame.list = windows;
+        frame.list = windows;
+        frame.focus_all(&self.rule, options.main_amount);
 
-        // Push views to the server
-        self.push_views(options);
+        frame
     }
 }
 
@@ -312,12 +304,6 @@ impl Window {
         let mut area = self.area.unwrap();
         area.apply_padding(padding);
         self.area = Some(area);
-    }
-    pub fn push_dimensions(&mut self, options: &Options) {
-        if !options.smart_padding || options.view_amount > 1 {
-            self.apply_padding(options.view_padding);
-        }
-        options.push_dimensions(&self.area.unwrap());
     }
     fn compare(&self, rule: &Rule) -> bool {
         match rule {

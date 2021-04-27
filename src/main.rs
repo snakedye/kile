@@ -32,7 +32,6 @@ fn main() {
                 1,
                 |layout_manager: Main<RiverLayoutManagerV2>, mut context: DispatchData| {
                     context.get::<Context>().unwrap().layout_manager = Some(layout_manager);
-                    context.get::<Context>().unwrap().running = true;
                 }
             ],
             [
@@ -52,29 +51,17 @@ fn main() {
         .unwrap();
 
     let mut args = env::args();
-    let mut monitor_index = 0;
+    let mut namespace = String::from("kile");
     args.next();
     loop {
         match args.next() {
             Some(flag) => match flag.as_str() {
                 "--namespace" | "--n" | "-n" => {
-                    context.namespace = args.next().unwrap_or(String::from("kile"))
-                }
-                "--monitor" | "--m" | "-m" => {
-                    match args.next().unwrap_or(String::from("0")).parse::<usize>() {
-                        Ok(index) => {
-                            monitor_index = if index >= context.outputs.len() {
-                                0
-                            } else {
-                                index
-                            }
-                        }
-                        Err(v) => println!("{}", v),
-                    }
+                    namespace = args.next().unwrap_or(String::from("kile"))
                 }
                 "--help" | "-h" | "--h" => {
                     help();
-                    context.running = false;
+                    std::process::exit(0);
                 }
                 _ => break,
             },
@@ -82,28 +69,14 @@ fn main() {
         }
     }
 
-    context.init(monitor_index);
+    let layout_manager = context.layout_manager.as_ref();
+    for output in context.outputs {
+        output.layout_filter(layout_manager, namespace.clone());
+    }
 
-    while context.running {
-        if let Err(e) = display.flush() {
-            if e.kind() != ::std::io::ErrorKind::WouldBlock {
-                eprintln!("Error while trying to flush the wayland socket: {:?}", e);
-            }
-        }
-        if let Some(guard) = event_queue.prepare_read() {
-            // prepare_read() returns None if there are already events pending in this
-            // event queue, in which case there is no need to try to read from the socket
-            if let Err(e) = guard.read_events() {
-                if e.kind() != ::std::io::ErrorKind::WouldBlock {
-                    // if read_events() returns Err(WouldBlock), this just means that no new
-                    // messages are available to be read
-                    eprintln!("Error while trying to read from the wayland socket: {:?}", e);
-                }
-            }
-        }
-        for output in &mut context.outputs {
+    loop {
         event_queue
-            .dispatch_pending(output, |event, object, _| {
+            .dispatch(&mut (), |event, object, _| {
                 panic!(
                     "[callop] Encountered an orphan event: {}@{}: {}",
                     event.interface,
@@ -112,7 +85,6 @@ fn main() {
                 );
             })
             .unwrap();
-        }
     }
 }
 

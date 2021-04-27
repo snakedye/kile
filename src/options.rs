@@ -1,11 +1,10 @@
 use super::client::{Area, Window};
-use crate::wayland::river_layout_v2::river_layout_v2::RiverLayoutV2;
+// use crate::wayland::river_layout_v2::river_layout_v2::RiverLayoutV2;
 use wayland_client::Main;
 
 pub struct Options {
     pub serial: u32,
     pub windows: Vec<Window>,
-    pub layout: Option<Main<RiverLayoutV2>>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
@@ -34,7 +33,6 @@ impl Options {
             Options {
                 serial: 0,
                 windows: Vec::new(),
-                layout: None,
                 view_amount: 0,
                 smart_padding: false,
                 view_padding: 0,
@@ -164,18 +162,18 @@ impl Options {
             area
         }
     }
-    pub fn push_dimensions(&self, rect: &Area) {
-        self.layout.as_ref().unwrap().push_view_dimensions(
-            self.serial,
-            rect.x as i32,
-            rect.y as i32,
-            rect.w,
-            rect.h,
-        )
-    }
-    pub fn commit(&self) {
-        self.layout.as_ref().unwrap().commit(self.serial);
-    }
+    // pub fn push_dimensions(&self, rect: &Area) {
+    //     self.layout.as_ref().unwrap().push_view_dimensions(
+    //         self.serial,
+    //         rect.x as i32,
+    //         rect.y as i32,
+    //         rect.w,
+    //         rect.h,
+    //     )
+    // }
+    // pub fn commit(&self) {
+    //     self.layout.as_ref().unwrap().commit(self.serial);
+    // }
     pub fn debug(&self) {
         println!("self - {}", self.serial);
         println!("\n  ZriverLayoutV@");
