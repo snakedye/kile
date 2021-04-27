@@ -23,7 +23,6 @@ pub struct Output {
     pub tags: [Option<Tag>; 32],
 }
 
-#[derive(Clone)]
 pub struct Tag {
     pub outer: Layout,
     pub main_index: u32,
@@ -34,14 +33,12 @@ pub struct Tag {
     pub frame: Option<Frame>,
 }
 
-#[derive(Clone, Debug)]
 pub struct Window {
     pub area: Option<Area>,
     pub app_id: String,
     pub tags: u32,
 }
 
-#[derive(Clone)]
 pub struct Frame {
     pub layout: Layout,
     pub area: Area,
@@ -143,10 +140,10 @@ impl Output {
                 }
                 Event::AdvertiseDone { serial } => {
                     if self.options.view_amount > 0 {
-                        let focused = self.tags[self.focused].as_mut();
-                        let frame = match focused {
-                            Some(tag) => tag.update(&mut self.options, self.smart_padding),
-                            None => self.default.update(&mut self.options, self.smart_padding),
+                        let area = self.options.get_output(self.smart_padding);
+                        let frame = match self.tags[self.focused].as_mut() {
+                            Some(tag) => tag.update(&mut self.options, area),
+                            None => self.default.update(&mut self.options, area),
                         };
                         for window in &mut frame.list {
                             if !self.smart_padding || self.options.view_amount > 1 {
@@ -161,6 +158,7 @@ impl Output {
                                 rect.h,
                             )
                         }
+                        frame.list = Vec::new();
                         self.layout.as_ref().unwrap().commit(serial);
                     }
                 }
@@ -231,8 +229,7 @@ impl Output {
                         parser::main(&mut self, value)
                     }
                 }
-            }
-        );
+            });
     }
 }
 
@@ -244,23 +241,19 @@ impl Tag {
                 main_index: 0,
                 main_amount: 1,
                 main_factor: 0.6,
-                // options: Options,
                 rule: Rule::None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
             }
         }
     }
-    pub fn update(&mut self, options: &mut Options, smart_padding: bool) -> &mut Frame {
+    pub fn update(&mut self, options: &mut Options, area: Area) -> &mut Frame {
         options.main_amount = self.main_amount;
         options.main_index = self.main_index;
         options.main_factor = self.main_factor;
 
         // Initialise a frame with the output dimension
-        self.frame = Some(
-            Frame::new(self.outer,
-            options.get_output(smart_padding))
-            );
+        self.frame = Some(Frame::new(self.outer, area));
 
         // Get a reference to the frame
         let frame = self.frame.as_mut().unwrap();
@@ -304,16 +297,13 @@ impl Tag {
         }
         frame.list = windows;
         frame.focus_all(&self.rule, options.main_amount);
-
         frame
     }
 }
 
 impl Window {
     pub fn apply_padding(&mut self, padding: u32) {
-        let mut area = self.area.unwrap();
-        area.apply_padding(padding);
-        self.area = Some(area);
+        self.area.as_mut().unwrap().apply_padding(padding);
     }
     fn compare(&self, rule: &Rule) -> bool {
         match rule {

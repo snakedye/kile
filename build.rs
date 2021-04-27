@@ -1,14 +1,14 @@
 extern crate wayland_scanner;
 
-use std::process::Command;
 use std::path::Path;
+use std::process::Command;
 use wayland_scanner::{generate_code, Side};
 
 pub fn main() {
     generate("river_layout_v2");
     Command::new("scdoc")
         .arg("<output kile.1.scd > kile.1.gz")
-        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"),"/doc/"))
+        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/doc/"))
         .spawn()
         .expect("Failed to execute command");
 }

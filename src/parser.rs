@@ -18,13 +18,17 @@ pub fn main(output_handle: &mut Output, value: String) {
         "window-rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 tag.rule = match command.next() {
-                    Some(app_id) => {
-                        if let Ok(tag) = app_id.parse::<u32>() {
-                            Rule::Tag(tag)
-                        } else {
-                            Rule::AppId(app_id.to_string())
+                    Some(arg) => match arg {
+                        "-tag" => {
+                            if let Ok(tag) = command.next().unwrap_or_default().parse::<u32>() {
+                                Rule::Tag(tag)
+                            } else {
+                                Rule::None
+                            }
                         }
-                    }
+                        "-app-id" => Rule::AppId(command.next().unwrap_or_default().to_string()),
+                        _ => Rule::None,
+                    },
                     None => Rule::None,
                 };
             }
@@ -36,7 +40,7 @@ pub fn main(output_handle: &mut Output, value: String) {
                     "focused" => output_handle.tags[output_handle.focused] = None,
                     _ => match arg.parse::<usize>() {
                         Ok(int) => {
-                            if int > 0 {
+                            if int > 0 && int < 33 {
                                 output_handle.tags[int - 1] = None
                             }
                         }

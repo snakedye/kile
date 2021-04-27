@@ -120,7 +120,7 @@ impl Options {
             'D' => Layout::Recursive { modi: 1 },
             'f' => Layout::Full,
             _ => {
-                println!("{}: Not a valid character at index", c);
+                println!("{}: Invalid character", c);
                 Layout::Full
             }
         }

@@ -10,7 +10,6 @@ use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
-
     let mut args = env::args();
     let mut namespace = String::from("kile");
     args.next();
@@ -30,14 +29,11 @@ fn main() {
         }
     }
 
-
     let display = Display::connect_to_env().unwrap();
 
     let mut event_queue = display.create_event_queue();
 
     let attached_display = (*display).clone().attach(event_queue.token());
-
-    let mut context = Context::new();
 
     GlobalManager::new_with_cb(
         &attached_display,
@@ -61,6 +57,7 @@ fn main() {
         ),
     );
 
+    let mut context = Context::new();
     event_queue
         .sync_roundtrip(&mut context, |_, _, _| unreachable!())
         .unwrap();
@@ -86,7 +83,6 @@ fn main() {
 
 fn help() {
     println!("Usage: kile [option]\n");
-    println!("  -m | --m | --monitor <int> : sets index of the monitor Kile will be used on.");
-    println!("  -n | --n | --namespace <string> : the string you assign to the layout option so kile can receive events.");
+    println!("  -n | --n | --namespace <string> : the namespace of kile.");
     println!("  -h | --h | --help : shows this help message.");
 }
