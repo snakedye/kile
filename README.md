@@ -4,32 +4,12 @@
 - rust
 - scdoc ( optional for man page )
 
-## Option
-- **layout (string)** :
-	The layout namespace used to determine which layout should arrange an output.
-
-- **view_padding (uint)** :
-	The padding in pixels of the each window within the layout.
-
-- **outer_padding (uint)** :
-	The padding in pixels of the between the layout and the edges of the output.
-
-- **xoffset (int)** :
-	The horizontal offset in pixels from a lateral screen edge.
-	Positive integers create an offset from 
-	the right of screen and negatives from the left.
-
-- **yoffset (int)** :
-	The vertical offset in pixels from the top or bottom screen edge.
-	Positive integers create an offset from 
-	the top of screen and negatives from the bottom.
-
 ## Commands
 
 You can send a command to *kile* by setting a value to the `command` option.
 
 ```shell
-  riverctl set-option -focused-output command ...
+  riverctl mod-layout-value <namespace> string command ...
 ```
 
 ### `set-tag focused:v:Dh:firefox`

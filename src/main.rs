@@ -1,12 +1,9 @@
-mod build;
-mod parser;
 mod client;
 mod options;
+mod parser;
 mod wayland;
 
-use crate::wayland::{
-    river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-};
+use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;
 use client::{Context, Output};
 use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
@@ -14,7 +11,25 @@ use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
 
-    build::main();
+    let mut args = env::args();
+    let mut namespace = String::from("kile");
+    args.next();
+    loop {
+        match args.next() {
+            Some(flag) => match flag.as_str() {
+                "--namespace" | "--n" | "-n" => {
+                    namespace = args.next().unwrap_or(String::from("kile"))
+                }
+                "--help" | "-h" | "--h" => {
+                    help();
+                    std::process::exit(0);
+                }
+                _ => break,
+            },
+            None => break,
+        }
+    }
+
 
     let display = Display::connect_to_env().unwrap();
 
@@ -49,25 +64,6 @@ fn main() {
     event_queue
         .sync_roundtrip(&mut context, |_, _, _| unreachable!())
         .unwrap();
-
-    let mut args = env::args();
-    let mut namespace = String::from("kile");
-    args.next();
-    loop {
-        match args.next() {
-            Some(flag) => match flag.as_str() {
-                "--namespace" | "--n" | "-n" => {
-                    namespace = args.next().unwrap_or(String::from("kile"))
-                }
-                "--help" | "-h" | "--h" => {
-                    help();
-                    std::process::exit(0);
-                }
-                _ => break,
-            },
-            None => break,
-        }
-    }
 
     let layout_manager = context.layout_manager.as_ref();
     for output in context.outputs {

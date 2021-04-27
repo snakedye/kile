@@ -10,16 +10,11 @@ kile - a tiling a layout generator for river
 
 It receives layout and option events to create a dynamic layout of windows.
 
-The layout configuration is entirely done through River's option protocol.
-
-Note: *kile* could work on any Wayland compositor that implements
-*river-layout-v1* and *river-options-v2*.
+Note: *kile* could work on any Wayland compositor 
+that implements *river-layout-v2*.
 
 
 # ARGUMENTS
-
-*-m* _<int>_, *--m* _<int>_, *--monitor* _<int>_
-	The index of the monitor *kile* will work on.
 
 *-h*, *--h*, *--help*
 	Display a help message.
@@ -29,20 +24,27 @@ Note: *kile* could work on any Wayland compositor that implements
 
 # CONFIGURATION
 
-*kile* is a layout generator configured through *river*'s
-option protocol or the riverctl ipc client.
+On launch, the default configuration is `f:f` which would be 
+a full outer and inner layout similar to monocle.
 
-On launch *kile* will declare all the options it needs.
-To configure it you need to modify the value of theses options.
+To configure and modify the layouts 
+you need to modify or set theses layout values.
 
-## OPTIONS
-*layout* _(string)_
-	The layout namespace used to determine which layout should arrange this output.
+## LAYOUT VALUES
+*main_amount* _(int)_
+	An arbitrary positive integer indicating the amount of main views.
 
-*view_padding* _(uint)_
+*main_factor* _(fixed)_
+	A floating point numger indicating the relative size of the area reserved for main views.
+	Note that layouts commonly expect values between 0.1 and 0.9.
+
+*main_index* _(int)_
+	An arbitrary positive integer indicating the index of the main area in the outer layout.
+
+*view_padding* _(int)_
 	The padding in pixels of the each window within the layout.
 
-*outer_padding* _(uint)_
+*outer_padding* _(int)_
 	The padding in pixels of the between the layout and the edges of the output.
 
 *xoffset* _(int)_
@@ -69,23 +71,6 @@ Available commands.
 	- *clear-tag <all | focused | 1..32>*
 
 	- *window-rule <app-id | tagmask>*
-
-	- *main-amount* (+ | -) _<uint>_
-
-	- *main-index* (+ | -) _<uint>_
-
-	- *main-factor* (+ | -) _<float>_
-
-*main_amount* _(uint)_
-	An arbitrary positive integer indicating the amount of main views.
-
-*main_index* _(uint)_
-	An arbitrary positive integer indicating the index of the main area in the outer layout.
-
-*main_factor* _(float)_
-	A floating point numger indicating the relative size of the area reserved for main views.
-	Note that layouts commonly expect values between 0.1 and 0.9.
-
 
 ## LAYOUT
 
@@ -119,4 +104,4 @@ The base layouts are the following.
 *inner-layout*
 	A string of layouts like "h" or "hDv".
 
-*riverctl*(1), *river-layouts*(7)
+*riverctl*(1), *rivertile*(7)

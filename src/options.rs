@@ -1,14 +1,10 @@
 use super::client::{Area, Window};
-// use crate::wayland::river_layout_v2::river_layout_v2::RiverLayoutV2;
-use wayland_client::Main;
 
 pub struct Options {
-    pub serial: u32,
     pub windows: Vec<Window>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
-    pub smart_padding: bool,
     pub view_padding: u32,
     pub outer_padding: u32,
     pub xoffset: i32,
@@ -31,10 +27,8 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
-                serial: 0,
                 windows: Vec::new(),
                 view_amount: 0,
-                smart_padding: false,
                 view_padding: 0,
                 outer_padding: 0,
                 xoffset: 0,
@@ -117,13 +111,6 @@ impl Options {
             None
         }
     }
-    pub fn rearrange(&mut self) {
-        if self.windows.len() > self.view_amount as usize {
-            self.windows = self.windows
-                [self.windows.len() - self.view_amount as usize..self.windows.len()]
-                .to_vec();
-        }
-    }
     fn layout(c: char) -> Layout {
         match c {
             'v' => Layout::Vertical,
@@ -138,7 +125,7 @@ impl Options {
             }
         }
     }
-    pub fn get_output(&self) -> Area {
+    pub fn get_output(&self, smart_padding: bool) -> Area {
         let mut area = {
             Area {
                 x: if self.xoffset > 0 {
@@ -155,35 +142,11 @@ impl Options {
                 h: self.usable_height(),
             }
         };
-        if !self.smart_padding || self.view_amount > 1 {
+        if !smart_padding || self.view_amount > 1 {
             area.apply_padding(self.outer_padding);
             area
         } else {
             area
         }
-    }
-    // pub fn push_dimensions(&self, rect: &Area) {
-    //     self.layout.as_ref().unwrap().push_view_dimensions(
-    //         self.serial,
-    //         rect.x as i32,
-    //         rect.y as i32,
-    //         rect.w,
-    //         rect.h,
-    //     )
-    // }
-    // pub fn commit(&self) {
-    //     self.layout.as_ref().unwrap().commit(self.serial);
-    // }
-    pub fn debug(&self) {
-        println!("self - {}", self.serial);
-        println!("\n  ZriverLayoutV@");
-        println!("    view_amount : {}", self.view_amount);
-        println!("    usable_width : {}", self.usable_width);
-        println!("    usable_height : {}", self.usable_height);
-        println!("    outer_padding : {}", self.outer_padding);
-        println!("    view_padding : {}", self.view_padding);
-        println!("    xoffset : {}", self.xoffset);
-        println!("    yoffset : {}", self.yoffset);
-        println!("    smart_padding : {}", self.smart_padding);
     }
 }

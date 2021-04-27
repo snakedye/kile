@@ -1,5 +1,5 @@
 use super::client::{Output, Rule, Tag};
-use super::options::{Options, Layout};
+use super::options::{Layout, Options};
 
 pub fn main(output_handle: &mut Output, value: String) {
     let mut command = value.split_whitespace();
@@ -7,7 +7,7 @@ pub fn main(output_handle: &mut Output, value: String) {
     match command_name {
         "smart-padding" => {
             if let Ok(ans) = command.next().unwrap().parse::<bool>() {
-                output_handle.options.smart_padding = ans;
+                output_handle.smart_padding = ans;
             }
         }
         "set-tag" => {
@@ -16,15 +16,13 @@ pub fn main(output_handle: &mut Output, value: String) {
             }
         }
         "window-rule" => {
-            if let Some(tag) =
-                output_handle.tags[output_handle.focused].as_mut()
-            {
+            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 tag.rule = match command.next() {
                     Some(app_id) => {
                         if let Ok(tag) = app_id.parse::<u32>() {
-                            Rule::Tag ( tag )
+                            Rule::Tag(tag)
                         } else {
-                            Rule::AppId ( app_id.to_string() )
+                            Rule::AppId(app_id.to_string())
                         }
                     }
                     None => Rule::None,
@@ -35,9 +33,7 @@ pub fn main(output_handle: &mut Output, value: String) {
             for arg in command {
                 match arg {
                     "all" => output_handle.tags = Default::default(),
-                    "focused" => {
-                        output_handle.tags[output_handle.focused] = None
-                    }
+                    "focused" => output_handle.tags[output_handle.focused] = None,
                     _ => match arg.parse::<usize>() {
                         Ok(int) => {
                             if int > 0 {
@@ -84,9 +80,9 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                 let window_rule = match rule.next() {
                     Some(app_id) => {
                         if let Ok(tag) = app_id.parse::<u32>() {
-                            Rule::Tag ( tag )
+                            Rule::Tag(tag)
                         } else {
-                            Rule::AppId ( app_id.to_string(), )
+                            Rule::AppId(app_id.to_string())
                         }
                     }
                     None => Rule::None,

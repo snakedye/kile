@@ -3,11 +3,14 @@ name = "kile"
 version = "0.1.0"
 authors = ["bryan <ndjeutcha@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[build-dependencies]
 wayland-scanner = "0.28.5"
+
+[dependencies]
 wayland-commons = "0.28.5"
 wayland-client = "0.28.5"
 

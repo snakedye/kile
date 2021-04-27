@@ -1,11 +1,11 @@
-use super::parser;
 use super::options::{Layout, Options};
+use super::parser;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-    river_layout_v2::river_layout_v2::{RiverLayoutV2, Event},
+    river_layout_v2::river_layout_v2::{Event, RiverLayoutV2},
 };
 use wayland_client::protocol::wl_output::WlOutput;
-use wayland_client::{Main};
+use wayland_client::Main;
 
 pub struct Context {
     pub outputs: Vec<Output>,
@@ -16,6 +16,7 @@ pub struct Output {
     pub options: Options,
     pub focused: usize,
     pub configured: bool,
+    pub smart_padding: bool,
     pub default: Tag,
     pub layout: Option<Main<RiverLayoutV2>>,
     pub output: WlOutput,
@@ -57,8 +58,8 @@ pub struct Area {
 
 #[derive(Clone, Debug)]
 pub enum Rule {
-    AppId ( String ),
-    Tag ( u32 ),
+    AppId(String),
+    Tag(u32),
     None,
 }
 
@@ -83,6 +84,7 @@ impl Output {
         {
             Output {
                 configured: false,
+                smart_padding: false,
                 focused: 0,
                 layout: None,
                 options: Options::new(),
@@ -92,138 +94,142 @@ impl Output {
             }
         }
     }
-    pub fn destroy(&self) {
-        (self.layout).as_ref().unwrap().destroy();
-    }
-    pub fn update(&mut self) {
-        if self.options.view_amount > 0 {
-            let focused = self.tags[self.focused].as_mut();
-            let mut frame = match focused {
-                Some(tag) => tag.update(&mut self.options),
-                None => self.default.update(&mut self.options),
-            };
-            for window in &mut frame.list {
-                if !self.options.smart_padding || self.options.view_amount > 1 {
-                    window.apply_padding(self.options.view_padding);
-                }
-                let rect = window.area.unwrap();
-                self.layout.as_ref().unwrap().push_view_dimensions(
-                    self.options.serial,
-                    rect.x as i32,
-                    rect.y as i32,
-                    rect.w,
-                    rect.h,
-                )
-            }
-            self.layout.as_ref().unwrap().commit(self.options.serial);
-        }
-    }
-    pub fn layout_filter(mut self, layout_manager: Option<&Main<RiverLayoutManagerV2>>, namespace: String) {
+    pub fn layout_filter(
+        mut self,
+        layout_manager: Option<&Main<RiverLayoutManagerV2>>,
+        namespace: String,
+    ) {
         self.layout = Some(
             layout_manager
                 .expect("Compositor doesn't implement river_layout_v2")
                 .get_layout(&self.output, namespace),
         );
-        self.layout.clone().unwrap().quick_assign(
-            move |_, event, _| { 
-                match event {
-                    Event::LayoutDemand {
-                        view_count,
-                        usable_width,
-                        usable_height,
-                        serial,
-                        mut tags,
-                    } => {
-                        self.options.serial = serial;
-                        self.options.view_amount = view_count;
-                        self.options.usable_height = usable_height;
-                        self.options.usable_width = usable_width;
-                        self.focused = {
-                            let mut i = 0;
-                            while tags > 1 {
-                                tags /= 2;
-                                i += 1;
-                            }
-                            i as usize
-                        };
-                    }
-                    Event::AdvertiseView {
-                        tags,
-                        app_id,
-                        serial: _,
-                    } => {
-                        self
-                            .options
-                            .windows
-                            .push(Window {
-                                app_id: app_id.unwrap(),
-                                area: None,
-                                tags: tags,
-                            });
-                    }
-                    Event::NamespaceInUse => {
-                        println!("Namespace already in use.");
-                    }
-                    Event::AdvertiseDone { serial } => {
-                        self.update()
-                    }
-                    Event::SetIntValue{ name , value } => match name.as_ref() {
-                        "main_amount" | "main_index" => {
-                            if let Some(tag) =
-                                self.tags[self.focused].as_mut()
-                            {
-                                if value >= 0 {
-                                    match name.as_ref() {
-                                        "main_amount" => tag.main_amount = value as u32,
-                                        "main_index" => tag.main_index = value as u32,
-                                        _ => {}
-                                    }
-                                }
-                            }
+        self.layout
+            .clone()
+            .unwrap()
+            .quick_assign(move |_, event, _| match event {
+                Event::LayoutDemand {
+                    view_count,
+                    usable_width,
+                    usable_height,
+                    serial: _,
+                    mut tags,
+                } => {
+                    self.options.view_amount = view_count;
+                    self.options.usable_height = usable_height;
+                    self.options.usable_width = usable_width;
+                    self.focused = {
+                        let mut i = 0;
+                        while tags > 1 {
+                            tags /= 2;
+                            i += 1;
                         }
-                        "view_padding" => self.options.view_padding = value as u32,
-                        "outer_padding" => self.options.outer_padding = value as u32,
-                        "xoffset" => self.options.xoffset = value,
-                        "yoffset" => self.options.yoffset = value,
-                        _ => {}
-                    },
-                    Event::ModIntValue{ name , delta } => match name.as_ref() {
-                        "main_amount" | "main_index" => {
-                            if let Some(tag) =
-                                self.tags[self.focused].as_mut()
-                            {
+                        i as usize
+                    };
+                }
+                Event::AdvertiseView {
+                    tags,
+                    app_id,
+                    serial: _,
+                } => {
+                    self.options.windows.push(Window {
+                        app_id: app_id.unwrap(),
+                        area: None,
+                        tags: tags,
+                    });
+                }
+                Event::NamespaceInUse => {
+                    println!("Namespace already in use.");
+                }
+                Event::AdvertiseDone { serial } => {
+                    if self.options.view_amount > 0 {
+                        let focused = self.tags[self.focused].as_mut();
+                        let frame = match focused {
+                            Some(tag) => tag.update(&mut self.options, self.smart_padding),
+                            None => self.default.update(&mut self.options, self.smart_padding),
+                        };
+                        for window in &mut frame.list {
+                            if !self.smart_padding || self.options.view_amount > 1 {
+                                window.apply_padding(self.options.view_padding);
+                            }
+                            let rect = window.area.unwrap();
+                            self.layout.as_ref().unwrap().push_view_dimensions(
+                                serial,
+                                rect.x as i32,
+                                rect.y as i32,
+                                rect.w,
+                                rect.h,
+                            )
+                        }
+                        self.layout.as_ref().unwrap().commit(serial);
+                    }
+                }
+                Event::SetIntValue { name, value } => match name.as_ref() {
+                    "main_amount" | "main_index" => {
+                        if let Some(tag) = self.tags[self.focused].as_mut() {
+                            if value >= 0 {
                                 match name.as_ref() {
-                                    "main_amount" => tag.main_amount = ((tag.main_amount as i32) + delta) as u32,
-                                    "main_index" => tag.main_index = ((tag.main_index as i32) + delta) as u32,
+                                    "main_amount" => tag.main_amount = value as u32,
+                                    "main_index" => tag.main_index = value as u32,
                                     _ => {}
                                 }
                             }
                         }
-                        "view_padding" => self.options.view_padding = ((self.options.view_padding as i32) + delta) as u32,
-                        "outer_padding" => self.options.outer_padding = ((self.options.outer_padding as i32) + delta) as u32,
-                        "xoffset" => self.options.xoffset += delta,
-                        "yoffset" => self.options.yoffset += delta,
-                        _ => {}
-                    },
-                    Event::SetFixedValue{ name , value } => if name == "main_factor" { 
-                        if let Some(tag) =
-                            self.tags[self.focused].as_mut()
-                        {
+                    }
+                    "view_padding" => self.options.view_padding = value as u32,
+                    "outer_padding" => self.options.outer_padding = value as u32,
+                    "xoffset" => self.options.xoffset = value,
+                    "yoffset" => self.options.yoffset = value,
+                    _ => {}
+                },
+                Event::ModIntValue { name, delta } => match name.as_ref() {
+                    "main_amount" | "main_index" => {
+                        if let Some(tag) = self.tags[self.focused].as_mut() {
+                            match name.as_ref() {
+                                "main_amount" => {
+                                    tag.main_amount = ((tag.main_amount as i32) + delta) as u32
+                                }
+                                "main_index" => {
+                                    tag.main_index = ((tag.main_index as i32) + delta) as u32
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    "view_padding" => {
+                        self.options.view_padding =
+                            ((self.options.view_padding as i32) + delta) as u32
+                    }
+                    "outer_padding" => {
+                        self.options.outer_padding =
+                            ((self.options.outer_padding as i32) + delta) as u32
+                    }
+                    "xoffset" => self.options.xoffset += delta,
+                    "yoffset" => self.options.yoffset += delta,
+                    _ => {}
+                },
+                Event::SetFixedValue { name, value } => {
+                    if name == "main_factor" {
+                        if let Some(tag) = self.tags[self.focused].as_mut() {
                             if value > 0.0 && value < 1.0 {
                                 tag.main_factor = value
                             }
                         }
-                    },
-                    Event::ModFixedValue{ name , delta } => if name == "main_factor" { 
-                        if let Some(tag) =
-                            self.tags[self.focused].as_mut()
-                        {
+                    }
+                }
+                Event::ModFixedValue { name, delta } => {
+                    if name == "main_factor" {
+                        if let Some(tag) = self.tags[self.focused].as_mut() {
                             if delta <= tag.main_factor {
                                 tag.main_factor += delta;
                             }
                         }
-                    },
-                    Event::SetStringValue{ name , value } => if name == "command" { parser::main(&mut self, value) },
+                    }
+                }
+                Event::SetStringValue { name, value } => {
+                    if name == "command" {
+                        parser::main(&mut self, value)
+                    }
                 }
             }
         );
@@ -238,19 +244,23 @@ impl Tag {
                 main_index: 0,
                 main_amount: 1,
                 main_factor: 0.6,
+                // options: Options,
                 rule: Rule::None,
                 outer: Layout::Full,
                 inner: vec![Layout::Full],
             }
         }
     }
-    pub fn update(&mut self, options: &mut Options) -> &mut Frame {
+    pub fn update(&mut self, options: &mut Options, smart_padding: bool) -> &mut Frame {
         options.main_amount = self.main_amount;
         options.main_index = self.main_index;
         options.main_factor = self.main_factor;
 
         // Initialise a frame with the output dimension
-        self.frame = Some(Frame::new(self.outer, options.get_output()));
+        self.frame = Some(
+            Frame::new(self.outer,
+            options.get_output(smart_padding))
+            );
 
         // Get a reference to the frame
         let frame = self.frame.as_mut().unwrap();
@@ -307,8 +317,8 @@ impl Window {
     }
     fn compare(&self, rule: &Rule) -> bool {
         match rule {
-            Rule::AppId ( string ) => string.eq(&self.app_id),
-            Rule::Tag ( uint ) => self.tags == *uint,
+            Rule::AppId(string) => string.eq(&self.app_id),
+            Rule::Tag(uint) => self.tags == *uint,
             _ => false,
         }
     }
