@@ -1,11 +1,11 @@
 use super::client::{Area, Window};
-use crate::wayland::river_layout_v1::river_layout_v1::RiverLayoutV1;
+use crate::wayland::river_layout_v2::river_layout_v2::RiverLayoutV2;
 use wayland_client::Main;
 
 pub struct Options {
     pub serial: u32,
     pub windows: Vec<Window>,
-    pub layout: Option<Main<RiverLayoutV1>>,
+    pub layout: Option<Main<RiverLayoutV2>>,
     pub view_amount: u32,
     pub usable_width: u32,
     pub usable_height: u32,
@@ -175,5 +175,17 @@ impl Options {
     }
     pub fn commit(&self) {
         self.layout.as_ref().unwrap().commit(self.serial);
+    }
+    pub fn debug(&self) {
+        println!("self - {}", self.serial);
+        println!("\n  ZriverLayoutV@");
+        println!("    view_amount : {}", self.view_amount);
+        println!("    usable_width : {}", self.usable_width);
+        println!("    usable_height : {}", self.usable_height);
+        println!("    outer_padding : {}", self.outer_padding);
+        println!("    view_padding : {}", self.view_padding);
+        println!("    xoffset : {}", self.xoffset);
+        println!("    yoffset : {}", self.yoffset);
+        println!("    smart_padding : {}", self.smart_padding);
     }
 }

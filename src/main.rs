@@ -1,11 +1,11 @@
-// mod build;
+mod build;
+mod parser;
 mod client;
 mod options;
 mod wayland;
 
 use crate::wayland::{
-    river_layout_v1::river_layout_manager_v1::RiverLayoutManagerV1,
-    river_options_v2::river_options_manager_v2::RiverOptionsManagerV2,
+    river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
 };
 use client::{Context, Output};
 use std::env;
@@ -13,6 +13,9 @@ use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
+
+    build::main();
+
     let display = Display::connect_to_env().unwrap();
 
     let mut event_queue = display.create_event_queue();
@@ -25,10 +28,10 @@ fn main() {
         &attached_display,
         wayland_client::global_filter!(
             [
-                RiverLayoutManagerV1,
+                RiverLayoutManagerV2,
                 1,
-                |layout_manager: Main<RiverLayoutManagerV1>, mut context: DispatchData| {
-                    context.get::<Context>().unwrap().globals.layout_manager = Some(layout_manager);
+                |layout_manager: Main<RiverLayoutManagerV2>, mut context: DispatchData| {
+                    context.get::<Context>().unwrap().layout_manager = Some(layout_manager);
                     context.get::<Context>().unwrap().running = true;
                 }
             ],
@@ -39,14 +42,6 @@ fn main() {
                     output.quick_assign(move |_, _, _| {});
                     let output = Output::new(output.detach());
                     context.get::<Context>().unwrap().outputs.push(output);
-                }
-            ],
-            [
-                RiverOptionsManagerV2,
-                1,
-                |options_manager: Main<RiverOptionsManagerV2>, mut context: DispatchData| {
-                    context.get::<Context>().unwrap().globals.options_manager =
-                        Some(options_manager);
                 }
             ]
         ),
@@ -90,8 +85,25 @@ fn main() {
     context.init(monitor_index);
 
     while context.running {
+        if let Err(e) = display.flush() {
+            if e.kind() != ::std::io::ErrorKind::WouldBlock {
+                eprintln!("Error while trying to flush the wayland socket: {:?}", e);
+            }
+        }
+        if let Some(guard) = event_queue.prepare_read() {
+            // prepare_read() returns None if there are already events pending in this
+            // event queue, in which case there is no need to try to read from the socket
+            if let Err(e) = guard.read_events() {
+                if e.kind() != ::std::io::ErrorKind::WouldBlock {
+                    // if read_events() returns Err(WouldBlock), this just means that no new
+                    // messages are available to be read
+                    eprintln!("Error while trying to read from the wayland socket: {:?}", e);
+                }
+            }
+        }
+        for output in &mut context.outputs {
         event_queue
-            .dispatch(&mut context.outputs[monitor_index], |event, object, _| {
+            .dispatch_pending(output, |event, object, _| {
                 panic!(
                     "[callop] Encountered an orphan event: {}@{}: {}",
                     event.interface,
@@ -100,6 +112,7 @@ fn main() {
                 );
             })
             .unwrap();
+        }
     }
 }
 

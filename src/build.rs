@@ -4,8 +4,7 @@ use std::path::Path;
 use wayland_scanner::{generate_code, Side};
 
 pub fn main() {
-    generate("river_layout_v1");
-    generate("river_options_v2");
+    generate("river_layout_v2");
 }
 
 fn generate(protocol_name: &str) {
