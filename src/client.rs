@@ -225,9 +225,7 @@ impl Output {
                     }
                 }
                 Event::SetStringValue { name, value } => {
-                    if name == "command" {
-                        parser::main(&mut self, value)
-                    }
+                    parser::main(&mut self, name, value)
                 }
             });
     }

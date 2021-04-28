@@ -1,21 +1,20 @@
 use super::client::{Output, Rule, Tag};
 use super::options::{Layout, Options};
 
-pub fn main(output_handle: &mut Output, value: String) {
+pub fn main(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
-    let command_name = command.next().unwrap_or_default();
-    match command_name {
-        "smart-padding" => {
+    match name.as_ref() {
+        "smart_padding" => {
             if let Ok(ans) = command.next().unwrap().parse::<bool>() {
                 output_handle.smart_padding = ans;
             }
         }
-        "set-tag" => {
+        "set_tag" => {
             for arg in command {
                 parse_tag(output_handle, arg.to_string())
             }
         }
-        "window-rule" => {
+        "window_rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 tag.rule = match command.next() {
                     Some(arg) => match arg {
@@ -33,7 +32,7 @@ pub fn main(output_handle: &mut Output, value: String) {
                 };
             }
         }
-        "clear-tag" => {
+        "clear_tag" => {
             for arg in command {
                 match arg {
                     "all" => output_handle.tags = Default::default(),
