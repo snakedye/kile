@@ -70,8 +70,8 @@ you need to modify or set theses layout values.
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
 *window_rule* _(string)_
-	- *_app_id* _app_id_
-	- *_tag* _tagmask_
+	- _app_id _app_id_
+	- _tag _tagmask_
 
 ## LAYOUT
 

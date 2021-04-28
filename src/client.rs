@@ -78,12 +78,22 @@ impl Output {
     pub fn new(output: WlOutput) -> Output {
         {
             Output {
-                smart_padding: false,
                 focused: 0,
-                options: Options::new(),
-                default: Tag::new(),
+                smart_padding: false,
                 output: output,
+                options: Options::new(),
                 tags: Default::default(),
+                default: {
+                    Tag {
+                        frame: None,
+                        main_index: 0,
+                        main_amount: 1,
+                        main_factor: 0.6,
+                        rule: Rule::None,
+                        outer: Layout::Full,
+                        inner: vec![Layout::Full],
+                    }
+                },
             }
         }
     }
@@ -220,19 +230,6 @@ impl Output {
 }
 
 impl Tag {
-    pub fn new() -> Tag {
-        {
-            Tag {
-                frame: None,
-                main_index: 0,
-                main_amount: 1,
-                main_factor: 0.6,
-                rule: Rule::None,
-                outer: Layout::Full,
-                inner: vec![Layout::Full],
-            }
-        }
-    }
     pub fn update(&mut self, options: &mut Options, area: Area) -> &mut Frame {
         options.main_amount = self.main_amount;
         options.main_index = self.main_index;
