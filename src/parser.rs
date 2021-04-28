@@ -16,20 +16,21 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
         }
         "window_rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
-                tag.rule = match command.next() {
+                match command.next() {
                     Some(arg) => match arg {
-                        "-tag" => {
-                            if let Ok(tag) = command.next().unwrap_or_default().parse::<u32>() {
-                                Rule::Tag(tag)
+                        "_tag" => {
+                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                                tag.rule = Rule::Tag(uint);
                             } else {
-                                Rule::None
                             }
                         }
-                        "-app-id" => Rule::AppId(command.next().unwrap_or_default().to_string()),
-                        _ => Rule::None,
+                        "_app_id" => {
+                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
+                        }
+                        _ => {}
                     },
-                    None => Rule::None,
-                };
+                    None => tag.rule = Rule::None,
+                }
             }
         }
         "clear_tag" => {

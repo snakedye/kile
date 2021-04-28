@@ -63,15 +63,15 @@ you need to modify or set theses layout values.
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	Format: [focused | all | _int_]:[outer-layout]:[inner-layout]:[app-id]
+	format: [focused | all | _int_]:[outer-layout]:[inner-layout]:[app-id]
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
 *window_rule* _(string)_
-	- *-app-id* _app_id_
-	- *-tag* _tagmask_
+	- *_app_id* _app_id_
+	- *_tag* _tagmask_
 
 ## LAYOUT
 
