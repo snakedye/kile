@@ -57,20 +57,21 @@ you need to modify or set theses layout values.
 	Positive integers create an offset from 
 	the top of screen and negatives from the bottom.
 
-*command* _<instruction>_
-	Execute a command within *kile*.
+*smart_padding* _(string)_
+	Enables or disables smart padding.
+	Possible values are "true" or "false".
 
-## COMMANDS
+*set_tag* _(string)_
+	Sets the tag configuration. All the fields except the first are escapable.
+	Format: [focused | all | _int_]:[outer-layout]:[inner-layout]:[app-id]
 
-Available commands.
+*clear_tag* _(string)_
+	Clear the configuration of the given tag(s)
+	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
-	- *smart-padding <true | false>*
-
-	- *set-tag <focused | all | 1..32>:<outer-layout>:<inner-layout..>:<app-id>*
-
-	- *clear-tag <all | focused | 1..32>*
-
-	- *window-rule <app-id | tagmask>*
+*window_rule* _(string)_
+	- *-app-id* _app_id_
+	- *-tag* _tagmask_
 
 ## LAYOUT
 
@@ -103,5 +104,6 @@ The base layouts are the following.
 
 *inner-layout*
 	A string of layouts like "h" or "hDv".
+
 
 *riverctl*(1), *rivertile*(7)

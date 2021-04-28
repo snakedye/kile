@@ -4,46 +4,63 @@
 - rust
 - scdoc ( optional for man page )
 
-## Commands
+## Layout Values
 
-You can send a command to *kile* by setting a value to the `command` option.
+You can edit *kile*'s layout by setting or modifying layout values.
 
-```shell
-  riverctl mod-layout-value <namespace> string command ...
-```
+**main_amount** _(int)_
 
-### `set-tag focused:v:Dh:firefox`
+An arbitrary positive integer indicating the amount of main views.
 
-Declares the configuration of a tag.
+**main_factor** _(fixed)_
 
-This command is set the outer layout of the tag to vertical (v)
-and the inner layout to [ dwindle (D), horizontal (h) ].
+A floating point numger indicating the relative size of the area reserved for main views.
+Note that layouts commonly expect values between 0.1 and 0.9.
 
-The last element is the window. An application matching that 
-app_id or tagmask will be automatically brought to the main area.
+**main_index** _(int)_
 
-All the fields except the first are escapable i.e you need to say 
-which tag you want to declare or edit but can ommit to put something in
-all the other fields. Which means `set-tag 4::hh`
-or `set-tag all:::Chromium` are also valid commands.
+An arbitrary positive integer indicating the index of the main area in the outer layout.
 
-### `clear-tag all`
+**view_padding** _(int)_
 
-Clears the configuration of all the tag.
-The default configuration is `f:f` which would be 
-a full outer and inner layout similar to monocle.
+The padding in pixels of the each window within the layout.
 
-### `window-rule ( app_id | tagmask )`
+**outer_padding** _(int)_
 
-The **app_id** is the preferred application of the focused tag.
-The **tagmask** is the bitwise integer corresponding to a tag.
-Apps from this tag will be zoomed
+The padding in pixels of the between the layout and the edges of the output.
 
-### `smart-padding (true | false)`
+**xoffset** _(int)_
 
-Enables or disable smart padding.
+The horizontal offset in pixels from a lateral screen edge.
+Positive integers create an offset from 
+the right of screen and negatives from the left.
 
-See `kile(1)` or `doc/kile.1.scd` for more info.
+**yoffset** _(int)_
+
+The vertical offset in pixels from the top or bottom screen edge.
+Positive integers create an offset from 
+the top of screen and negatives from the bottom.
+
+**smart_padding** _(string)_
+
+Enables or disables smart padding.
+Possible values are "true" or "false".
+
+**set_tag** _(string)_
+
+Sets the tag configuration. All the fields except the first are escapable.
+
+	Format: [focused | all | _int_]:[outer-layout]:[inner-layout]:[app-id]
+
+**clear_tag** _(string)_
+
+Clear the configuration of the given tag(s)
+Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
+
+**window_rule** _(string)_
+
+- `-app-id (app_id)`
+- `-tag (int)`
 
 ## Building
 
