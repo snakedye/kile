@@ -31,6 +31,7 @@ To configure and modify the layouts
 you need to modify or set theses layout values.
 
 ## LAYOUT VALUES
+
 *main_amount* _(int)_
 	An arbitrary positive integer indicating the amount of main views.
 
@@ -70,8 +71,8 @@ you need to modify or set theses layout values.
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
 *window_rule* _(string)_
-	- _app_id _app_id_
-	- _tag _tagmask_
+	- "_app_id" app_id
+	- "_tag" tagmask
 
 ## LAYOUT
 

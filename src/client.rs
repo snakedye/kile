@@ -88,7 +88,7 @@ impl Output {
                         frame: None,
                         main_index: 0,
                         main_amount: 1,
-                        main_factor: 0.6,
+                        main_factor: 0.55,
                         rule: Rule::None,
                         outer: Layout::Full,
                         inner: vec![Layout::Full],
@@ -377,7 +377,7 @@ impl Frame {
         client_count: u32,
         options: &mut Options,
         parent: bool,
-        mut factor: bool,
+        factor: bool,
     ) {
         let mut area = self.area;
         let mut slave_area = area;
@@ -452,25 +452,50 @@ impl Frame {
                 }
             }
             Layout::Recursive { modi } => {
-                for i in 0..client_count {
-                    self.layout = if (i + modi) % 2 == 0 {
-                        Layout::Vertical
+                let master = if factor {
+                    if options.main_amount > 0
+                        && client_count > 1
+                        && options.main_amount < options.view_amount
+                        && options.main_index < client_count
+                    {
+                        true
                     } else {
-                        Layout::Horizontal
-                    };
+                        false
+                    }
+                } else { false };
+                for i in 0..client_count {
+                    let reste;
                     if i < client_count - 1 {
-                        self.generate(2, options, true, factor);
-                        let index = self.list.len() - 1;
-                        self.area = self.list.remove(index).area.unwrap();
-                        if !parent && options.windows.len() > 0 {
-                            let mut window = options.windows.remove(0);
-                            window.area = self.list[index - 1].area;
-                            self.list[index - 1] = window;
+                        if ( i+modi ) % 2 == 0 {
+                            if master && i == options.main_index {
+                                area.w = ( (area.w as f64) * options.main_factor ) as u32 ;
+                            } else {
+                                reste = area.w % 2;
+                                area.w /= 2;
+                                area.w += reste;
+                            }
+                            self.insert_window(area, options, parent);
+                            area.x += area.w;
+                            if master && i == options.main_index {
+                                area.w = self.area.w - area.x;
+                            }
+                        } else {
+                            if master && i == options.main_index {
+                                area.h = ( (area.h as f64) * options.main_factor ) as u32 ;
+                            } else {
+                                reste = area.h % 2;
+                                area.h /= 2;
+                                area.h += reste;
+                            }
+                            self.insert_window(area, options, parent);
+                            area.y += area.h;
+                            if master && i == options.main_index {
+                                area.h = self.area.h - area.y;
+                            }
                         }
                     } else {
-                        self.generate(1, options, parent, factor);
+                        self.insert_window(area, options, parent);
                     }
-                    factor = false;
                 }
             }
             Layout::Full => {

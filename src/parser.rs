@@ -9,11 +9,7 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                 output_handle.smart_padding = ans;
             }
         }
-        "set_tag" => {
-            for arg in command {
-                parse_tag(output_handle, arg.to_string())
-            }
-        }
+        "set_tag" => parse_tag(output_handle, value),
         "window_rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
@@ -109,7 +105,7 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                                     frame: None,
                                     main_index: 0,
                                     main_amount: 1,
-                                    main_factor: 0.6,
+                                    main_factor: 0.55,
                                     rule: window_rule.clone(),
                                     outer: outer_layout.unwrap_or(Layout::Full),
                                     inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
