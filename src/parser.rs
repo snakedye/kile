@@ -102,7 +102,6 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                         None => {
                             output_handle.tags[i] = Some({
                                 Tag {
-                                    frame: None,
                                     main_index: 0,
                                     main_amount: 1,
                                     main_factor: 0.55,

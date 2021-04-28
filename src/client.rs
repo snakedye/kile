@@ -28,7 +28,6 @@ pub struct Tag {
     pub main_amount: u32,
     pub main_factor: f64,
     pub inner: Vec<Layout>,
-    pub frame: Option<Frame>,
 }
 
 pub struct Window {
@@ -38,7 +37,6 @@ pub struct Window {
 }
 
 pub struct Frame {
-    pub layout: Layout,
     pub area: Area,
     pub list: Vec<Window>,
 }
@@ -85,7 +83,6 @@ impl Output {
                 tags: Default::default(),
                 default: {
                     Tag {
-                        frame: None,
                         main_index: 0,
                         main_amount: 1,
                         main_factor: 0.55,
@@ -142,7 +139,7 @@ impl Output {
             Event::AdvertiseDone { serial } => {
                 if self.options.view_amount > 0 {
                     let area = self.options.get_output(self.smart_padding);
-                    let frame = match self.tags[self.focused].as_mut() {
+                    let mut frame = match self.tags[self.focused].as_mut() {
                         Some(tag) => tag.update(&mut self.options, area),
                         None => self.default.update(&mut self.options, area),
                     };
@@ -230,21 +227,19 @@ impl Output {
 }
 
 impl Tag {
-    pub fn update(&mut self, options: &mut Options, area: Area) -> &mut Frame {
+    pub fn update(&mut self, options: &mut Options, area: Area) -> Frame {
         options.main_amount = self.main_amount;
         options.main_index = self.main_index;
         options.main_factor = self.main_factor;
 
         // Initialise a frame with the output dimension
-        self.frame = Some(Frame::new(self.outer, area));
+        let mut frame = Frame::new(area);
 
-        // Get a reference to the frame
-        let frame = self.frame.as_mut().unwrap();
         // The total amount of frame
         let frame_amount = options.frames_amount(self.inner.len() as u32);
 
         // Generate the outer layout
-        frame.generate(frame_amount, options, true, true);
+        frame.generate(options, frame_amount, self.outer, true, true);
 
         let main_amount = options.main_amount(frame_amount);
         let slave_amount;
@@ -260,18 +255,19 @@ impl Tag {
         // Generate the inner layouts
         let mut windows = Vec::new();
         for (i, window) in frame.list.iter().enumerate() {
-            let mut frame = Frame::new(self.inner[i], window.area.unwrap());
+            let mut frame = Frame::new(window.area.unwrap());
             if i == 0 && main_amount != 0 {
-                frame.generate(main_amount, options, false, false);
+                frame.generate(options, main_amount, self.inner[i], false, false);
             } else {
                 frame.generate(
+                    options,
                     if reste > 0 {
                         reste -= 1;
                         slave_amount + 1
                     } else {
                         slave_amount
                     },
-                    options,
+                    self.inner[i],
                     false,
                     false,
                 );
@@ -309,10 +305,9 @@ impl Area {
 }
 
 impl Frame {
-    pub fn new(layout: Layout, area: Area) -> Frame {
+    pub fn new(area: Area) -> Frame {
         {
             Frame {
-                layout: layout,
                 area: area,
                 list: Vec::new(),
             }
@@ -374,16 +369,15 @@ impl Frame {
     }
     pub fn generate(
         &mut self,
-        client_count: u32,
         options: &mut Options,
+        client_count: u32,
+        layout: Layout,
         parent: bool,
         factor: bool,
     ) {
         let mut area = self.area;
-        let mut slave_area = area;
-        let mut main_area = area;
 
-        match self.layout {
+        match layout {
             Layout::Tab => {
                 for _i in 0..client_count {
                     self.insert_window(area, options, parent);
@@ -392,6 +386,8 @@ impl Frame {
                 }
             }
             Layout::Horizontal => {
+                let mut main_area = area;
+                let mut slave_area = area;
                 let reste = area.h % client_count;
                 if factor {
                     main_area.h = if options.main_amount > 0
@@ -422,6 +418,8 @@ impl Frame {
                 }
             }
             Layout::Vertical => {
+                let mut main_area = area;
+                let mut slave_area = area;
                 let reste = area.w % client_count;
                 if factor {
                     main_area.w = if options.main_amount > 0
@@ -462,13 +460,15 @@ impl Frame {
                     } else {
                         false
                     }
-                } else { false };
+                } else {
+                    false
+                };
                 for i in 0..client_count {
                     let reste;
                     if i < client_count - 1 {
-                        if ( i+modi ) % 2 == 0 {
+                        if (i + modi) % 2 == 0 {
                             if master && i == options.main_index {
-                                area.w = ( (area.w as f64) * options.main_factor ) as u32 ;
+                                area.w = ((area.w as f64) * options.main_factor) as u32;
                             } else {
                                 reste = area.w % 2;
                                 area.w /= 2;
@@ -481,7 +481,7 @@ impl Frame {
                             }
                         } else {
                             if master && i == options.main_index {
-                                area.h = ( (area.h as f64) * options.main_factor ) as u32 ;
+                                area.h = ((area.h as f64) * options.main_factor) as u32;
                             } else {
                                 reste = area.h % 2;
                                 area.h /= 2;
