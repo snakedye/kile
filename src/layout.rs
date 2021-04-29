@@ -133,7 +133,7 @@ impl Rectangle {
                     false
                 };
                 for i in 0..client_count {
-                    let mut reste;
+                    let reste;
                     if i < client_count - 1 {
                         if (i + modi) % 2 == 0 {
                             if master && i == options.main_index {

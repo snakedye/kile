@@ -44,11 +44,6 @@ pub struct Window {
     pub area: Option<Area>,
 }
 
-pub struct Frame {
-    pub area: Area,
-    pub list: Vec<Rectangle>,
-}
-
 #[derive(Copy, Clone)]
 pub struct Area {
     pub x: u32,
