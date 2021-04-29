@@ -126,7 +126,7 @@ impl Output {
             .get_layout(&self.output, namespace);
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
-                view_count: _,
+                view_count,
                 usable_width,
                 usable_height,
                 serial: _,
@@ -134,6 +134,9 @@ impl Output {
             } => {
                 if !self.resized {
                     self.dimension = Area::from(0, 0, usable_width, usable_height);
+                }
+                if !self.smart_padding || view_count > 1 {
+                    self.dimension.apply_padding(self.outer_padding);
                 }
                 self.focused = {
                     let mut i = 0;
@@ -159,7 +162,6 @@ impl Output {
                 println!("Namespace already in use.");
             }
             Event::AdvertiseDone { serial } => {
-                self.dimension.apply_padding(self.outer_padding);
                 let mut list = match self.tags[self.focused].as_mut() {
                     Some(tag) => {
                         tag.options
