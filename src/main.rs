@@ -11,7 +11,7 @@ use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
     let mut args = env::args();
-    let mut namespace = String::from("randy");
+    let mut namespace = String::from("kile");
     args.next();
     loop {
         match args.next() {
