@@ -318,10 +318,11 @@ impl Tag {
         let frame_amount = {
             let main = self.options.main_amount > 1 
                 && frames_available > 1
-                && view_amount > self.options.main_amount
-                && view_amount - self.options.main_amount < frames_available - 1;
+                && view_amount > self.options.main_amount;
             if main {
-                frames_available - 1
+                if view_amount - self.options.main_amount < frames_available {
+                    1 + view_amount - self.options.main_amount
+                } else { frames_available }
             } else if self.options.main_amount >= view_amount {
                 1
             } else if view_amount > frames_available {
