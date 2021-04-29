@@ -202,7 +202,7 @@ impl Output {
                 "view_padding" => self.view_padding = value as u32,
                 "outer_padding" => self.outer_padding = value as u32,
                 "xoffset" => {
-                    if value != 0 || value < self.dimension.x as i32 {
+                    if value != 0 {
                         if value < 0 {
                             self.dimension.x = 0;
                             value = value * (-1);
@@ -216,7 +216,7 @@ impl Output {
                     }
                 }
                 "yoffset" => {
-                    if value != 0 || value < self.dimension.y as i32 {
+                    if value != 0 {
                         if value < 0 {
                             self.dimension.y = 0;
                             value = value * (-1);
@@ -330,7 +330,6 @@ impl Tag {
                 view_amount
             }
         };
-        println!("frame_amount: {}", frame_amount);
         let main_amount = if self.options.main_index + self.options.main_amount
             <= view_amount
             && frame_amount > 1
