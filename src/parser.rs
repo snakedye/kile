@@ -1,5 +1,5 @@
-use super::client::{Output, Rule, Tag};
-use super::options::{Layout, Options};
+use super::client::*;
+use super::layout::*;
 
 pub fn main(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
@@ -73,10 +73,8 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                         break;
                     }
                 };
-                let outer_layout =
-                    Options::outer_layout(rule.next().unwrap_or_default().to_string());
-                let inner_layout =
-                    Options::inner_layout(rule.next().unwrap_or_default().to_string());
+                let outer_layout = outer_layout(rule.next().unwrap_or_default().to_string());
+                let inner_layout = inner_layout(rule.next().unwrap_or_default().to_string());
                 let window_rule = match rule.next() {
                     Some(app_id) => {
                         if let Ok(tag) = app_id.parse::<u32>() {
@@ -102,9 +100,7 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                         None => {
                             output_handle.tags[i] = Some({
                                 Tag {
-                                    main_index: 0,
-                                    main_amount: 1,
-                                    main_factor: 0.55,
+                                    options: Options::new(),
                                     rule: window_rule.clone(),
                                     outer: outer_layout.unwrap_or(Layout::Full),
                                     inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
@@ -115,6 +111,40 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                 }
             }
             None => break,
+        }
+    }
+}
+
+pub fn outer_layout(layout_output: String) -> Option<Layout> {
+    match layout_output.chars().next() {
+        Some(c) => Some(layout(c)),
+        None => None,
+    }
+}
+pub fn inner_layout(string: String) -> Option<Vec<Layout>> {
+    let mut vec = Vec::new();
+
+    for c in string.chars() {
+        vec.push(layout(c));
+    }
+
+    if vec.len() > 0 {
+        Some(vec)
+    } else {
+        None
+    }
+}
+fn layout(c: char) -> Layout {
+    match c {
+        'v' => Layout::Vertical,
+        'h' => Layout::Horizontal,
+        't' => Layout::Tab,
+        'd' => Layout::Recursive { modi: 0 },
+        'D' => Layout::Recursive { modi: 1 },
+        'f' => Layout::Full,
+        _ => {
+            println!("{}: Invalid character", c);
+            Layout::Full
         }
     }
 }

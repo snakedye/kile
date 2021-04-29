@@ -1,4 +1,4 @@
-use super::options::{Layout, Options};
+use super::layout::Layout;
 use super::parser;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
@@ -12,21 +12,29 @@ pub struct Context {
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
 
+pub struct Options {
+    pub windows: Vec<Window>,
+    pub main_amount: u32,
+    pub main_index: u32,
+    pub main_factor: f64,
+}
+
 pub struct Output {
     pub default: Tag,
+    pub resized: bool,
     pub focused: usize,
     pub output: WlOutput,
-    pub options: Options,
+    pub dimension: Area,
     pub smart_padding: bool,
+    pub outer_padding: u32,
+    pub view_padding: u32,
     pub tags: [Option<Tag>; 32],
 }
 
 pub struct Tag {
     pub rule: Rule,
     pub outer: Layout,
-    pub main_index: u32,
-    pub main_amount: u32,
-    pub main_factor: f64,
+    pub options: Options,
     pub inner: Vec<Layout>,
 }
 
@@ -38,10 +46,10 @@ pub struct Window {
 
 pub struct Frame {
     pub area: Area,
-    pub list: Vec<Window>,
+    pub list: Vec<Rectangle>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Area {
     pub x: u32,
     pub y: u32,
@@ -56,9 +64,9 @@ pub enum Rule {
     None,
 }
 
-pub trait Rectangle {
-    fn apply_padding(&mut self, padding: u32);
-    fn push_dimensions(&mut self, options: &Options);
+pub enum Rectangle {
+    Area(Area),
+    Window(Window),
 }
 
 impl Context {
@@ -72,20 +80,39 @@ impl Context {
     }
 }
 
+impl Options {
+    pub fn new() -> Options {
+        return {
+            Options {
+                windows: Vec::new(),
+                main_factor: 0.55,
+                main_index: 0,
+                main_amount: 1,
+            }
+        };
+    }
+}
+
 impl Output {
     pub fn new(output: WlOutput) -> Output {
         {
             Output {
-                focused: 0,
-                smart_padding: false,
                 output: output,
-                options: Options::new(),
+                dimension: Area {
+                    x: 0,
+                    y: 0,
+                    w: 0,
+                    h: 0,
+                },
+                focused: 0,
+                view_padding: 0,
+                outer_padding: 0,
+                resized: false,
+                smart_padding: false,
                 tags: Default::default(),
                 default: {
                     Tag {
-                        main_index: 0,
-                        main_amount: 1,
-                        main_factor: 0.55,
+                        options: Options::new(),
                         rule: Rule::None,
                         outer: Layout::Full,
                         inner: vec![Layout::Full],
@@ -104,15 +131,15 @@ impl Output {
             .get_layout(&self.output, namespace);
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
-                view_count,
+                view_count: _,
                 usable_width,
                 usable_height,
                 serial: _,
                 mut tags,
             } => {
-                self.options.view_amount = view_count;
-                self.options.usable_height = usable_height;
-                self.options.usable_width = usable_width;
+                if !self.resized {
+                    self.dimension = Area::from(0, 0, usable_width, usable_height);
+                }
                 self.focused = {
                     let mut i = 0;
                     while tags > 1 {
@@ -127,7 +154,7 @@ impl Output {
                 app_id,
                 serial: _,
             } => {
-                self.options.windows.push(Window {
+                self.default.options.windows.push(Window {
                     app_id: app_id.unwrap(),
                     area: None,
                     tags: tags,
@@ -137,45 +164,74 @@ impl Output {
                 println!("Namespace already in use.");
             }
             Event::AdvertiseDone { serial } => {
-                if self.options.view_amount > 0 {
-                    let area = self.options.get_output(self.smart_padding);
-                    let mut frame = match self.tags[self.focused].as_mut() {
-                        Some(tag) => tag.update(&mut self.options, area),
-                        None => self.default.update(&mut self.options, area),
-                    };
-                    for window in &mut frame.list {
-                        if !self.smart_padding || self.options.view_amount > 1 {
-                            window.apply_padding(self.options.view_padding);
-                        }
-                        let rect = window.area.unwrap();
-                        layout.push_view_dimensions(
-                            serial,
-                            rect.x as i32,
-                            rect.y as i32,
-                            rect.w,
-                            rect.h,
-                        )
+                self.dimension.apply_padding(self.outer_padding);
+                let mut list = match self.tags[self.focused].as_mut() {
+                    Some(tag) => {
+                        tag.options
+                            .windows
+                            .append(&mut self.default.options.windows);
+                        tag.update(Rectangle::Area(self.dimension))
                     }
-                    frame.list = Vec::new();
-                    layout.commit(serial);
+                    None => self.default.update(Rectangle::Area(self.dimension)),
+                };
+                let view_amount = list.len();
+                for rect in &mut list {
+                    if !self.smart_padding || view_amount > 1 {
+                        rect.apply_padding(self.view_padding);
+                    }
+                    let rect = rect.area();
+                    layout.push_view_dimensions(
+                        serial,
+                        rect.x as i32,
+                        rect.y as i32,
+                        rect.w,
+                        rect.h,
+                    )
                 }
+                layout.commit(serial);
             }
-            Event::SetIntValue { name, value } => match name.as_ref() {
+            Event::SetIntValue { name, mut value } => match name.as_ref() {
                 "main_amount" | "main_index" => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value >= 0 {
                             match name.as_ref() {
-                                "main_amount" => tag.main_amount = value as u32,
-                                "main_index" => tag.main_index = value as u32,
+                                "main_amount" => tag.options.main_amount = value as u32,
+                                "main_index" => tag.options.main_index = value as u32,
                                 _ => {}
                             }
                         }
                     }
                 }
-                "view_padding" => self.options.view_padding = value as u32,
-                "outer_padding" => self.options.outer_padding = value as u32,
-                "xoffset" => self.options.xoffset = value,
-                "yoffset" => self.options.yoffset = value,
+                "view_padding" => self.view_padding = value as u32,
+                "outer_padding" => self.outer_padding = value as u32,
+                "xoffset" => {
+                    if value != 0 || value < self.dimension.x as i32 {
+                        if value < 0 {
+                            self.dimension.x = 0;
+                            value = value * (-1);
+                        } else {
+                            self.dimension.x = value as u32;
+                        }
+                        self.dimension.w -= value as u32;
+                        self.resized = true;
+                    } else {
+                        self.resized = false;
+                    }
+                }
+                "yoffset" => {
+                    if value != 0 || value < self.dimension.y as i32 {
+                        if value < 0 {
+                            self.dimension.y = 0;
+                            value = value * (-1);
+                        } else {
+                            self.dimension.y = value as u32;
+                        }
+                        self.dimension.h -= value as u32;
+                        self.resized = true;
+                    } else {
+                        self.resized = false;
+                    }
+                }
                 _ => {}
             },
             Event::ModIntValue { name, delta } => match name.as_ref() {
@@ -183,31 +239,28 @@ impl Output {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         match name.as_ref() {
                             "main_amount" => {
-                                tag.main_amount = ((tag.main_amount as i32) + delta) as u32
+                                tag.options.main_amount =
+                                    ((tag.options.main_amount as i32) + delta) as u32
                             }
                             "main_index" => {
-                                tag.main_index = ((tag.main_index as i32) + delta) as u32
+                                tag.options.main_index =
+                                    ((tag.options.main_index as i32) + delta) as u32
                             }
                             _ => {}
                         }
                     }
                 }
-                "view_padding" => {
-                    self.options.view_padding = ((self.options.view_padding as i32) + delta) as u32
-                }
+                "view_padding" => self.view_padding = ((self.view_padding as i32) + delta) as u32,
                 "outer_padding" => {
-                    self.options.outer_padding =
-                        ((self.options.outer_padding as i32) + delta) as u32
+                    self.outer_padding = ((self.outer_padding as i32) + delta) as u32
                 }
-                "xoffset" => self.options.xoffset += delta,
-                "yoffset" => self.options.yoffset += delta,
                 _ => {}
             },
             Event::SetFixedValue { name, value } => {
                 if name == "main_factor" {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value > 0.0 && value < 1.0 {
-                            tag.main_factor = value
+                            tag.options.main_factor = value
                         }
                     }
                 }
@@ -215,8 +268,8 @@ impl Output {
             Event::ModFixedValue { name, delta } => {
                 if name == "main_factor" {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if delta <= tag.main_factor {
-                            tag.main_factor += delta;
+                        if delta <= tag.options.main_factor {
+                            tag.options.main_factor += delta;
                         }
                     }
                 }
@@ -226,65 +279,11 @@ impl Output {
     }
 }
 
-impl Tag {
-    pub fn update(&mut self, options: &mut Options, area: Area) -> Frame {
-        options.main_amount = self.main_amount;
-        options.main_index = self.main_index;
-        options.main_factor = self.main_factor;
-
-        // Initialise a frame with the output dimension
-        let mut frame = Frame::new(area);
-
-        // The total amount of frame
-        let frame_amount = options.frames_amount(self.inner.len() as u32);
-
-        // Generate the outer layout
-        frame.generate(options, frame_amount, self.outer, true, true);
-
-        let main_amount = options.main_amount(frame_amount);
-        let slave_amount;
-        let mut reste = if main_amount > 0 {
-            frame.zoom(options.main_index as usize);
-            slave_amount = (options.view_amount - main_amount) / (frame_amount - 1);
-            (options.view_amount - main_amount) % (frame_amount - 1)
-        } else {
-            slave_amount = options.view_amount / frame_amount;
-            options.view_amount % frame_amount
-        };
-
-        // Generate the inner layouts
-        let mut windows = Vec::new();
-        for (i, window) in frame.list.iter().enumerate() {
-            let mut frame = Frame::new(window.area.unwrap());
-            if i == 0 && main_amount != 0 {
-                frame.generate(options, main_amount, self.inner[i], false, false);
-            } else {
-                frame.generate(
-                    options,
-                    if reste > 0 {
-                        reste -= 1;
-                        slave_amount + 1
-                    } else {
-                        slave_amount
-                    },
-                    self.inner[i],
-                    false,
-                    false,
-                );
-            }
-            windows.append(&mut frame.list);
-        }
-        frame.list = windows;
-        frame.focus_all(&self.rule, options.main_amount);
-        frame
-    }
-}
-
 impl Window {
     pub fn apply_padding(&mut self, padding: u32) {
         self.area.as_mut().unwrap().apply_padding(padding);
     }
-    fn compare(&self, rule: &Rule) -> bool {
+    pub fn compare(&self, rule: &Rule) -> bool {
         match rule {
             Rule::AppId(string) => string.eq(&self.app_id),
             Rule::Tag(uint) => self.tags == *uint,
@@ -294,6 +293,16 @@ impl Window {
 }
 
 impl Area {
+    pub fn from(x: u32, y: u32, w: u32, h: u32) -> Area {
+        {
+            Area {
+                x: x,
+                y: y,
+                w: w,
+                h: h,
+            }
+        }
+    }
     pub fn apply_padding(&mut self, padding: u32) {
         if 2 * padding < self.h && 2 * padding < self.w {
             self.x += padding;
@@ -304,44 +313,78 @@ impl Area {
     }
 }
 
-impl Frame {
-    pub fn new(area: Area) -> Frame {
+impl Tag {
+    pub fn update(&mut self, mut area: Rectangle) -> Vec<Rectangle> {
+        let view_amount = self.options.windows.len() as u32;
+        let slave_amount;
+        let frames_available = self.inner.len() as u32;
+        let frame_amount = if self.options.main_amount >= view_amount {
+            1
+        } else if view_amount >= frames_available {
+            if 1 + view_amount - self.options.main_amount < frames_available
+                && self.options.main_amount > view_amount / frames_available
+            {
+                1 + view_amount - self.options.main_amount
+            } else {
+                frames_available
+            }
+        } else {
+            view_amount
+        };
+        self.options.main_amount = if self.options.main_index + self.options.main_amount
+            <= view_amount
+            && frame_amount > 1
+            && self.options.main_amount > 0
         {
-            Frame {
-                area: area,
-                list: Vec::new(),
+            if self.options.main_index + self.options.main_amount > view_amount {
+                view_amount - self.options.main_index
+            } else {
+                self.options.main_amount
             }
+        } else {
+            0
+        };
+        let mut list = area.generate(&mut self.options, frame_amount, self.outer, true, true);
+        let mut reste = if self.options.main_amount > 0 {
+            zoom(&mut list, self.options.main_index as usize);
+            slave_amount = (view_amount - self.options.main_amount) / (frame_amount - 1);
+            (view_amount - self.options.main_amount) % (frame_amount - 1)
+        } else {
+            slave_amount = view_amount / frame_amount;
+            view_amount % frame_amount
+        };
+
+        let mut windows = Vec::new();
+        for (i, rect) in list.iter_mut().enumerate() {
+            let mut list = {
+                let amount = if i == 0 && self.options.main_amount != 0 {
+                    self.options.main_amount
+                } else {
+                    if reste > 0 {
+                        reste -= 1;
+                        slave_amount + 1
+                    } else {
+                        slave_amount
+                    }
+                };
+                rect.generate(&mut self.options, amount, self.inner[i], false, false)
+            };
+            windows.append(&mut list);
         }
+        self.focus_all(&mut windows);
+        windows
     }
-    pub fn zoom(&mut self, index: usize) {
-        if (index as usize) < self.list.len() {
-            let main = self.list[index].area;
-            for i in (0..index).rev() {
-                self.list[i + 1].area = self.list[i].area;
-            }
-            self.list[0].area = main;
-        }
-    }
-    pub fn focus(&mut self, index: usize, to: usize) {
-        if (index as usize) < self.list.len() {
-            let main = self.list[to].area;
-            for i in to..index {
-                self.list[i].area = self.list[i + 1].area;
-            }
-            self.list[index].area = main;
-        }
-    }
-    pub fn focus_all(&mut self, rule: &Rule, main_amount: u32) {
-        let mut i = self.list.len() - 1;
+    pub fn focus_all(&self, list: &mut Vec<Rectangle>) {
+        let mut i = list.len() - 1;
         let mut zoomed = 0;
         let mut to = 0;
-        while to < i && self.list[to].compare(rule) {
+        while to < i && list[to].compare(&self.rule) {
             to += 1;
         }
         while i > 0 {
             let mut j = i;
-            while j > to && zoomed < main_amount && self.list[i].compare(rule) {
-                self.focus(i, to);
+            while j > to && zoomed < self.options.main_amount && list[i].compare(&self.rule) {
+                focus(list, i, to);
                 j -= 1;
                 zoomed += 1;
             }
@@ -352,157 +395,25 @@ impl Frame {
             }
         }
     }
-    fn insert_window(&mut self, area: Area, options: &mut Options, parent: bool) {
-        let mut window = if !parent && options.windows.len() > 0 {
-            options.windows.remove(0)
-        } else {
-            {
-                Window {
-                    app_id: String::new(),
-                    area: None,
-                    tags: 0,
-                }
-            }
-        };
-        window.area = Some(area);
-        self.list.push(window);
-    }
-    pub fn generate(
-        &mut self,
-        options: &mut Options,
-        client_count: u32,
-        layout: Layout,
-        parent: bool,
-        factor: bool,
-    ) {
-        let mut area = self.area;
+}
 
-        match layout {
-            Layout::Tab => {
-                for _i in 0..client_count {
-                    self.insert_window(area, options, parent);
-                    area.h -= 50;
-                    area.y += 50;
-                }
-            }
-            Layout::Horizontal => {
-                let mut main_area = area;
-                let mut slave_area = area;
-                let reste = area.h % client_count;
-                if factor {
-                    main_area.h = if options.main_amount > 0
-                        && client_count > 1
-                        && options.main_amount < options.view_amount
-                        && options.main_index < client_count
-                    {
-                        (area.h * (options.main_factor * 100.0) as u32) / (50 * client_count)
-                    } else {
-                        0
-                    };
-                    slave_area.h -= main_area.h;
-                }
-                for i in 0..client_count {
-                    area.h = if factor && i == options.main_index && main_area.h > 0 {
-                        main_area.h
-                    } else if factor && main_area.h > 0 {
-                        slave_area.h / (client_count - 1)
-                    } else {
-                        slave_area.h / client_count
-                    };
-                    if i == 0 {
-                        area.h += reste;
-                    }
-
-                    self.insert_window(area, options, parent);
-                    area.y += area.h;
-                }
-            }
-            Layout::Vertical => {
-                let mut main_area = area;
-                let mut slave_area = area;
-                let reste = area.w % client_count;
-                if factor {
-                    main_area.w = if options.main_amount > 0
-                        && client_count > 1
-                        && options.main_amount < options.view_amount
-                        && options.main_index < client_count
-                    {
-                        (area.w * (options.main_factor * 100.0) as u32) / (50 * client_count)
-                    } else {
-                        0
-                    };
-                    slave_area.w -= main_area.w;
-                }
-                for i in 0..client_count {
-                    area.w = if factor && i == options.main_index && main_area.w > 0 {
-                        main_area.w
-                    } else if factor && main_area.w > 0 {
-                        slave_area.w / (client_count - 1)
-                    } else {
-                        slave_area.w / client_count
-                    };
-                    if i == 0 {
-                        area.w += reste;
-                    }
-
-                    self.insert_window(area, options, parent);
-                    area.x += area.w;
-                }
-            }
-            Layout::Recursive { modi } => {
-                let master = if factor {
-                    if options.main_amount > 0
-                        && client_count > 1
-                        && options.main_amount < options.view_amount
-                        && options.main_index < client_count
-                    {
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                };
-                for i in 0..client_count {
-                    let reste;
-                    if i < client_count - 1 {
-                        if (i + modi) % 2 == 0 {
-                            if master && i == options.main_index {
-                                area.w = ((area.w as f64) * options.main_factor) as u32;
-                            } else {
-                                reste = area.w % 2;
-                                area.w /= 2;
-                                area.w += reste;
-                            }
-                            self.insert_window(area, options, parent);
-                            area.x += area.w;
-                            if master && i == options.main_index {
-                                area.w = self.area.w - area.x;
-                            }
-                        } else {
-                            if master && i == options.main_index {
-                                area.h = ((area.h as f64) * options.main_factor) as u32;
-                            } else {
-                                reste = area.h % 2;
-                                area.h /= 2;
-                                area.h += reste;
-                            }
-                            self.insert_window(area, options, parent);
-                            area.y += area.h;
-                            if master && i == options.main_index {
-                                area.h = self.area.h - area.y;
-                            }
-                        }
-                    } else {
-                        self.insert_window(area, options, parent);
-                    }
-                }
-            }
-            Layout::Full => {
-                for _i in 0..client_count {
-                    self.insert_window(area, options, parent);
-                }
-            }
+fn zoom(list: &mut Vec<Rectangle>, index: usize) {
+    if (index as usize) < list.len() {
+        let area = list[index].area();
+        for i in (0..index).rev() {
+            let previous = list[i].area();
+            list[i + 1].set(previous);
         }
+        list[0].set(area);
+    }
+}
+fn focus(list: &mut Vec<Rectangle>, index: usize, to: usize) {
+    if (index as usize) < list.len() {
+        let main = list[to].area();
+        for i in to..index {
+            let forward = list[i + 1].area();
+            list[i].set(forward);
+        }
+        list[index].set(main);
     }
 }

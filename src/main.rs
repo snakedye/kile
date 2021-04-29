@@ -1,5 +1,5 @@
 mod client;
-mod options;
+mod layout;
 mod parser;
 mod wayland;
 
@@ -11,16 +11,20 @@ use wayland_client::{Display, GlobalManager, Main};
 
 fn main() {
     let mut args = env::args();
-    let mut namespace = String::from("kile");
+    let mut namespace = String::from("randy");
     args.next();
     loop {
         match args.next() {
             Some(flag) => match flag.as_str() {
                 "--namespace" | "--n" | "-n" => {
-                    namespace = args.next().unwrap_or(String::from("kile"))
+                    if let Some(name) = args.next() {
+                        namespace = name;
+                    }
                 }
                 "--help" | "-h" | "--h" => {
-                    help();
+                    println!("Usage: kile [option]\n");
+                    println!("  -n | --n | --namespace <string> : the namespace of kile.");
+                    println!("  -h | --h | --help : shows this help message.");
                     std::process::exit(0);
                 }
                 _ => break,
@@ -79,10 +83,4 @@ fn main() {
             })
             .unwrap();
     }
-}
-
-fn help() {
-    println!("Usage: kile [option]\n");
-    println!("  -n | --n | --namespace <string> : the namespace of kile.");
-    println!("  -h | --h | --help : shows this help message.");
 }
