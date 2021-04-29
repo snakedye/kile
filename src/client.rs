@@ -313,20 +313,23 @@ impl Tag {
         let view_amount = self.options.windows.len() as u32;
         let slave_amount;
         let frames_available = self.inner.len() as u32;
-        let frame_amount = if self.options.main_amount >= view_amount {
-            1
-        } else if view_amount >= frames_available {
-            if 1 + view_amount - self.options.main_amount < frames_available
-                && self.options.main_amount > view_amount / frames_available
-            {
-                1 + view_amount - self.options.main_amount
-            } else {
+        let frame_amount = {
+            let main = self.options.main_amount > 1 
+                && frames_available > 1
+                && view_amount > self.options.main_amount
+                && view_amount - self.options.main_amount < frames_available - 1;
+            if main {
+                frames_available - 1
+            } else if self.options.main_amount >= view_amount {
+                1
+            } else if view_amount > frames_available {
                 frames_available
+            } else {
+                view_amount
             }
-        } else {
-            view_amount
         };
-        self.options.main_amount = if self.options.main_index + self.options.main_amount
+        println!("frame_amount: {}", frame_amount);
+        let main_amount = if self.options.main_index + self.options.main_amount
             <= view_amount
             && frame_amount > 1
             && self.options.main_amount > 0
@@ -340,10 +343,10 @@ impl Tag {
             0
         };
         let mut list = area.generate(&mut self.options, frame_amount, self.outer, true, true);
-        let mut reste = if self.options.main_amount > 0 {
+        let mut reste = if main_amount > 0 {
             zoom(&mut list, self.options.main_index as usize);
-            slave_amount = (view_amount - self.options.main_amount) / (frame_amount - 1);
-            (view_amount - self.options.main_amount) % (frame_amount - 1)
+            slave_amount = (view_amount - main_amount) / (frame_amount - 1);
+            (view_amount - main_amount) % (frame_amount - 1)
         } else {
             slave_amount = view_amount / frame_amount;
             view_amount % frame_amount
@@ -352,8 +355,8 @@ impl Tag {
         let mut windows = Vec::new();
         for (i, rect) in list.iter_mut().enumerate() {
             let mut list = {
-                let amount = if i == 0 && self.options.main_amount != 0 {
-                    self.options.main_amount
+                let amount = if i == 0 && main_amount != 0 {
+                    main_amount
                 } else {
                     if reste > 0 {
                         reste -= 1;
@@ -366,10 +369,10 @@ impl Tag {
             };
             windows.append(&mut list);
         }
-        self.focus_all(&mut windows);
+        self.focus_all(&mut windows, main_amount);
         windows
     }
-    pub fn focus_all(&self, list: &mut Vec<Rectangle>) {
+    pub fn focus_all(&self, list: &mut Vec<Rectangle>, main_amount: u32) {
         let mut i = list.len() - 1;
         let mut zoomed = 0;
         let mut to = 0;
@@ -378,7 +381,7 @@ impl Tag {
         }
         while i > 0 {
             let mut j = i;
-            while j > to && zoomed < self.options.main_amount && list[i].compare(&self.rule) {
+            while j > to && zoomed < main_amount && list[i].compare(&self.rule) {
                 focus(list, i, to);
                 j -= 1;
                 zoomed += 1;
