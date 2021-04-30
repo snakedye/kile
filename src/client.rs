@@ -2,7 +2,7 @@ use super::layout::Layout;
 use super::parser;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-    river_layout_v2::river_layout_v2::Event,
+    river_layout_v2::river_layout_v2::{Event, RiverLayoutV2},
 };
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
@@ -13,10 +13,12 @@ pub struct Context {
 }
 
 pub struct Options {
-    pub windows: Vec<Window>,
+    pub rule: Rule,
     pub main_amount: u32,
     pub main_index: u32,
     pub main_factor: f64,
+    pub view_padding: u32,
+    pub windows: Vec<Window>,
 }
 
 pub struct Output {
@@ -27,12 +29,10 @@ pub struct Output {
     pub dimension: Area,
     pub smart_padding: bool,
     pub outer_padding: u32,
-    pub view_padding: u32,
     pub tags: [Option<Tag>; 32],
 }
 
 pub struct Tag {
-    pub rule: Rule,
     pub outer: Layout,
     pub options: Options,
     pub inner: Vec<Layout>,
@@ -79,10 +79,12 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
-                windows: Vec::new(),
+                rule: Rule::None,
+                view_padding: 0,
                 main_factor: 0.55,
                 main_index: 0,
                 main_amount: 1,
+                windows: Vec::new(),
             }
         };
     }
@@ -100,7 +102,6 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
-                view_padding: 0,
                 outer_padding: 0,
                 resized: false,
                 smart_padding: false,
@@ -108,7 +109,6 @@ impl Output {
                 default: {
                     Tag {
                         options: Options::new(),
-                        rule: Rule::None,
                         outer: Layout::Full,
                         inner: vec![Layout::Full],
                     }
@@ -167,72 +167,32 @@ impl Output {
                         tag.options
                             .windows
                             .append(&mut self.default.options.windows);
-                        tag.update(Rectangle::Area(self.dimension))
+                        tag.update(Rectangle::Area(self.dimension), &layout, serial)
                     }
-                    None => self.default.update(Rectangle::Area(self.dimension)),
+                    None => self
+                        .default
+                        .update(Rectangle::Area(self.dimension), &layout, serial),
                 };
-                let view_amount = list.len();
-                for rect in &mut list {
-                    if !self.smart_padding || view_amount > 1 {
-                        rect.apply_padding(self.view_padding);
-                    }
-                    let rect = rect.area();
-                    layout.push_view_dimensions(
-                        serial,
-                        rect.x as i32,
-                        rect.y as i32,
-                        rect.w,
-                        rect.h,
-                    )
-                }
                 layout.commit(serial);
             }
-            Event::SetIntValue { name, mut value } => match name.as_ref() {
-                "main_amount" | "main_index" => {
+            Event::SetIntValue { name, value } => match name.as_ref() {
+                "main_amount" | "main_index" | "view_padding" => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value >= 0 {
                             match name.as_ref() {
                                 "main_amount" => tag.options.main_amount = value as u32,
                                 "main_index" => tag.options.main_index = value as u32,
+                                "view_padding" => tag.options.view_padding = value as u32,
                                 _ => {}
                             }
                         }
                     }
                 }
-                "view_padding" => self.view_padding = value as u32,
                 "outer_padding" => self.outer_padding = value as u32,
-                "xoffset" => {
-                    if value != 0 {
-                        if value < 0 {
-                            self.dimension.x = 0;
-                            value = value * (-1);
-                        } else {
-                            self.dimension.x = value as u32;
-                        }
-                        self.dimension.w -= value as u32;
-                        self.resized = true;
-                    } else {
-                        self.resized = false;
-                    }
-                }
-                "yoffset" => {
-                    if value != 0 {
-                        if value < 0 {
-                            self.dimension.y = 0;
-                            value = value * (-1);
-                        } else {
-                            self.dimension.y = value as u32;
-                        }
-                        self.dimension.h -= value as u32;
-                        self.resized = true;
-                    } else {
-                        self.resized = false;
-                    }
-                }
                 _ => {}
             },
-            Event::ModIntValue { name, delta } => match name.as_ref() {
-                "main_amount" | "main_index" => {
+            Event::ModIntValue { name, mut delta } => match name.as_ref() {
+                "main_amount" | "main_index" | "view_padding" => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         match name.as_ref() {
                             "main_amount" => {
@@ -243,13 +203,44 @@ impl Output {
                                 tag.options.main_index =
                                     ((tag.options.main_index as i32) + delta) as u32
                             }
+                            "view_padding" => {
+                                tag.options.view_padding =
+                                    ((tag.options.view_padding as i32) + delta) as u32
+                            }
                             _ => {}
                         }
                     }
                 }
-                "view_padding" => self.view_padding = ((self.view_padding as i32) + delta) as u32,
                 "outer_padding" => {
                     self.outer_padding = ((self.outer_padding as i32) + delta) as u32
+                }
+                "xoffset" => {
+                    if delta != 0 {
+                        if delta < 0 {
+                            self.dimension.x = 0;
+                            delta = delta * (-1);
+                        } else {
+                            self.dimension.x = delta as u32;
+                        }
+                        self.dimension.w -= delta as u32;
+                        self.resized = true;
+                    } else {
+                        self.resized = false;
+                    }
+                }
+                "yoffset" => {
+                    if delta != 0 {
+                        if delta < 0 {
+                            self.dimension.y = 0;
+                            delta = delta * (-1);
+                        } else {
+                            self.dimension.y = delta as u32;
+                        }
+                        self.dimension.h -= delta as u32;
+                        self.resized = true;
+                    } else {
+                        self.resized = false;
+                    }
                 }
                 _ => {}
             },
@@ -311,18 +302,25 @@ impl Area {
 }
 
 impl Tag {
-    pub fn update(&mut self, mut area: Rectangle) -> Vec<Rectangle> {
+    pub fn update(
+        &mut self,
+        mut area: Rectangle,
+        layout: &Main<RiverLayoutV2>,
+        serial: u32,
+    ) -> Vec<Rectangle> {
         let view_amount = self.options.windows.len() as u32;
         let slave_amount;
         let frames_available = self.inner.len() as u32;
         let frame_amount = {
-            let main = self.options.main_amount > 1 
+            let main = self.options.main_amount > 1
                 && frames_available > 1
                 && view_amount > self.options.main_amount;
             if main {
                 if view_amount - self.options.main_amount < frames_available {
                     1 + view_amount - self.options.main_amount
-                } else { frames_available }
+                } else {
+                    frames_available
+                }
             } else if self.options.main_amount >= view_amount {
                 1
             } else if view_amount > frames_available {
@@ -331,8 +329,7 @@ impl Tag {
                 view_amount
             }
         };
-        let main_amount = if self.options.main_index + self.options.main_amount
-            <= view_amount
+        let main_amount = if self.options.main_index + self.options.main_amount <= view_amount
             && frame_amount > 1
             && self.options.main_amount > 0
         {
@@ -344,7 +341,15 @@ impl Tag {
         } else {
             0
         };
-        let mut list = area.generate(&mut self.options, frame_amount, self.outer, true, true);
+        let mut list = area.generate(
+            serial,
+            layout,
+            &mut self.options,
+            frame_amount,
+            self.outer,
+            true,
+            true,
+        );
         let mut reste = if main_amount > 0 {
             zoom(&mut list, self.options.main_index as usize);
             slave_amount = (view_amount - main_amount) / (frame_amount - 1);
@@ -367,33 +372,19 @@ impl Tag {
                         slave_amount
                     }
                 };
-                rect.generate(&mut self.options, amount, self.inner[i], false, false)
+                rect.generate(
+                    serial,
+                    layout,
+                    &mut self.options,
+                    amount,
+                    self.inner[i],
+                    false,
+                    false,
+                )
             };
             windows.append(&mut list);
         }
-        self.focus_all(&mut windows, main_amount);
         windows
-    }
-    pub fn focus_all(&self, list: &mut Vec<Rectangle>, main_amount: u32) {
-        let mut i = list.len() - 1;
-        let mut zoomed = 0;
-        let mut to = 0;
-        while to < i && list[to].compare(&self.rule) {
-            to += 1;
-        }
-        while i > 0 {
-            let mut j = i;
-            while j > to && zoomed < main_amount && list[i].compare(&self.rule) {
-                focus(list, i, to);
-                j -= 1;
-                zoomed += 1;
-            }
-            if i != j {
-                i = j
-            } else {
-                i -= 1
-            }
-        }
     }
 }
 

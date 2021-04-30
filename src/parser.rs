@@ -16,16 +16,17 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                     Some(arg) => match arg {
                         "_tag" => {
                             if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                                tag.rule = Rule::Tag(uint);
+                                tag.options.rule = Rule::Tag(uint);
                             } else {
                             }
                         }
                         "_app_id" => {
-                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
+                            tag.options.rule =
+                                Rule::AppId(command.next().unwrap_or_default().to_string())
                         }
                         _ => {}
                     },
-                    None => tag.rule = Rule::None,
+                    None => tag.options.rule = Rule::None,
                 }
             }
         }
@@ -95,13 +96,14 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                             if let Some(inner_layout) = inner_layout.clone() {
                                 tag.inner = inner_layout;
                             }
-                            tag.rule = window_rule.clone();
+                            tag.options.rule = window_rule.clone();
                         }
                         None => {
+                            let mut options = Options::new();
+                            options.rule = window_rule.clone();
                             output_handle.tags[i] = Some({
                                 Tag {
-                                    options: Options::new(),
-                                    rule: window_rule.clone(),
+                                    options: options,
                                     outer: outer_layout.unwrap_or(Layout::Full),
                                     inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
                                 }
