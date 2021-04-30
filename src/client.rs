@@ -172,15 +172,29 @@ impl Output {
                         tag.options
                             .windows
                             .append(&mut self.default.options.windows);
-                        tag.update(serial, &layout, self.view_amount, Rectangle::Area(self.dimension))
+                        tag.update(
+                            serial,
+                            &layout,
+                            self.view_amount,
+                            Rectangle::Area(self.dimension),
+                        )
                     }
-                    None => self
-                        .default
-                        .update(serial, &layout, self.view_amount, Rectangle::Area(self.dimension))
+                    None => self.default.update(
+                        serial,
+                        &layout,
+                        self.view_amount,
+                        Rectangle::Area(self.dimension),
+                    ),
                 };
                 for windows in list {
                     let area = windows.area();
-                    layout.push_view_dimensions(serial, area.x as i32, area.y as i32, area.w, area.h)
+                    layout.push_view_dimensions(
+                        serial,
+                        area.x as i32,
+                        area.y as i32,
+                        area.w,
+                        area.h,
+                    )
                 }
                 layout.commit(serial);
             }
