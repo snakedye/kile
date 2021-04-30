@@ -39,7 +39,6 @@ pub struct Tag {
     pub inner: Vec<Layout>,
 }
 
-#[derive(Clone, Debug)]
 pub struct Window {
     pub tags: u32,
     pub app_id: String,
@@ -61,7 +60,6 @@ pub enum Rule {
     None,
 }
 
-#[derive(Debug)]
 pub enum Rectangle {
     Area(Area),
     Window(Window),
@@ -291,6 +289,9 @@ impl Output {
 }
 
 impl Window {
+    pub fn apply_padding(&mut self, padding: u32) {
+        self.area.as_mut().unwrap().apply_padding(padding);
+    }
     pub fn compare(&self, rule: &Rule) -> bool {
         match rule {
             Rule::AppId(string) => string.eq(&self.app_id),
