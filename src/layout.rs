@@ -11,6 +11,29 @@ pub enum Layout {
     Horizontal,
 }
 
+fn insert_window(
+    serial: u32,
+    layout: &Main<RiverLayoutV2>,
+    list: &mut Vec<Rectangle>,
+    mut area: Area,
+    options: &mut Options,
+    parent: bool,
+) {
+    if !parent {
+        let mut window = options.windows.remove(0);
+        area.apply_padding(options.view_padding);
+        window.area = if window.compare(&options.rule) {
+            layout.push_view_dimensions(serial, area.x as i32, area.y as i32, area.w, area.h);
+            Some(list.remove(0).area())
+        } else {
+            Some(area)
+        };
+        list.push(Rectangle::Window(window));
+    } else {
+        list.push(Rectangle::Area(area));
+    };
+}
+
 impl Rectangle {
     pub fn apply_padding(&mut self, padding: u32) {
         match self {
@@ -43,11 +66,11 @@ impl Rectangle {
         options: &mut Options,
         client_count: u32,
         layout: Layout,
+        list: &mut Vec<Rectangle>,
         parent: bool,
         factor: bool,
-    ) -> Vec<Rectangle> {
+    ) {
         let mut area = self.area();
-        let mut list = Vec::new();
         let view_amount = options.windows.len() as u32;
 
         let master = if factor
@@ -63,7 +86,7 @@ impl Rectangle {
         match layout {
             Layout::Tab => {
                 for _i in 0..client_count {
-                    insert_window(serial, zlayout, &mut list, area, options, parent);
+                    insert_window(serial, zlayout, list, area, options, parent);
                     area.h -= 50;
                     area.y += 50;
                 }
@@ -92,7 +115,7 @@ impl Rectangle {
                         area.h += reste;
                     }
 
-                    insert_window(serial, zlayout, &mut list, area, options, parent);
+                    insert_window(serial, zlayout, list, area, options, parent);
                     area.y += area.h;
                 }
             }
@@ -120,7 +143,7 @@ impl Rectangle {
                         area.w += reste;
                     }
 
-                    insert_window(serial, zlayout, &mut list, area, options, parent);
+                    insert_window(serial, zlayout, list, area, options, parent);
                     area.x += area.w;
                 }
             }
@@ -136,7 +159,7 @@ impl Rectangle {
                                 area.w /= 2;
                                 area.w += reste;
                             }
-                            insert_window(serial, zlayout, &mut list, area, options, parent);
+                            insert_window(serial, zlayout, list, area, options, parent);
                             area.x += area.w;
                             if master && i == options.main_index {
                                 area.w = (((area.w as f64) * (1.0 - options.main_factor))
@@ -151,7 +174,7 @@ impl Rectangle {
                                 area.h /= 2;
                                 area.h += reste;
                             }
-                            insert_window(serial, zlayout, &mut list, area, options, parent);
+                            insert_window(serial, zlayout, list, area, options, parent);
                             area.y += area.h;
                             if master && i == options.main_index {
                                 area.h = (((area.h as f64) * (1.0 - options.main_factor))
@@ -160,33 +183,15 @@ impl Rectangle {
                             }
                         }
                     } else {
-                        insert_window(serial, zlayout, &mut list, area, options, parent);
+                        insert_window(serial, zlayout, list, area, options, parent);
                     }
                 }
             }
             Layout::Full => {
                 for _i in 0..client_count {
-                    insert_window(serial, zlayout, &mut list, area, options, parent);
+                    insert_window(serial, zlayout, list, area, options, parent);
                 }
             }
         }
-        list
     }
-}
-
-fn insert_window(
-    serial: u32,
-    layout: &Main<RiverLayoutV2>,
-    list: &mut Vec<Rectangle>,
-    mut area: Area,
-    options: &mut Options,
-    parent: bool,
-) {
-    if !parent {
-        let mut window = options.windows.remove(0);
-        area.apply_padding(options.view_padding);
-        layout.push_view_dimensions(serial, area.x as i32, area.y as i32, area.w, area.h)
-    } else {
-        list.push(Rectangle::Area(area));
-    };
 }

@@ -28,6 +28,7 @@ pub struct Output {
     pub output: WlOutput,
     pub dimension: Area,
     pub smart_padding: bool,
+    pub view_amount: u32,
     pub outer_padding: u32,
     pub tags: [Option<Tag>; 32],
 }
@@ -38,13 +39,14 @@ pub struct Tag {
     pub inner: Vec<Layout>,
 }
 
+#[derive(Clone, Debug)]
 pub struct Window {
     pub tags: u32,
     pub app_id: String,
     pub area: Option<Area>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Area {
     pub x: u32,
     pub y: u32,
@@ -59,6 +61,7 @@ pub enum Rule {
     None,
 }
 
+#[derive(Debug)]
 pub enum Rectangle {
     Area(Area),
     Window(Window),
@@ -103,6 +106,7 @@ impl Output {
                 },
                 focused: 0,
                 outer_padding: 0,
+                view_amount: 0,
                 resized: false,
                 smart_padding: false,
                 tags: Default::default(),
@@ -132,6 +136,7 @@ impl Output {
                 serial: _,
                 mut tags,
             } => {
+                self.view_amount = view_count;
                 if !self.resized {
                     self.dimension = Area::from(0, 0, usable_width, usable_height);
                 }
@@ -162,17 +167,21 @@ impl Output {
                 println!("Namespace already in use.");
             }
             Event::AdvertiseDone { serial } => {
-                let mut list = match self.tags[self.focused].as_mut() {
+                let list = match self.tags[self.focused].as_mut() {
                     Some(tag) => {
                         tag.options
                             .windows
                             .append(&mut self.default.options.windows);
-                        tag.update(Rectangle::Area(self.dimension), &layout, serial)
+                        tag.update(serial, &layout, self.view_amount, Rectangle::Area(self.dimension))
                     }
                     None => self
                         .default
-                        .update(Rectangle::Area(self.dimension), &layout, serial),
+                        .update(serial, &layout, self.view_amount, Rectangle::Area(self.dimension))
                 };
+                for windows in list {
+                    let area = windows.area();
+                    layout.push_view_dimensions(serial, area.x as i32, area.y as i32, area.w, area.h)
+                }
                 layout.commit(serial);
             }
             Event::SetIntValue { name, value } => match name.as_ref() {
@@ -268,9 +277,6 @@ impl Output {
 }
 
 impl Window {
-    pub fn apply_padding(&mut self, padding: u32) {
-        self.area.as_mut().unwrap().apply_padding(padding);
-    }
     pub fn compare(&self, rule: &Rule) -> bool {
         match rule {
             Rule::AppId(string) => string.eq(&self.app_id),
@@ -304,11 +310,12 @@ impl Area {
 impl Tag {
     pub fn update(
         &mut self,
-        mut area: Rectangle,
-        layout: &Main<RiverLayoutV2>,
         serial: u32,
+        layout: &Main<RiverLayoutV2>,
+        view_amount: u32,
+        mut area: Rectangle,
     ) -> Vec<Rectangle> {
-        let view_amount = self.options.windows.len() as u32;
+        let mut list = Vec::new();
         let slave_amount;
         let frames_available = self.inner.len() as u32;
         let frame_amount = {
@@ -341,12 +348,13 @@ impl Tag {
         } else {
             0
         };
-        let mut list = area.generate(
+        area.generate(
             serial,
             layout,
             &mut self.options,
             frame_amount,
             self.outer,
+            &mut list,
             true,
             true,
         );
@@ -361,28 +369,26 @@ impl Tag {
 
         let mut windows = Vec::new();
         for (i, rect) in list.iter_mut().enumerate() {
-            let mut list = {
-                let amount = if i == 0 && main_amount != 0 {
-                    main_amount
+            let amount = if i == 0 && main_amount != 0 {
+                main_amount
+            } else {
+                if reste > 0 {
+                    reste -= 1;
+                    slave_amount + 1
                 } else {
-                    if reste > 0 {
-                        reste -= 1;
-                        slave_amount + 1
-                    } else {
-                        slave_amount
-                    }
-                };
-                rect.generate(
-                    serial,
-                    layout,
-                    &mut self.options,
-                    amount,
-                    self.inner[i],
-                    false,
-                    false,
-                )
+                    slave_amount
+                }
             };
-            windows.append(&mut list);
+            rect.generate(
+                serial,
+                layout,
+                &mut self.options,
+                amount,
+                self.inner[i],
+                &mut windows,
+                false,
+                false,
+            )
         }
         windows
     }
@@ -396,15 +402,5 @@ fn zoom(list: &mut Vec<Rectangle>, index: usize) {
             list[i + 1].set(previous);
         }
         list[0].set(area);
-    }
-}
-fn focus(list: &mut Vec<Rectangle>, index: usize, to: usize) {
-    if (index as usize) < list.len() {
-        let main = list[to].area();
-        for i in to..index {
-            let forward = list[i + 1].area();
-            list[i].set(forward);
-        }
-        list[index].set(main);
     }
 }
