@@ -143,7 +143,7 @@ fn layout(name: &str) -> Layout {
     match name {
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
-        "t" | "tab" => Layout::Tab,
+        "t" | "tab" | "tabbed" => Layout::Tab,
         "d" | "dwd" => Layout::Dwindle ( 0 ),
         "D" | "Dwd" => Layout::Dwindle ( 1 ),
         "f" | "ful" | "full" => Layout::Full,
@@ -173,8 +173,6 @@ fn layout(name: &str) -> Layout {
                             _ => {}
                         }
                     }
-                    println!("outer: {}", outer);
-                    println!("inner: {}", inner);
                     Layout::Recursive {
                         outer: {
                             Box::new(Some(layout(outer)))
@@ -187,12 +185,12 @@ fn layout(name: &str) -> Layout {
                                 match char {
                                     "{" => {
                                         let nested = brace(&inner[i..]);
-                                        if nested.1 < 2 {
+                                        if nested.1 == 0 {
+                                            break
+                                        } else if nested.1 < 2 {
                                             i+=1;
                                             continue;
                                         } else {
-                                            println!("nested: {}", &inner[i..]);
-                                            // break;
                                             vec.push(layout(&inner[i..]));
                                             i += nested.1;
                                         }

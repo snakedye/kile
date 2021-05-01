@@ -322,7 +322,6 @@ impl Tag {
         layout: &Main<RiverLayoutV2>,
         mut area: Rectangle,
     ) -> Vec<Rectangle> {
-        println!("{:?}", &self.options.rule);
         let mut list = Vec::new();
         let view_amount = self.options.windows.len() as u32;
         let parent = match &self.layout {
@@ -339,7 +338,6 @@ impl Tag {
             parent,
             true,
         );
-        println!("{}", list.len());
         list
     }
 }

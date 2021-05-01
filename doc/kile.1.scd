@@ -64,7 +64,7 @@ you need to modify or set theses layout values.
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	format: [focused | all | _int_]:[outer-layout]:[inner-layout]:[app-id]
+	format: [focused | all | _int_]|[outer-layout]|[inner-layout]|[app-id | tags]
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
@@ -88,23 +88,26 @@ no matter how funky your combinations may be.
 
 The base layouts are the following.
 
-	- *v* : vertical
+	- "v" | "ver" | "vertical"
 
-	- *h* : horizontal
+	- "h" | "hor" | "horizontal"
 
-	- *t* : tab
+	- "t" | "tab" | "tabbed"
 
-	- *f* : full
+	- "f" | "ful" | "full"
 
-	- *d* : dwindle (vertical)
+	- "d" | "dwd"
 
-	- *D* : dwindle (horizontal)
+	- "D" | "Dwd"
 
-*outer-layout*
-	A character from the list of layouts above.
+### RECURSIVE
 
-*inner-layout*
-	A string of layouts like "h" or "hDv".
+The syntax for initiate a *recursive* layout is "{}".
+The content of layout is contained within the bracket.
+*:* is the delimiter between the outer and inner layout. Both are property specific 
+to the *recursive* layout. Only single characters are acceptable as layout denominators.
+
+*example: "{v:hh}*
 
 
 *riverctl*(1), *rivertile*(7)

@@ -200,6 +200,7 @@ impl Rectangle {
                 let frame_amount = {
                     let main = options.main_amount > 1
                         && frames_available > 1
+                        && options.main_index < frames_available
                         && client_count > options.main_amount;
                     if main {
                         if client_count - options.main_amount < frames_available {
@@ -216,9 +217,9 @@ impl Rectangle {
                     }
                 };
                 let main_amount = if parent
-                    && options.main_index + options.main_amount <= client_count
                     && frame_amount > 1
                     && options.main_amount > 0
+                    && options.main_index < frames_available
                 {
                     if options.main_index + options.main_amount > client_count {
                         client_count - options.main_index
@@ -273,7 +274,7 @@ impl Rectangle {
                 }
             }
             Layout::Full => {
-                for i in 0..client_count {
+                for _i in 0..client_count {
                     insert_window(serial, zlayout, list, area, options, parent);
                 }
             }
