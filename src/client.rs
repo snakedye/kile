@@ -28,15 +28,13 @@ pub struct Output {
     pub output: WlOutput,
     pub dimension: Area,
     pub smart_padding: bool,
-    pub view_amount: u32,
     pub outer_padding: u32,
     pub tags: [Option<Tag>; 32],
 }
 
 pub struct Tag {
-    pub outer: Layout,
     pub options: Options,
-    pub inner: Vec<Layout>,
+    pub layout: Layout,
 }
 
 pub struct Window {
@@ -104,15 +102,13 @@ impl Output {
                 },
                 focused: 0,
                 outer_padding: 0,
-                view_amount: 0,
                 resized: false,
                 smart_padding: false,
                 tags: Default::default(),
                 default: {
                     Tag {
                         options: Options::new(),
-                        outer: Layout::Full,
-                        inner: vec![Layout::Full],
+                        layout: Layout::Full,
                     }
                 },
             }
@@ -134,7 +130,6 @@ impl Output {
                 serial: _,
                 mut tags,
             } => {
-                self.view_amount = view_count;
                 if !self.resized {
                     self.dimension = Area::from(0, 0, usable_width, usable_height);
                 }
@@ -173,14 +168,12 @@ impl Output {
                         tag.update(
                             serial,
                             &layout,
-                            self.view_amount,
                             Rectangle::Area(self.dimension),
                         )
                     }
                     None => self.default.update(
                         serial,
                         &layout,
-                        self.view_amount,
                         Rectangle::Area(self.dimension),
                     ),
                 };
@@ -327,95 +320,26 @@ impl Tag {
         &mut self,
         serial: u32,
         layout: &Main<RiverLayoutV2>,
-        view_amount: u32,
         mut area: Rectangle,
     ) -> Vec<Rectangle> {
+        println!("{:?}", &self.options.rule);
         let mut list = Vec::new();
-        let slave_amount;
-        let frames_available = self.inner.len() as u32;
-        let frame_amount = {
-            let main = self.options.main_amount > 1
-                && frames_available > 1
-                && view_amount > self.options.main_amount;
-            if main {
-                if view_amount - self.options.main_amount < frames_available {
-                    1 + view_amount - self.options.main_amount
-                } else {
-                    frames_available
-                }
-            } else if self.options.main_amount >= view_amount {
-                1
-            } else if view_amount > frames_available {
-                frames_available
-            } else {
-                view_amount
-            }
-        };
-        let main_amount = if self.options.main_index + self.options.main_amount <= view_amount
-            && frame_amount > 1
-            && self.options.main_amount > 0
-        {
-            if self.options.main_index + self.options.main_amount > view_amount {
-                view_amount - self.options.main_index
-            } else {
-                self.options.main_amount
-            }
-        } else {
-            0
+        let view_amount = self.options.windows.len() as u32;
+        let parent = match &self.layout {
+            Layout::Recursive{ outer:_, inner:_ } => true,
+            _ => false
         };
         area.generate(
             serial,
             layout,
             &mut self.options,
-            frame_amount,
-            self.outer,
+            view_amount,
+            &self.layout,
             &mut list,
-            true,
+            parent,
             true,
         );
-        let mut reste = if main_amount > 0 {
-            zoom(&mut list, self.options.main_index as usize);
-            slave_amount = (view_amount - main_amount) / (frame_amount - 1);
-            (view_amount - main_amount) % (frame_amount - 1)
-        } else {
-            slave_amount = view_amount / frame_amount;
-            view_amount % frame_amount
-        };
-
-        let mut windows = Vec::new();
-        for (i, rect) in list.iter_mut().enumerate() {
-            let amount = if i == 0 && main_amount != 0 {
-                main_amount
-            } else {
-                if reste > 0 {
-                    reste -= 1;
-                    slave_amount + 1
-                } else {
-                    slave_amount
-                }
-            };
-            rect.generate(
-                serial,
-                layout,
-                &mut self.options,
-                amount,
-                self.inner[i],
-                &mut windows,
-                false,
-                false,
-            )
-        }
-        windows
-    }
-}
-
-fn zoom(list: &mut Vec<Rectangle>, index: usize) {
-    if (index as usize) < list.len() {
-        let area = list[index].area();
-        for i in (0..index).rev() {
-            let previous = list[i].area();
-            list[i + 1].set(previous);
-        }
-        list[0].set(area);
+        println!("{}", list.len());
+        list
     }
 }

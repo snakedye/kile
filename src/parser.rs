@@ -49,13 +49,14 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
         _ => {}
     }
 }
+
 fn parse_tag(output_handle: &mut Output, value: String) {
     let mut value = value.split_whitespace();
     loop {
         match value.next() {
-            Some(rule) => {
-                let mut rule = rule.split(':');
-                let tags = match rule.next() {
+            Some(fields) => {
+                let mut fields = fields.split('|');
+                let tags = match fields.next() {
                     Some(tag) => match tag {
                         "focused" => output_handle.focused..output_handle.focused + 1,
                         "all" => 0..32,
@@ -74,9 +75,9 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                         break;
                     }
                 };
-                let outer_layout = outer_layout(rule.next().unwrap_or_default().to_string());
-                let inner_layout = inner_layout(rule.next().unwrap_or_default().to_string());
-                let window_rule = match rule.next() {
+                let layout = layout(fields.next().unwrap_or_default());
+                println!("{:?}", layout);
+                let window_rule = match fields.next() {
                     Some(app_id) => {
                         if let Ok(tag) = app_id.parse::<u32>() {
                             Rule::Tag(tag)
@@ -90,12 +91,7 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                     let tag = output_handle.tags[i].as_mut();
                     match tag {
                         Some(tag) => {
-                            if let Some(outer_layout) = outer_layout {
-                                tag.outer = outer_layout;
-                            }
-                            if let Some(inner_layout) = inner_layout.clone() {
-                                tag.inner = inner_layout;
-                            }
+                            tag.layout = layout.clone();
                             tag.options.rule = window_rule.clone();
                         }
                         None => {
@@ -104,8 +100,7 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                             output_handle.tags[i] = Some({
                                 Tag {
                                     options: options,
-                                    outer: outer_layout.unwrap_or(Layout::Full),
-                                    inner: inner_layout.clone().unwrap_or(vec![Layout::Full]),
+                                    layout: layout.clone(),
                                 }
                             })
                         }
@@ -117,36 +112,104 @@ fn parse_tag(output_handle: &mut Output, value: String) {
     }
 }
 
-pub fn outer_layout(layout_output: String) -> Option<Layout> {
-    match layout_output.chars().next() {
-        Some(c) => Some(layout(c)),
-        None => None,
+fn brace(str: &str) -> (&str, usize) {
+    let mut start = 0;
+    let mut end = 0;
+    let mut brace = 0;
+    let mut captured = "";
+    for i in 0..str.len() {
+        match &str[i..i+1] {
+            "{" => {
+                brace+=1;
+                if brace == 0 {
+                    start = i+1;
+                }
+            }
+            "}" => {
+                brace-=1;
+                if brace == 0 {
+                    end = i;
+                    captured = &str[start+1..end];
+                    break;
+                }
+            }
+            _ => {}
+        }
     }
+    (captured, end)
 }
-pub fn inner_layout(string: String) -> Option<Vec<Layout>> {
-    let mut vec = Vec::new();
 
-    for c in string.chars() {
-        vec.push(layout(c));
-    }
-
-    if vec.len() > 0 {
-        Some(vec)
-    } else {
-        None
-    }
-}
-fn layout(c: char) -> Layout {
-    match c {
-        'v' => Layout::Vertical,
-        'h' => Layout::Horizontal,
-        't' => Layout::Tab,
-        'd' => Layout::Recursive { modi: 0 },
-        'D' => Layout::Recursive { modi: 1 },
-        'f' => Layout::Full,
+fn layout(name: &str) -> Layout {
+    match name {
+        "v" | "ver" | "vertical" => Layout::Vertical,
+        "h" | "hor" | "horizontal" => Layout::Horizontal,
+        "t" | "tab" => Layout::Tab,
+        "d" | "dwd" => Layout::Dwindle ( 0 ),
+        "D" | "Dwd" => Layout::Dwindle ( 1 ),
+        "f" | "ful" | "full" => Layout::Full,
         _ => {
-            println!("{}: Invalid character", c);
-            Layout::Full
+            let captured = brace(name);
+            let closure = captured.0;
+            println!("closure: {}", closure);
+            match closure {
+                "" => Layout::Full,
+                _ => {
+                    let mut outer = "";
+                    let mut inner = "";
+                    for i in 0..closure.len() {
+                        let c = &closure[i..i+1];
+                        match c {
+                            "{" => {
+                                let nested = brace(closure);
+                                outer = &closure[i..nested.1+1];
+                                inner = &closure[i+nested.1+2..];
+                                break;
+                            }
+                            ":" => {
+                                outer = &closure[0..i];
+                                inner = &closure[i+1..];
+                                break;
+                            }
+                            _ => {}
+                        }
+                    }
+                    println!("outer: {}", outer);
+                    println!("inner: {}", inner);
+                    Layout::Recursive {
+                        outer: {
+                            Box::new(Some(layout(outer)))
+                        },
+                        inner: {
+                            let mut vec = Vec::new();
+                            let mut i = 0;
+                            while i < inner.len() {
+                                let char = &inner[i..i+1];
+                                match char {
+                                    "{" => {
+                                        let nested = brace(&inner[i..]);
+                                        if nested.1 < 2 {
+                                            i+=1;
+                                            continue;
+                                        } else {
+                                            println!("nested: {}", &inner[i..]);
+                                            // break;
+                                            vec.push(layout(&inner[i..]));
+                                            i += nested.1;
+                                        }
+                                    }
+                                    " " | "}" => i+=1,
+                                    _ => {
+                                        println!("char: {}", char);
+                                        vec.push(layout(char));
+                                        i+=1
+                                    }
+                                }
+                            }
+                            vec
+                        }
+                    }
+                }
+            }
         }
     }
 }
