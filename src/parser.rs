@@ -76,7 +76,6 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                     }
                 };
                 let layout = layout(fields.next().unwrap_or_default());
-                println!("{:?}", layout);
                 let window_rule = match fields.next() {
                     Some(app_id) => {
                         if let Ok(tag) = app_id.parse::<u32>() {
@@ -149,7 +148,6 @@ fn layout(name: &str) -> Layout {
         _ => {
             let captured = brace(name);
             let closure = captured.0;
-            println!("closure: {}", closure);
             match closure {
                 "" => Layout::Full,
                 _ => {
@@ -196,7 +194,6 @@ fn layout(name: &str) -> Layout {
                                     }
                                     " " | "}" => i+=1,
                                     _ => {
-                                        println!("layout: {}", char);
                                         vec.push(layout(char));
                                         i+=1
                                     }
