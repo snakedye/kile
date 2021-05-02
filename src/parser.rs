@@ -10,26 +10,6 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
             }
         }
         "set_tag" => parse_tag(output_handle, value),
-        "window_rule" => {
-            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
-                match command.next() {
-                    Some(arg) => match arg {
-                        "_tag" => {
-                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                                tag.options.rule = Rule::Tag(uint);
-                            } else {
-                            }
-                        }
-                        "_app_id" => {
-                            tag.options.rule =
-                                Rule::AppId(command.next().unwrap_or_default().to_string())
-                        }
-                        _ => {}
-                    },
-                    None => tag.options.rule = Rule::None,
-                }
-            }
-        }
         "clear_tag" => {
             for arg in command {
                 match arg {
@@ -92,11 +72,9 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                     match tag {
                         Some(tag) => {
                             tag.layout = layout.clone();
-                            tag.options.rule = window_rule.clone();
                         }
                         None => {
                             let mut options = Options::new();
-                            options.rule = window_rule.clone();
                             output_handle.tags[i] = Some({
                                 Tag {
                                     options: options,
@@ -150,7 +128,6 @@ fn layout(name: &str) -> Layout {
         _ => {
             let captured = brace(name);
             let closure = captured.0;
-            println!("closure: {}", closure);
             match closure {
                 "" => Layout::Full,
                 _ => {
@@ -175,7 +152,7 @@ fn layout(name: &str) -> Layout {
                     }
                     Layout::Recursive {
                         outer: {
-                            Box::new(Some(layout(outer)))
+                            Box::new(layout(outer))
                         },
                         inner: {
                             let mut vec = Vec::new();
@@ -197,7 +174,6 @@ fn layout(name: &str) -> Layout {
                                     }
                                     " " | "}" => i+=1,
                                     _ => {
-                                        println!("char: {}", char);
                                         vec.push(layout(char));
                                         i+=1
                                     }

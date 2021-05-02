@@ -12,23 +12,23 @@ pub struct Context {
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct Options {
-    pub rule: Rule,
     pub main_amount: u32,
     pub main_index: u32,
     pub main_factor: f64,
     pub view_padding: u32,
-    pub windows: Vec<Window>,
 }
 
 pub struct Output {
+    pub output: WlOutput,
     pub default: Tag,
     pub resized: bool,
     pub focused: usize,
-    pub output: WlOutput,
+    pub view_amount: u32,
     pub dimension: Area,
-    pub smart_padding: bool,
     pub outer_padding: u32,
+    pub smart_padding: bool,
     pub tags: [Option<Tag>; 32],
 }
 
@@ -55,6 +55,7 @@ pub struct Area {
 pub enum Rule {
     AppId(String),
     Tag(u32),
+    All,
     None,
 }
 
@@ -78,12 +79,10 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
-                rule: Rule::None,
                 view_padding: 0,
                 main_factor: 0.55,
                 main_index: 0,
                 main_amount: 1,
-                windows: Vec::new(),
             }
         };
     }
@@ -101,6 +100,7 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
+                view_amount: 0,
                 outer_padding: 0,
                 resized: false,
                 smart_padding: false,
@@ -130,6 +130,7 @@ impl Output {
                 serial: _,
                 mut tags,
             } => {
+                self.view_amount = view_count;
                 if !self.resized {
                     self.dimension = Area::from(0, 0, usable_width, usable_height);
                 }
@@ -148,45 +149,28 @@ impl Output {
             Event::AdvertiseView {
                 tags,
                 app_id,
-                serial: _,
-            } => {
-                self.default.options.windows.push(Window {
-                    app_id: app_id.unwrap(),
-                    area: None,
-                    tags: tags,
-                });
-            }
+                serial,
+            } => {}
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
             }
             Event::AdvertiseDone { serial } => {
-                let list = match self.tags[self.focused].as_mut() {
+                match self.tags[self.focused].as_mut() {
                     Some(tag) => {
-                        tag.options
-                            .windows
-                            .append(&mut self.default.options.windows);
                         tag.update(
                             serial,
                             &layout,
+                            self.view_amount,
                             Rectangle::Area(self.dimension),
                         )
                     }
                     None => self.default.update(
                         serial,
                         &layout,
+                        self.view_amount,
                         Rectangle::Area(self.dimension),
                     ),
                 };
-                for windows in list {
-                    let area = windows.area();
-                    layout.push_view_dimensions(
-                        serial,
-                        area.x as i32,
-                        area.y as i32,
-                        area.w,
-                        area.h,
-                    )
-                }
                 layout.commit(serial);
             }
             Event::SetIntValue { name, value } => match name.as_ref() {
@@ -289,6 +273,7 @@ impl Window {
         match rule {
             Rule::AppId(string) => string.eq(&self.app_id),
             Rule::Tag(uint) => self.tags == *uint,
+            Rule::All => true,
             _ => false,
         }
     }
@@ -320,24 +305,26 @@ impl Tag {
         &mut self,
         serial: u32,
         layout: &Main<RiverLayoutV2>,
+        view_amount: u32,
         mut area: Rectangle,
-    ) -> Vec<Rectangle> {
+    ) {
+        let parent;
         let mut list = Vec::new();
-        let view_amount = self.options.windows.len() as u32;
-        let parent = match &self.layout {
-            Layout::Recursive{ outer:_, inner:_ } => true,
-            _ => false
+        match &self.layout {
+            Layout::Recursive{ outer:_, inner:_ } => {
+                parent = true;
+            }
+            _ => parent = false
         };
         area.generate(
             serial,
             layout,
-            &mut self.options,
+            self.options,
             view_amount,
             &self.layout,
             &mut list,
             parent,
             true,
         );
-        list
     }
 }
