@@ -48,19 +48,15 @@ Possible values are "true" or "false".
 
 #### set_tag _(string)_
 
-Sets the tag configuration. All the fields except the first are escapable.
+Sets the tag configuration
 ```
-[focused | all | (int)]:[outer-layout]:[inner-layout]:[app-id | (int)]
+[focused | all | (int)]|[layout]
 ```
 
 #### clear_tag _(string)_
 
 Clear the configuration of the given tag(s)
 Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
-
-#### window_rule _(string)_
-- *_app_id* (app_id)
-- *_tag* (tagmask)
 
 ## Building
 

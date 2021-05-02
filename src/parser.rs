@@ -10,6 +10,26 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
             }
         }
         "set_tag" => parse_tag(output_handle, value),
+        "window_rule" => {
+            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
+                match command.next() {
+                    Some(arg) => match arg {
+                        "_tag" => {
+                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                                tag.rule = Rule::Tag(uint);
+                            } else {
+                            }
+                        }
+                        "_app_id" => {
+                            tag.rule =
+                                Rule::AppId(command.next().unwrap_or_default().to_string())
+                        }
+                        _ => {}
+                    },
+                    None => tag.rule = Rule::None,
+                }
+            }
+        }
         "clear_tag" => {
             for arg in command {
                 match arg {
@@ -72,12 +92,13 @@ fn parse_tag(output_handle: &mut Output, value: String) {
                     match tag {
                         Some(tag) => {
                             tag.layout = layout.clone();
+                            tag.rule = window_rule.clone();
                         }
                         None => {
-                            let mut options = Options::new();
                             output_handle.tags[i] = Some({
                                 Tag {
-                                    options: options,
+                                    rule: window_rule.clone(),
+                                    options: Options::new(),
                                     layout: layout.clone(),
                                 }
                             })
@@ -128,6 +149,7 @@ fn layout(name: &str) -> Layout {
         _ => {
             let captured = brace(name);
             let closure = captured.0;
+            println!("closure: {}", closure);
             match closure {
                 "" => Layout::Full,
                 _ => {
@@ -174,6 +196,7 @@ fn layout(name: &str) -> Layout {
                                     }
                                     " " | "}" => i+=1,
                                     _ => {
+                                        println!("layout: {}", char);
                                         vec.push(layout(char));
                                         i+=1
                                     }

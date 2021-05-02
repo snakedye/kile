@@ -1,6 +1,4 @@
 use super::client::*;
-use crate::wayland::river_layout_v2::river_layout_v2::RiverLayoutV2;
-use wayland_client::Main;
 
 #[derive(Clone, Debug)]
 pub enum Layout {
@@ -12,20 +10,7 @@ pub enum Layout {
     Horizontal,
 }
 
-fn zoom(list: &mut Vec<Rectangle>, index: usize) {
-    if (index as usize) < list.len() {
-        let area = list[index].area();
-        for i in (0..index).rev() {
-            let previous = list[i].area();
-            list[i + 1].set(previous);
-        }
-        list[0].set(area);
-    }
-}
-
 fn insert_window(
-    serial: u32,
-    layout: &Main<RiverLayoutV2>,
     list: &mut Vec<Rectangle>,
     mut area: Area,
     options: Options,
@@ -33,35 +18,19 @@ fn insert_window(
 ) {
     if !parent {
         area.apply_padding(options.view_padding);
-        layout.push_view_dimensions(serial, area.x as i32, area.y as i32, area.w, area.h);
-    } else {
-        list.push(Rectangle::Area(area));
-    };
+    }
+    list.push(Rectangle::Area(area));
 }
 
 impl Rectangle {
-    pub fn apply_padding(&mut self, padding: u32) {
-        match self {
-            Rectangle::Window(window) => window.apply_padding(padding),
-            Rectangle::Area(area) => area.apply_padding(padding),
-        }
-    }
     pub fn area(&self) -> Area {
         match self {
             Rectangle::Window(window) => window.area.unwrap(),
             Rectangle::Area(area) => *area,
         }
     }
-    pub fn set(&mut self, area: Area) {
-        match self {
-            Rectangle::Window(window) => window.area = Some(area),
-            Rectangle::Area(area_handle) => (*area_handle) = area,
-        }
-    }
     pub fn generate(
         &mut self,
-        serial: u32,
-        zlayout: &Main<RiverLayoutV2>,
         mut options: Options,
         client_count: u32,
         layout: &Layout,
@@ -83,7 +52,7 @@ impl Rectangle {
         match layout {
             Layout::Tab => {
                 for _i in 0..client_count {
-                    insert_window(serial, zlayout, list, area, options, parent);
+                    insert_window(list, area, options, parent);
                     area.h -= 50;
                     area.y += 50;
                 }
@@ -111,7 +80,7 @@ impl Rectangle {
                         area.h += reste;
                     }
 
-                    insert_window(serial, zlayout, list, area, options, parent);
+                    insert_window(list, area, options, parent);
                     area.y += area.h;
                 }
             }
@@ -138,7 +107,7 @@ impl Rectangle {
                         area.w += reste;
                     }
 
-                    insert_window(serial, zlayout, list, area, options, parent);
+                    insert_window(list, area, options, parent);
                     area.x += area.w;
                 }
             }
@@ -154,7 +123,7 @@ impl Rectangle {
                                 area.w /= 2;
                                 area.w += reste;
                             }
-                            insert_window(serial, zlayout, list, area, options, parent);
+                            insert_window(list, area, options, parent);
                             area.x += area.w;
                             if master && i == options.main_index {
                                 area.w = (((area.w as f64) * (1.0 - options.main_factor))
@@ -169,7 +138,7 @@ impl Rectangle {
                                 area.h /= 2;
                                 area.h += reste;
                             }
-                            insert_window(serial, zlayout, list, area, options, parent);
+                            insert_window(list, area, options, parent);
                             area.y += area.h;
                             if master && i == options.main_index {
                                 area.h = (((area.h as f64) * (1.0 - options.main_factor))
@@ -178,12 +147,13 @@ impl Rectangle {
                             }
                         }
                     } else {
-                        insert_window(serial, zlayout, list, area, options, parent);
+                        insert_window(list, area, options, parent);
                     }
                 }
             }
             Layout::Recursive{ inner, outer } => {
                 let slave_amount;
+                let mut main_amount = 0;
                 let mut frame = Vec::new();
                 let frames_available = inner.len() as u32;
                 let frame_amount = {
@@ -191,14 +161,14 @@ impl Rectangle {
                         && frames_available > 1
                         && options.main_index < frames_available
                         && client_count > options.main_amount;
-                    if main
+                    if options.main_amount >= client_count {
+                        1
+                    } else if main
                         && client_count - options.main_amount < frames_available {
                         1 + client_count - options.main_amount
                     } else if client_count > frames_available
                         || main {
                         frames_available
-                    } else if options.main_amount >= client_count {
-                        1
                     } else {
                         client_count
                     }
@@ -209,15 +179,13 @@ impl Rectangle {
                     && options.main_index < frames_available
                 {
                     if options.main_index + options.main_amount > client_count {
-                        options.main_amount = client_count - options.main_index
+                       main_amount = client_count - options.main_index;
+                    } else {
+                        main_amount = options.main_amount;
                     }
-                } else {
-                    options.main_amount = 0
-                };
+                }
                 use std::ops::Deref;
                 Rectangle::Area(area).generate(
-                    serial,
-                    zlayout,
                     options,
                     frame_amount,
                     outer.deref(),
@@ -226,20 +194,19 @@ impl Rectangle {
                     factor,
                 );
 
-                let mut reste = if options.main_amount > 0 {
-                    slave_amount = (client_count - options.main_amount) / (frame_amount - 1);
-                    (client_count - options.main_amount) % (frame_amount - 1)
+                let mut reste = if main_amount > 0 {
+                    slave_amount = (client_count - main_amount) / (frame_amount - 1);
+                    (client_count - main_amount) % (frame_amount - 1)
                 } else {
                     slave_amount = client_count / frame_amount;
                     client_count % frame_amount
                 };
 
-                if options.main_amount != 0 {
+                if main_amount != 0 {
+                    options.main_amount = 0;
                     frame[options.main_index as usize].generate(
-                        serial,
-                        zlayout,
                         options,
-                        options.main_amount,
+                        main_amount,
                         &inner[options.main_index as usize],
                         list,
                         false,
@@ -248,11 +215,9 @@ impl Rectangle {
                 }
 
                 for (i, rect) in frame.iter_mut().enumerate() {
-                    if options.main_amount != 0
+                    if main_amount != 0
                         && i == options.main_index as usize { continue }
                     rect.generate(
-                        serial,
-                        zlayout,
                         options,
                         if reste > 0 {
                             reste -= 1;
@@ -269,7 +234,7 @@ impl Rectangle {
             }
             Layout::Full => {
                 for _i in 0..client_count {
-                    insert_window(serial, zlayout, list, area, options, parent);
+                    insert_window(list, area, options, parent);
                 }
             }
         }

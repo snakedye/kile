@@ -2,7 +2,7 @@ use super::layout::Layout;
 use super::parser;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-    river_layout_v2::river_layout_v2::{Event, RiverLayoutV2},
+    river_layout_v2::river_layout_v2::Event,
 };
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
@@ -33,6 +33,7 @@ pub struct Output {
 }
 
 pub struct Tag {
+    pub rule: Rule,
     pub options: Options,
     pub layout: Layout,
 }
@@ -51,11 +52,10 @@ pub struct Area {
     pub h: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, std::cmp::PartialEq)]
 pub enum Rule {
     AppId(String),
     Tag(u32),
-    All,
     None,
 }
 
@@ -107,6 +107,7 @@ impl Output {
                 tags: Default::default(),
                 default: {
                     Tag {
+                        rule: Rule::None,
                         options: Options::new(),
                         layout: Layout::Full,
                     }
@@ -122,15 +123,15 @@ impl Output {
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
+        let mut windows: Vec<Rectangle> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
                 view_count,
                 usable_width,
                 usable_height,
-                serial: _,
+                serial:_,
                 mut tags,
             } => {
-                self.view_amount = view_count;
                 if !self.resized {
                     self.dimension = Area::from(0, 0, usable_width, usable_height);
                 }
@@ -145,32 +146,38 @@ impl Output {
                     }
                     i as usize
                 };
+                windows = match self.tags[self.focused].as_mut() {
+                    Some(tag) => {
+                        tag.update(
+                            view_count,
+                            Rectangle::Area(self.dimension),
+                        )
+                    }
+                    None => self.default.update(
+                        view_count,
+                        Rectangle::Area(self.dimension),
+                    ),
+                };
             }
             Event::AdvertiseView {
-                tags,
-                app_id,
-                serial,
+                tags:_,
+                app_id:_,
+                serial:_,
             } => {}
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
             }
             Event::AdvertiseDone { serial } => {
-                match self.tags[self.focused].as_mut() {
-                    Some(tag) => {
-                        tag.update(
-                            serial,
-                            &layout,
-                            self.view_amount,
-                            Rectangle::Area(self.dimension),
-                        )
-                    }
-                    None => self.default.update(
+                for area in &windows {
+                    let area = area.area();
+                    layout.push_view_dimensions(
                         serial,
-                        &layout,
-                        self.view_amount,
-                        Rectangle::Area(self.dimension),
-                    ),
-                };
+                        area.x as i32,
+                        area.y as i32,
+                        area.w,
+                        area.h,
+                    )
+                }
                 layout.commit(serial);
             }
             Event::SetIntValue { name, value } => match name.as_ref() {
@@ -265,20 +272,6 @@ impl Output {
     }
 }
 
-impl Window {
-    pub fn apply_padding(&mut self, padding: u32) {
-        self.area.as_mut().unwrap().apply_padding(padding);
-    }
-    pub fn compare(&self, rule: &Rule) -> bool {
-        match rule {
-            Rule::AppId(string) => string.eq(&self.app_id),
-            Rule::Tag(uint) => self.tags == *uint,
-            Rule::All => true,
-            _ => false,
-        }
-    }
-}
-
 impl Area {
     pub fn from(x: u32, y: u32, w: u32, h: u32) -> Area {
         {
@@ -303,11 +296,9 @@ impl Area {
 impl Tag {
     pub fn update(
         &mut self,
-        serial: u32,
-        layout: &Main<RiverLayoutV2>,
         view_amount: u32,
         mut area: Rectangle,
-    ) {
+    ) -> Vec<Rectangle> {
         let parent;
         let mut list = Vec::new();
         match &self.layout {
@@ -317,8 +308,6 @@ impl Tag {
             _ => parent = false
         };
         area.generate(
-            serial,
-            layout,
             self.options,
             view_amount,
             &self.layout,
@@ -326,5 +315,6 @@ impl Tag {
             parent,
             true,
         );
+        list
     }
 }

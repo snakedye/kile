@@ -64,17 +64,13 @@ you need to modify or set theses layout values.
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	format: [focused | all | _int_]|[outer-layout]|[inner-layout]|[app-id | tags]
+	format: [focused | all | _int_]|[layout]
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
-*window_rule* _(string)_
-	- "_app_id" app_id
-	- "_tag" tagmask
-
-## LAYOUT
+## LAYOUTS
 
 *kile* generate a dynamic layout or window layouts.
 
@@ -100,14 +96,16 @@ The base layouts are the following.
 
 	- "D" | "Dwd"
 
-### RECURSIVE
+## RECURSIVE
 
 The syntax for initiate a *recursive* layout is "{}".
 The content of layout is contained within the bracket.
 *:* is the delimiter between the outer and inner layout. Both are property specific 
 to the *recursive* layout. Only single characters are acceptable as layout denominators.
 
-*example: "{v:hh}*
-
+*examples:* 
+	- {v:hh}
+	- {d:h{v:dd}}
+	- {{v:dd}:tt}
 
 *riverctl*(1), *rivertile*(7)
