@@ -5,46 +5,45 @@ pub enum Layout {
     Tab,
     Full,
     Vertical,
-    Dwindle ( u32 ),
-    Recursive { outer: Box<Layout>, inner: Vec<Layout> },
+    Dwindle(u32),
+    Recursive {
+        outer: Box<Layout>,
+        inner: Vec<Layout>,
+    },
     Horizontal,
 }
 
-fn insert_window(
-    list: &mut Vec<Rectangle>,
-    mut area: Area,
-    options: Options,
-    parent: bool,
-) {
-    if !parent {
-        area.apply_padding(options.view_padding);
+impl Area {
+    pub fn new(x: u32, y: u32, w: u32, h: u32) -> Area {
+        {
+            Area {
+                x: x,
+                y: y,
+                w: w,
+                h: h,
+            }
+        }
     }
-    list.push(Rectangle::Area(area));
-}
-
-impl Rectangle {
-    pub fn area(&self) -> Area {
-        match self {
-            Rectangle::Window(window) => window.area.unwrap(),
-            Rectangle::Area(area) => *area,
+    pub fn apply_padding(&mut self, padding: u32) {
+        if 2 * padding < self.h && 2 * padding < self.w {
+            self.x += padding;
+            self.y += padding;
+            self.w -= 2 * padding;
+            self.h -= 2 * padding;
         }
     }
     pub fn generate(
-        &mut self,
+        self,
         mut options: Options,
         client_count: u32,
         layout: &Layout,
-        list: &mut Vec<Rectangle>,
+        list: &mut Vec<Area>,
         parent: bool,
         factor: bool,
     ) {
-        let mut area = self.area();
+        let mut area = self;
 
-        let master = if parent
-            && factor
-            && client_count > 1
-            && options.main_index < client_count
-        {
+        let master = if parent && factor && client_count > 1 && options.main_index < client_count {
             true
         } else {
             false
@@ -52,7 +51,7 @@ impl Rectangle {
         match layout {
             Layout::Tab => {
                 for _i in 0..client_count {
-                    insert_window(list, area, options, parent);
+                    list.push(area);
                     area.h -= 50;
                     area.y += 50;
                 }
@@ -62,8 +61,7 @@ impl Rectangle {
                 let mut slave_area = area;
                 let reste = area.h % client_count;
                 if master {
-                    main_area.h = 
-                        ((area.h as f64) * options.main_factor * 0.5 * (client_count as f64)) as u32;
+                    main_area.h = ((area.h as f64) * options.main_factor) as u32;
                 } else {
                     main_area.h = 0;
                 }
@@ -80,7 +78,7 @@ impl Rectangle {
                         area.h += reste;
                     }
 
-                    insert_window(list, area, options, parent);
+                    list.push(area);
                     area.y += area.h;
                 }
             }
@@ -89,8 +87,7 @@ impl Rectangle {
                 let mut slave_area = area;
                 let reste = area.w % client_count;
                 if master {
-                    main_area.w = 
-                        ((area.w as f64) * options.main_factor * 0.5 * (client_count as f64)) as u32;
+                    main_area.w = ((area.w as f64) * options.main_factor) as u32;
                 } else {
                     main_area.w = 0;
                 }
@@ -107,11 +104,11 @@ impl Rectangle {
                         area.w += reste;
                     }
 
-                    insert_window(list, area, options, parent);
+                    list.push(area);
                     area.x += area.w;
                 }
             }
-            Layout::Dwindle ( modi ) => {
+            Layout::Dwindle(modi) => {
                 for i in 0..client_count {
                     let reste;
                     if i < client_count - 1 {
@@ -123,7 +120,7 @@ impl Rectangle {
                                 area.w /= 2;
                                 area.w += reste;
                             }
-                            insert_window(list, area, options, parent);
+                            list.push(area);
                             area.x += area.w;
                             if master && i == options.main_index {
                                 area.w = (((area.w as f64) * (1.0 - options.main_factor))
@@ -138,7 +135,7 @@ impl Rectangle {
                                 area.h /= 2;
                                 area.h += reste;
                             }
-                            insert_window(list, area, options, parent);
+                            list.push(area);
                             area.y += area.h;
                             if master && i == options.main_index {
                                 area.h = (((area.h as f64) * (1.0 - options.main_factor))
@@ -147,11 +144,11 @@ impl Rectangle {
                             }
                         }
                     } else {
-                        insert_window(list, area, options, parent);
+                        list.push(area);
                     }
                 }
             }
-            Layout::Recursive{ inner, outer } => {
+            Layout::Recursive { outer, inner } => {
                 let slave_amount;
                 let mut main_amount = 0;
                 let mut frame = Vec::new();
@@ -163,11 +160,9 @@ impl Rectangle {
                         && client_count > options.main_amount;
                     if options.main_amount >= client_count {
                         1
-                    } else if main
-                        && client_count - options.main_amount < frames_available {
+                    } else if main && client_count - options.main_amount < frames_available {
                         1 + client_count - options.main_amount
-                    } else if client_count > frames_available
-                        || main {
+                    } else if client_count > frames_available || main {
                         frames_available
                     } else {
                         client_count
@@ -179,13 +174,13 @@ impl Rectangle {
                     && options.main_index < frames_available
                 {
                     if options.main_index + options.main_amount > client_count {
-                       main_amount = client_count - options.main_index;
+                        main_amount = client_count - options.main_index;
                     } else {
                         main_amount = options.main_amount;
                     }
                 }
                 use std::ops::Deref;
-                Rectangle::Area(area).generate(
+                area.generate(
                     options,
                     frame_amount,
                     outer.deref(),
@@ -203,7 +198,7 @@ impl Rectangle {
                 };
 
                 if main_amount != 0 {
-                    options.main_amount = 0;
+                    options.main_amount = 1;
                     frame[options.main_index as usize].generate(
                         options,
                         main_amount,
@@ -215,8 +210,9 @@ impl Rectangle {
                 }
 
                 for (i, rect) in frame.iter_mut().enumerate() {
-                    if main_amount != 0
-                        && i == options.main_index as usize { continue }
+                    if main_amount != 0 && i == options.main_index as usize {
+                        continue;
+                    }
                     rect.generate(
                         options,
                         if reste > 0 {
@@ -234,7 +230,7 @@ impl Rectangle {
             }
             Layout::Full => {
                 for _i in 0..client_count {
-                    insert_window(list, area, options, parent);
+                    list.push(area);
                 }
             }
         }

@@ -23,7 +23,6 @@ pub struct Options {
 pub struct Output {
     pub output: WlOutput,
     pub default: Tag,
-    pub resized: bool,
     pub focused: usize,
     pub view_amount: u32,
     pub dimension: Area,
@@ -36,12 +35,6 @@ pub struct Tag {
     pub rule: Rule,
     pub options: Options,
     pub layout: Layout,
-}
-
-pub struct Window {
-    pub tags: u32,
-    pub app_id: String,
-    pub area: Option<Area>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -57,11 +50,6 @@ pub enum Rule {
     AppId(String),
     Tag(u32),
     None,
-}
-
-pub enum Rectangle {
-    Area(Area),
-    Window(Window),
 }
 
 impl Context {
@@ -102,7 +90,6 @@ impl Output {
                 focused: 0,
                 view_amount: 0,
                 outer_padding: 0,
-                resized: false,
                 smart_padding: false,
                 tags: Default::default(),
                 default: {
@@ -123,17 +110,17 @@ impl Output {
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
-        let mut windows: Vec<Rectangle> = Vec::new();
+        let mut resized = false;
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
                 view_count,
                 usable_width,
                 usable_height,
-                serial:_,
+                serial,
                 mut tags,
             } => {
-                if !self.resized {
-                    self.dimension = Area::from(0, 0, usable_width, usable_height);
+                if !resized {
+                    self.dimension = Area::new(0, 0, usable_width, usable_height);
                 }
                 if !self.smart_padding || view_count > 1 {
                     self.dimension.apply_padding(self.outer_padding);
@@ -146,30 +133,20 @@ impl Output {
                     }
                     i as usize
                 };
-                windows = match self.tags[self.focused].as_mut() {
+                let mut view_padding = 0;
+                let windows = match self.tags[self.focused].as_mut() {
                     Some(tag) => {
-                        tag.update(
-                            view_count,
-                            Rectangle::Area(self.dimension),
-                        )
+                        view_padding = tag.options.view_padding;
+                        tag.update(view_count, self.dimension)
                     }
-                    None => self.default.update(
-                        view_count,
-                        Rectangle::Area(self.dimension),
-                    ),
+                    None => self
+                        .default
+                        .update(view_count, self.dimension),
                 };
-            }
-            Event::AdvertiseView {
-                tags:_,
-                app_id:_,
-                serial:_,
-            } => {}
-            Event::NamespaceInUse => {
-                println!("Namespace already in use.");
-            }
-            Event::AdvertiseDone { serial } => {
-                for area in &windows {
-                    let area = area.area();
+                for mut area in windows {
+                    if !self.smart_padding || view_count > 1 {
+                        area.apply_padding(view_padding);
+                    }
                     layout.push_view_dimensions(
                         serial,
                         area.x as i32,
@@ -180,6 +157,15 @@ impl Output {
                 }
                 layout.commit(serial);
             }
+            Event::AdvertiseView {
+                tags,
+                app_id,
+                serial,
+            } => {}
+            Event::NamespaceInUse => {
+                println!("Namespace already in use.");
+            }
+            Event::AdvertiseDone { serial } => {}
             Event::SetIntValue { name, value } => match name.as_ref() {
                 "main_amount" | "main_index" | "view_padding" => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
@@ -208,7 +194,7 @@ impl Output {
                                 tag.options.main_index =
                                     ((tag.options.main_index as i32) + delta) as u32
                             }
-                            "view_padding" => {
+                            "view_padding" => if tag.options.view_padding as i32 >= delta {
                                 tag.options.view_padding =
                                     ((tag.options.view_padding as i32) + delta) as u32
                             }
@@ -216,7 +202,7 @@ impl Output {
                         }
                     }
                 }
-                "outer_padding" => {
+                "outer_padding" => if self.outer_padding as i32 >= delta {
                     self.outer_padding = ((self.outer_padding as i32) + delta) as u32
                 }
                 "xoffset" => {
@@ -228,9 +214,9 @@ impl Output {
                             self.dimension.x = delta as u32;
                         }
                         self.dimension.w -= delta as u32;
-                        self.resized = true;
+                        resized = true;
                     } else {
-                        self.resized = false;
+                        resized = false;
                     }
                 }
                 "yoffset" => {
@@ -242,9 +228,9 @@ impl Output {
                             self.dimension.y = delta as u32;
                         }
                         self.dimension.h -= delta as u32;
-                        self.resized = true;
+                        resized = true;
                     } else {
-                        self.resized = false;
+                        resized = false;
                     }
                 }
                 _ => {}
@@ -272,40 +258,15 @@ impl Output {
     }
 }
 
-impl Area {
-    pub fn from(x: u32, y: u32, w: u32, h: u32) -> Area {
-        {
-            Area {
-                x: x,
-                y: y,
-                w: w,
-                h: h,
-            }
-        }
-    }
-    pub fn apply_padding(&mut self, padding: u32) {
-        if 2 * padding < self.h && 2 * padding < self.w {
-            self.x += padding;
-            self.y += padding;
-            self.w -= 2 * padding;
-            self.h -= 2 * padding;
-        }
-    }
-}
-
 impl Tag {
-    pub fn update(
-        &mut self,
-        view_amount: u32,
-        mut area: Rectangle,
-    ) -> Vec<Rectangle> {
+    pub fn update(&mut self, view_amount: u32, area: Area) -> Vec<Area> {
         let parent;
         let mut list = Vec::new();
         match &self.layout {
-            Layout::Recursive{ outer:_, inner:_ } => {
+            Layout::Recursive { outer: _, inner: _ } => {
                 parent = true;
             }
-            _ => parent = false
+            _ => parent = false,
         };
         area.generate(
             self.options,

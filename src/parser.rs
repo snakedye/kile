@@ -14,15 +14,14 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
                     Some(arg) => match arg {
-                        "_tag" => {
+                        "-tag" => {
                             if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
                                 tag.rule = Rule::Tag(uint);
                             } else {
                             }
                         }
-                        "_app_id" => {
-                            tag.rule =
-                                Rule::AppId(command.next().unwrap_or_default().to_string())
+                        "-app-id" => {
+                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
                         }
                         _ => {}
                     },
@@ -116,18 +115,18 @@ fn brace(str: &str) -> (&str, usize) {
     let mut brace = 0;
     let mut captured = "";
     for i in 0..str.len() {
-        match &str[i..i+1] {
+        match &str[i..i + 1] {
             "{" => {
-                brace+=1;
+                brace += 1;
                 if brace == 0 {
-                    start = i+1;
+                    start = i + 1;
                 }
             }
             "}" => {
-                brace-=1;
+                brace -= 1;
                 if brace == 0 {
                     end = i;
-                    captured = &str[start+1..end];
+                    captured = &str[start + 1..end];
                     break;
                 }
             }
@@ -142,8 +141,8 @@ fn layout(name: &str) -> Layout {
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
         "t" | "tab" | "tabbed" => Layout::Tab,
-        "d" | "dwd" => Layout::Dwindle ( 0 ),
-        "D" | "Dwd" => Layout::Dwindle ( 1 ),
+        "d" | "dwd" => Layout::Dwindle(0),
+        "D" | "Dwd" => Layout::Dwindle(1),
         "f" | "ful" | "full" => Layout::Full,
         _ => {
             let captured = brace(name);
@@ -154,53 +153,51 @@ fn layout(name: &str) -> Layout {
                     let mut outer = "";
                     let mut inner = "";
                     for i in 0..closure.len() {
-                        let c = &closure[i..i+1];
+                        let c = &closure[i..i + 1];
                         match c {
                             "{" => {
                                 let nested = brace(closure);
-                                outer = &closure[i..nested.1+1];
-                                inner = &closure[i+nested.1+2..];
+                                outer = &closure[i..nested.1 + 1];
+                                inner = &closure[i + nested.1 + 2..];
                                 break;
                             }
                             ":" => {
                                 outer = &closure[0..i];
-                                inner = &closure[i+1..];
+                                inner = &closure[i + 1..];
                                 break;
                             }
                             _ => {}
                         }
                     }
                     Layout::Recursive {
-                        outer: {
-                            Box::new(layout(outer))
-                        },
+                        outer: { Box::new(layout(outer)) },
                         inner: {
                             let mut vec = Vec::new();
                             let mut i = 0;
                             while i < inner.len() {
-                                let char = &inner[i..i+1];
+                                let char = &inner[i..i + 1];
                                 match char {
                                     "{" => {
                                         let nested = brace(&inner[i..]);
                                         if nested.1 == 0 {
-                                            break
+                                            break;
                                         } else if nested.1 < 2 {
-                                            i+=1;
+                                            i += 1;
                                             continue;
                                         } else {
                                             vec.push(layout(&inner[i..]));
                                             i += nested.1;
                                         }
                                     }
-                                    " " | "}" => i+=1,
+                                    " " | "}" => i += 1,
                                     _ => {
                                         vec.push(layout(char));
-                                        i+=1
+                                        i += 1
                                     }
                                 }
                             }
                             vec
-                        }
+                        },
                     }
                 }
             }
