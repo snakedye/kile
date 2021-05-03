@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use super::client::*;
 
 #[derive(Clone, Debug)]
@@ -24,12 +25,12 @@ impl Area {
             }
         }
     }
-    pub fn apply_padding(&mut self, padding: u32) {
-        if 2 * padding < self.h && 2 * padding < self.w {
-            self.x += padding;
-            self.y += padding;
-            self.w -= 2 * padding;
-            self.h -= 2 * padding;
+    pub fn apply_padding(&mut self, padding: i32) {
+        if 2 * padding < self.h as i32 && 2 * padding < self.w as i32 {
+            self.x = ((self.x as i32) + padding) as u32;
+            self.y = ((self.y as i32) + padding) as u32;
+            self.w = ((self.w as i32) - 2 * padding) as u32;
+            self.h = ((self.h as i32) - 2 * padding) as u32;
         }
     }
     pub fn generate(
@@ -179,7 +180,6 @@ impl Area {
                         main_amount = options.main_amount;
                     }
                 }
-                use std::ops::Deref;
                 area.generate(
                     options,
                     frame_amount,

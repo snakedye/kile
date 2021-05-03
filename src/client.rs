@@ -17,7 +17,7 @@ pub struct Options {
     pub main_amount: u32,
     pub main_index: u32,
     pub main_factor: f64,
-    pub view_padding: u32,
+    pub view_padding: i32,
 }
 
 pub struct Output {
@@ -26,7 +26,7 @@ pub struct Output {
     pub focused: usize,
     pub view_amount: u32,
     pub dimension: Area,
-    pub outer_padding: u32,
+    pub outer_padding: i32,
     pub smart_padding: bool,
     pub tags: [Option<Tag>; 32],
 }
@@ -110,7 +110,9 @@ impl Output {
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
-        let mut resized = false;
+        let mut reload = true;
+        let mut resize = false;
+        let mut windows:Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
                 view_count,
@@ -119,31 +121,34 @@ impl Output {
                 serial,
                 mut tags,
             } => {
-                if !resized {
-                    self.dimension = Area::new(0, 0, usable_width, usable_height);
-                }
-                if !self.smart_padding || view_count > 1 {
-                    self.dimension.apply_padding(self.outer_padding);
-                }
-                self.focused = {
-                    let mut i = 0;
-                    while tags > 1 {
-                        tags /= 2;
-                        i += 1;
-                    }
-                    i as usize
-                };
                 let mut view_padding = 0;
-                let windows = match self.tags[self.focused].as_mut() {
-                    Some(tag) => {
-                        view_padding = tag.options.view_padding;
-                        tag.update(view_count, self.dimension)
+                if reload {
+                    if !resize {
+                        self.dimension = Area::new(0, 0, usable_width, usable_height);
                     }
-                    None => self
-                        .default
-                        .update(view_count, self.dimension),
-                };
-                for mut area in windows {
+                    if !self.smart_padding || view_count > 1 {
+                        self.dimension.apply_padding(self.outer_padding);
+                    }
+                    self.focused = {
+                        let mut i = 0;
+                        while tags > 1 {
+                            tags /= 2;
+                            i += 1;
+                        }
+                        i as usize
+                    };
+                    windows = match self.tags[self.focused].as_mut() {
+                        Some(tag) => {
+                            view_padding = tag.options.view_padding;
+                            tag.update(view_count, self.dimension)
+                        }
+                        None => self
+                            .default
+                            .update(view_count, self.dimension),
+                    };
+                }
+                reload = true;
+                for mut area in &mut windows {
                     if !self.smart_padding || view_count > 1 {
                         area.apply_padding(view_padding);
                     }
@@ -173,13 +178,23 @@ impl Output {
                             match name.as_ref() {
                                 "main_amount" => tag.options.main_amount = value as u32,
                                 "main_index" => tag.options.main_index = value as u32,
-                                "view_padding" => tag.options.view_padding = value as u32,
+                                "view_padding" => {
+                                    let delta = value - tag.options.view_padding;
+                                    tag.options.view_padding = value;
+                                    let view_amount = windows.len() > 1;
+                                    for area in &mut windows {
+                                        if !self.smart_padding || view_amount {
+                                            area.apply_padding(delta);
+                                        }
+                                    }
+                                    reload = false;
+                                }
                                 _ => {}
                             }
                         }
                     }
                 }
-                "outer_padding" => self.outer_padding = value as u32,
+                "outer_padding" => self.outer_padding = value,
                 _ => {}
             },
             Event::ModIntValue { name, mut delta } => match name.as_ref() {
@@ -194,16 +209,22 @@ impl Output {
                                 tag.options.main_index =
                                     ((tag.options.main_index as i32) + delta) as u32
                             }
-                            "view_padding" => if tag.options.view_padding as i32 >= delta {
-                                tag.options.view_padding =
-                                    ((tag.options.view_padding as i32) + delta) as u32
+                            "view_padding" => if tag.options.view_padding >= delta {
+                                tag.options.view_padding += delta;
+                                let view_amount = windows.len() > 1;
+                                for area in &mut windows {
+                                    if !self.smart_padding || view_amount {
+                                        area.apply_padding(delta);
+                                    }
+                                }
+                                reload = false;
                             }
                             _ => {}
                         }
                     }
                 }
                 "outer_padding" => if self.outer_padding as i32 >= delta {
-                    self.outer_padding = ((self.outer_padding as i32) + delta) as u32
+                    self.outer_padding += delta
                 }
                 "xoffset" => {
                     if delta != 0 {
@@ -214,9 +235,9 @@ impl Output {
                             self.dimension.x = delta as u32;
                         }
                         self.dimension.w -= delta as u32;
-                        resized = true;
+                        resize = true;
                     } else {
-                        resized = false;
+                        resize = false;
                     }
                 }
                 "yoffset" => {
@@ -228,9 +249,9 @@ impl Output {
                             self.dimension.y = delta as u32;
                         }
                         self.dimension.h -= delta as u32;
-                        resized = true;
+                        resize = true;
                     } else {
-                        resized = false;
+                        resize = false;
                     }
                 }
                 _ => {}
