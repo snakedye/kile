@@ -8,7 +8,7 @@ kile - a tiling a layout generator for river
 
 *kile* is a layout generator for *river*.
 
-It receives layout and option events to create a dynamic layout of windows.
+It receives layout events and creates a dynamic layouts of windows.
 
 Note: *kile* could work on any Wayland compositor 
 that implements *river-layout-v2*.
@@ -40,13 +40,13 @@ you need to modify or set theses layout values.
 	Note that layouts commonly expect values between 0.1 and 0.9.
 
 *main_index* _(int)_
-	An arbitrary positive integer indicating the index of the main area in the outer layout.
+	An arbitrary positive integer indicating the index of the main area in a layout.
 
 *view_padding* _(int)_
 	The padding in pixels of the each window within the layout.
 
 *outer_padding* _(int)_
-	The padding in pixels of the between the layout and the edges of the output.
+	The padding in pixels between the layout and the edges of the output.
 
 *xoffset* _(int)_
 	The horizontal offset in pixels from a lateral screen edge.
@@ -79,8 +79,6 @@ you need to modify or set theses layout values.
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
 ## LAYOUTS
-
-*kile* generate a dynamic layout or window layouts.
 
 The base layouts are the following.
 

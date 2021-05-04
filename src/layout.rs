@@ -51,7 +51,7 @@ impl Area {
         };
         match layout {
             Layout::Tab => {
-                while client_count > 1 {
+                while client_count > 0 {
                     list.push(area);
                     area.h -= 50;
                     area.y += 50;
