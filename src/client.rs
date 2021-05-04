@@ -147,7 +147,6 @@ impl Output {
                             .update(&mut windows, view_count, self.dimension),
                     };
                 }
-                println!("{}",windows.len());
                 reload = true;
                 for area in &mut windows {
                     if !self.smart_padding || view_count > 1 {
