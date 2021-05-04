@@ -1,5 +1,5 @@
-use std::ops::Deref;
 use super::client::*;
+use std::ops::Deref;
 
 #[derive(Clone, Debug)]
 pub enum Layout {
@@ -36,7 +36,7 @@ impl Area {
     pub fn generate(
         self,
         mut options: Options,
-        client_count: u32,
+        mut client_count: u32,
         layout: &Layout,
         list: &mut Vec<Area>,
         parent: bool,
@@ -51,10 +51,11 @@ impl Area {
         };
         match layout {
             Layout::Tab => {
-                for _i in 0..client_count {
+                while client_count > 1 {
                     list.push(area);
                     area.h -= 50;
                     area.y += 50;
+                    client_count-=1;
                 }
             }
             Layout::Horizontal => {
@@ -150,11 +151,10 @@ impl Area {
                 }
             }
             Layout::Recursive { outer, inner } => {
-                let slave_amount;
                 let mut main_amount = 0;
                 let mut frame = Vec::new();
                 let frames_available = inner.len() as u32;
-                let frame_amount = {
+                let mut frame_amount = {
                     let main = options.main_amount >= 1
                         && frames_available > 1
                         && options.main_index < frames_available
@@ -189,16 +189,10 @@ impl Area {
                     factor,
                 );
 
-                let mut reste = if main_amount > 0 {
-                    slave_amount = (client_count - main_amount) / (frame_amount - 1);
-                    (client_count - main_amount) % (frame_amount - 1)
-                } else {
-                    slave_amount = client_count / frame_amount;
-                    client_count % frame_amount
-                };
-
                 if main_amount != 0 {
-                    options.main_amount = 1;
+                    frame_amount -= 1;
+                    options.main_amount = 0;
+                    client_count -= main_amount;
                     frame[options.main_index as usize].generate(
                         options,
                         main_amount,
@@ -213,24 +207,18 @@ impl Area {
                     if main_amount != 0 && i == options.main_index as usize {
                         continue;
                     }
-                    rect.generate(
-                        options,
-                        if reste > 0 {
-                            reste -= 1;
-                            slave_amount + 1
-                        } else {
-                            slave_amount
-                        },
-                        &inner[i],
-                        list,
-                        false,
-                        false,
-                    )
+                    let mut count = client_count / frame_amount;
+                    if client_count % frame_amount != 0 && i as u32 != frame_amount {
+                        client_count -= 1;
+                        count += 1;
+                    }
+                    rect.generate(options, count, &inner[i], list, false, false)
                 }
             }
             Layout::Full => {
-                for _i in 0..client_count {
+                while client_count > 0 {
                     list.push(area);
+                    client_count -= 1;
                 }
             }
         }

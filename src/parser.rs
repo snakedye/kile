@@ -141,8 +141,8 @@ fn layout(name: &str) -> Layout {
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
         "t" | "tab" | "tabbed" => Layout::Tab,
-        "d" | "dwd" => Layout::Dwindle(0),
-        "D" | "Dwd" => Layout::Dwindle(1),
+        "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
+        "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
         "f" | "ful" | "full" => Layout::Full,
         _ => {
             let captured = brace(name);

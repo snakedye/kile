@@ -112,7 +112,7 @@ impl Output {
             .get_layout(&self.output, namespace);
         let mut reload = true;
         let mut resize = false;
-        let mut windows:Vec<Area> = Vec::new();
+        let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
                 view_count,
@@ -125,9 +125,9 @@ impl Output {
                 if reload {
                     if !resize {
                         self.dimension = Area::new(0, 0, usable_width, usable_height);
-                    }
-                    if !self.smart_padding || view_count > 1 {
-                        self.dimension.apply_padding(self.outer_padding);
+                        if !self.smart_padding || view_count > 1 {
+                            self.dimension.apply_padding(self.outer_padding);
+                        }
                     }
                     self.focused = {
                         let mut i = 0;
@@ -137,18 +137,18 @@ impl Output {
                         }
                         i as usize
                     };
-                    windows = match self.tags[self.focused].as_mut() {
+                    match self.tags[self.focused].as_mut() {
                         Some(tag) => {
                             view_padding = tag.options.view_padding;
-                            tag.update(view_count, self.dimension)
+                            tag.update(&mut windows, view_count, self.dimension)
                         }
                         None => self
                             .default
-                            .update(view_count, self.dimension),
+                            .update(&mut windows, view_count, self.dimension),
                     };
                 }
                 reload = true;
-                for mut area in &mut windows {
+                for area in &mut windows {
                     if !self.smart_padding || view_count > 1 {
                         area.apply_padding(view_padding);
                     }
@@ -209,22 +209,26 @@ impl Output {
                                 tag.options.main_index =
                                     ((tag.options.main_index as i32) + delta) as u32
                             }
-                            "view_padding" => if tag.options.view_padding >= delta {
-                                tag.options.view_padding += delta;
-                                let view_amount = windows.len() > 1;
-                                for area in &mut windows {
-                                    if !self.smart_padding || view_amount {
-                                        area.apply_padding(delta);
+                            "view_padding" => {
+                                if tag.options.view_padding >= delta {
+                                    tag.options.view_padding += delta;
+                                    let view_amount = windows.len() > 1;
+                                    for area in &mut windows {
+                                        if !self.smart_padding || view_amount {
+                                            area.apply_padding(delta);
+                                        }
                                     }
+                                    reload = false;
                                 }
-                                reload = false;
                             }
                             _ => {}
                         }
                     }
                 }
-                "outer_padding" => if self.outer_padding as i32 >= delta {
-                    self.outer_padding += delta
+                "outer_padding" => {
+                    if self.outer_padding as i32 >= delta {
+                        self.outer_padding += delta
+                    }
                 }
                 "xoffset" => {
                     if delta != 0 {
@@ -274,29 +278,38 @@ impl Output {
                     }
                 }
             }
-            Event::SetStringValue { name, value } => parser::main(&mut self, name, value),
+            Event::SetStringValue { name, value } => match name.as_ref() {
+                "dimension" => {
+                    let mut argument = value.split_whitespace();
+                    self.dimension = {
+                        resize = true;
+                        Area {
+                            x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
+                            y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
+                            w: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
+                            h: argument.next().unwrap_or("0").parse::<u32>().unwrap()
+                        }
+                    }
+                },
+                "resize" => resize = if let Ok(ans) = value.parse::<bool>() {
+                    ans
+                } else { false },
+                _ => parser::main(&mut self, name, value),
+            }
         });
     }
 }
 
 impl Tag {
-    pub fn update(&mut self, view_amount: u32, area: Area) -> Vec<Area> {
+    pub fn update(&mut self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
         let parent;
-        let mut list = Vec::new();
+        *list = Vec::new();
         match &self.layout {
             Layout::Recursive { outer: _, inner: _ } => {
                 parent = true;
             }
             _ => parent = false,
         };
-        area.generate(
-            self.options,
-            view_amount,
-            &self.layout,
-            &mut list,
-            parent,
-            true,
-        );
-        list
+        area.generate(self.options, view_amount, &self.layout, list, parent, true);
     }
 }

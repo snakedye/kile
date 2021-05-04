@@ -58,13 +58,21 @@ you need to modify or set theses layout values.
 	Positive integers create an offset from 
 	the top of screen and negatives from the bottom.
 
+*dimension* _(string)_
+	A custom dimension of the output.
+	format: "_(uint)_ _(uint)_ _(uint)_ _(uint)_"
+
+*resize* _(string)_
+	Declare if the output can or cannot be resized.
+	Possible values are "true" or "false".
+
 *smart_padding* _(string)_
 	Enables or disables smart padding.
 	Possible values are "true" or "false".
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	format: [focused | all | _int_]|[layout]
+	format: "[focused | all | _uint_]|[layout]"
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
@@ -73,14 +81,6 @@ you need to modify or set theses layout values.
 ## LAYOUTS
 
 *kile* generate a dynamic layout or window layouts.
-
-The screen geometry is split into smaller areas following the outer layout
-and the layout within these areas are determined by the inner layout.
-Inner layouts are generated from left to right in the order they are presented.
-This allows you to create more complex layouts from the basic ones given.
-
-It will never and should never give an empty area,
-no matter how funky your combinations may be.
 
 The base layouts are the following.
 
@@ -99,11 +99,14 @@ The base layouts are the following.
 ## RECURSIVE
 
 The syntax for initiate a *recursive* layout is "{}".
-The content of layout is contained within the bracket.
+The content of layout resides within the brackets.
 *:* is the delimiter between the outer and inner layout. Both are property specific 
-to the *recursive* layout. Only single characters are acceptable as layout denominators.
+to the *recursive* layout. Only characters are acceptable as layout denominators.
 
-*examples:* 
+It will never and should never give an empty area,
+no matter how funky your combinations may be.
+
+*examples:*
 	- {v:hh}
 	- {d:h{v:dd}}
 	- {{v:dd}:tt}
