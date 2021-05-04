@@ -52,9 +52,10 @@ impl Area {
         match layout {
             Layout::Tab => {
                 while client_count > 0 {
+                    let delta = options.main_factor * 100.0;
                     list.push(area);
-                    area.h -= 50;
-                    area.y += 50;
+                    area.h -= delta as u32;
+                    area.y += delta as u32;
                     client_count-=1;
                 }
             }
