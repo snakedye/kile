@@ -8,7 +8,7 @@ pub fn main() {
     generate("river_layout_v2");
     Command::new("scdoc")
         .arg("<output kile.1.scd > kile.1.gz")
-        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "doc/"))
+        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/doc/"))
         .spawn()
         .expect("Failed to execute command");
 }

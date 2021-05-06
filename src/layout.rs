@@ -50,22 +50,19 @@ impl Area {
                 }
             }
             Layout::Horizontal => {
-                let mut main_area = area;
-                let mut slave_area = area;
                 let reste = area.h % client_count;
-                if master {
-                    main_area.h = ((area.h as f64) * options.main_factor) as u32;
-                } else {
-                    main_area.h = 0;
-                }
-                slave_area.h -= main_area.h;
+                let mut slave_height = area.h;
+                let main_height = if master {
+                    ((area.h as f64) * options.main_factor) as u32
+                } else { 0 };
+                slave_height -= main_height;
                 for i in 0..client_count {
-                    area.h = if factor && i == options.main_index && main_area.h > 0 {
-                        main_area.h
-                    } else if factor && main_area.h > 0 {
-                        slave_area.h / (client_count - 1)
+                    area.h = if master && i == options.main_index {
+                        main_height
+                    } else if master {
+                        slave_height / (client_count - 1)
                     } else {
-                        slave_area.h / client_count
+                        slave_height / client_count
                     };
                     if i == 0 {
                         area.h += reste;
@@ -76,22 +73,19 @@ impl Area {
                 }
             }
             Layout::Vertical => {
-                let mut main_area = area;
-                let mut slave_area = area;
                 let reste = area.w % client_count;
-                if master {
-                    main_area.w = ((area.w as f64) * options.main_factor) as u32;
-                } else {
-                    main_area.w = 0;
-                }
-                slave_area.w -= main_area.w;
+                let mut slave_width = area.w;
+                let main_width = if master {
+                    ((area.w as f64) * options.main_factor) as u32
+                } else { 0 };
+                slave_width -= main_width;
                 for i in 0..client_count {
-                    area.w = if factor && i == options.main_index && main_area.w > 0 {
-                        main_area.w
-                    } else if factor && main_area.w > 0 {
-                        slave_area.w / (client_count - 1)
+                    area.w = if master && i == options.main_index {
+                        main_width
+                    } else if master {
+                        slave_width / (client_count - 1)
                     } else {
-                        slave_area.w / client_count
+                        slave_width / client_count
                     };
                     if i == 0 {
                         area.w += reste;
