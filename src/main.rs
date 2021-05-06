@@ -3,9 +3,9 @@ mod layout;
 mod parser;
 mod wayland;
 
+use std::env;
 use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;
 use client::{Context, Output};
-use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
 

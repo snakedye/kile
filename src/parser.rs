@@ -9,7 +9,65 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                 output_handle.smart_padding = ans;
             }
         }
-        "set_tag" => parse_tag(output_handle, value),
+        "set_tag" => {
+            let mut value = value.split_whitespace();
+            loop {
+                match value.next() {
+                    Some(fields) => {
+                        let mut fields = fields.split('|');
+                        let tags = match fields.next() {
+                            Some(tag) => match tag {
+                                "focused" => output_handle.focused..output_handle.focused + 1,
+                                "all" => 0..32,
+                                _ => match tag.parse::<usize>() {
+                                    Ok(int) => {
+                                        if int > 0 && int < 33 {
+                                            int - 1..int
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    Err(_) => break,
+                                },
+                            },
+                            None => {
+                                break;
+                            }
+                        };
+                        let layout = layout(fields.next().unwrap_or_default());
+                        let window_rule = match fields.next() {
+                            Some(app_id) => {
+                                if let Ok(tag) = app_id.parse::<u32>() {
+                                    Rule::Tag(tag)
+                                } else {
+                                    Rule::AppId(app_id.to_string())
+                                }
+                            }
+                            None => Rule::None,
+                        };
+                        for i in tags {
+                            let tag = output_handle.tags[i].as_mut();
+                            match tag {
+                                Some(tag) => {
+                                    tag.layout = layout.clone();
+                                    tag.rule = window_rule.clone();
+                                }
+                                None => {
+                                    output_handle.tags[i] = Some({
+                                        Tag {
+                                            rule: window_rule.clone(),
+                                            options: Options::new(),
+                                            layout: layout.clone(),
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                    }
+                    None => break,
+                }
+            }
+        },
         "window_rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
@@ -46,66 +104,6 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
             }
         }
         _ => {}
-    }
-}
-
-fn parse_tag(output_handle: &mut Output, value: String) {
-    let mut value = value.split_whitespace();
-    loop {
-        match value.next() {
-            Some(fields) => {
-                let mut fields = fields.split('|');
-                let tags = match fields.next() {
-                    Some(tag) => match tag {
-                        "focused" => output_handle.focused..output_handle.focused + 1,
-                        "all" => 0..32,
-                        _ => match tag.parse::<usize>() {
-                            Ok(int) => {
-                                if int > 0 && int < 33 {
-                                    int - 1..int
-                                } else {
-                                    break;
-                                }
-                            }
-                            Err(_) => break,
-                        },
-                    },
-                    None => {
-                        break;
-                    }
-                };
-                let layout = layout(fields.next().unwrap_or_default());
-                let window_rule = match fields.next() {
-                    Some(app_id) => {
-                        if let Ok(tag) = app_id.parse::<u32>() {
-                            Rule::Tag(tag)
-                        } else {
-                            Rule::AppId(app_id.to_string())
-                        }
-                    }
-                    None => Rule::None,
-                };
-                for i in tags {
-                    let tag = output_handle.tags[i].as_mut();
-                    match tag {
-                        Some(tag) => {
-                            tag.layout = layout.clone();
-                            tag.rule = window_rule.clone();
-                        }
-                        None => {
-                            output_handle.tags[i] = Some({
-                                Tag {
-                                    rule: window_rule.clone(),
-                                    options: Options::new(),
-                                    layout: layout.clone(),
-                                }
-                            })
-                        }
-                    }
-                }
-            }
-            None => break,
-        }
     }
 }
 

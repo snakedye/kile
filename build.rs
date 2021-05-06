@@ -8,7 +8,7 @@ pub fn main() {
     generate("river_layout_v2");
     Command::new("scdoc")
         .arg("<output kile.1.scd > kile.1.gz")
-        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/doc/"))
+        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "doc/"))
         .spawn()
         .expect("Failed to execute command");
 }
@@ -16,7 +16,7 @@ pub fn main() {
 fn generate(protocol_name: &str) {
     let out_dir = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src/wayland/"));
 
-    let mut protocol_dir = String::from(concat!(env!("CARGO_MANIFEST_DIR"), "/protocols/"));
+    let mut protocol_dir = String::from(concat!(env!("CARGO_MANIFEST_DIR"), "/protocol/"));
     protocol_dir.push_str(protocol_name);
     protocol_dir.push_str(".xml");
     protocol_dir = protocol_dir.replace("_", "-");

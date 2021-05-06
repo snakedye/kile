@@ -72,7 +72,7 @@ you need to modify or set theses layout values.
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	format: "[focused | all | _uint_]|[layout]"
+	format: "<focused | all | _uint_>|<layout>"
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
@@ -90,9 +90,9 @@ The base layouts are the following.
 
 	- "f" | "ful" | "full"
 
-	- "d" | "dwd"
+	- "d" | "dwd" | "dwindle"
 
-	- "D" | "Dwd"
+	- "D" | "Dwd" | "Dwindle"
 
 ## RECURSIVE
 

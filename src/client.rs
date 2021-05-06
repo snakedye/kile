@@ -24,7 +24,6 @@ pub struct Output {
     pub output: WlOutput,
     pub default: Tag,
     pub focused: usize,
-    pub view_amount: u32,
     pub dimension: Area,
     pub outer_padding: i32,
     pub smart_padding: bool,
@@ -88,7 +87,6 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
-                view_amount: 0,
                 outer_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
@@ -124,7 +122,12 @@ impl Output {
                 let mut view_padding = 0;
                 if reload {
                     if !resize {
-                        self.dimension = Area::new(0, 0, usable_width, usable_height);
+                        self.dimension = { Area {
+                            x: 0,
+                            y: 0,
+                            w: usable_width,
+                            h: usable_height
+                        }};
                         if !self.smart_padding || view_count > 1 {
                             self.dimension.apply_padding(self.outer_padding);
                         }
@@ -172,7 +175,8 @@ impl Output {
             }
             Event::AdvertiseDone { serial } => {}
             Event::SetIntValue { name, value } => match name.as_ref() {
-                "main_amount" | "main_index" | "view_padding" => {
+                "outer_padding" => self.outer_padding = value,
+                _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value >= 0 {
                             match name.as_ref() {
@@ -194,37 +198,8 @@ impl Output {
                         }
                     }
                 }
-                "outer_padding" => self.outer_padding = value,
-                _ => {}
             },
             Event::ModIntValue { name, mut delta } => match name.as_ref() {
-                "main_amount" | "main_index" | "view_padding" => {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        match name.as_ref() {
-                            "main_amount" => {
-                                tag.options.main_amount =
-                                    ((tag.options.main_amount as i32) + delta) as u32
-                            }
-                            "main_index" => {
-                                tag.options.main_index =
-                                    ((tag.options.main_index as i32) + delta) as u32
-                            }
-                            "view_padding" => {
-                                if tag.options.view_padding >= delta {
-                                    tag.options.view_padding += delta;
-                                    let view_amount = windows.len() > 1;
-                                    for area in &mut windows {
-                                        if !self.smart_padding || view_amount {
-                                            area.apply_padding(delta);
-                                        }
-                                    }
-                                    reload = false;
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
                 "outer_padding" => {
                     if self.outer_padding as i32 >= delta {
                         self.outer_padding += delta
@@ -258,7 +233,33 @@ impl Output {
                         resize = false;
                     }
                 }
-                _ => {}
+                _ => {
+                    if let Some(tag) = self.tags[self.focused].as_mut() {
+                        match name.as_ref() {
+                            "main_amount" => {
+                                tag.options.main_amount =
+                                    ((tag.options.main_amount as i32) + delta) as u32
+                            }
+                            "main_index" => {
+                                tag.options.main_index =
+                                    ((tag.options.main_index as i32) + delta) as u32
+                            }
+                            "view_padding" => {
+                                if tag.options.view_padding >= delta {
+                                    tag.options.view_padding += delta;
+                                    let view_amount = windows.len() > 1;
+                                    for area in &mut windows {
+                                        if !self.smart_padding || view_amount {
+                                            area.apply_padding(delta);
+                                        }
+                                    }
+                                    reload = false;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             },
             Event::SetFixedValue { name, value } => {
                 if name == "main_factor" {

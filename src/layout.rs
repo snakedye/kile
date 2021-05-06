@@ -15,16 +15,6 @@ pub enum Layout {
 }
 
 impl Area {
-    pub fn new(x: u32, y: u32, w: u32, h: u32) -> Area {
-        {
-            Area {
-                x: x,
-                y: y,
-                w: w,
-                h: h,
-            }
-        }
-    }
     pub fn apply_padding(&mut self, padding: i32) {
         if 2 * padding < self.h as i32 && 2 * padding < self.w as i32 {
             self.x = ((self.x as i32) + padding) as u32;
