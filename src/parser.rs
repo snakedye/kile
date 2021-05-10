@@ -67,7 +67,7 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                     None => break,
                 }
             }
-        },
+        }
         "window_rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {

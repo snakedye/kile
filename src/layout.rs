@@ -46,7 +46,7 @@ impl Area {
                     list.push(area);
                     area.h -= delta as u32;
                     area.y += delta as u32;
-                    client_count-=1;
+                    client_count -= 1;
                 }
             }
             Layout::Horizontal => {
@@ -54,7 +54,9 @@ impl Area {
                 let mut slave_height = area.h;
                 let main_height = if master {
                     ((area.h as f64) * options.main_factor) as u32
-                } else { 0 };
+                } else {
+                    0
+                };
                 slave_height -= main_height;
                 for i in 0..client_count {
                     area.h = if master && i == options.main_index {
@@ -77,7 +79,9 @@ impl Area {
                 let mut slave_width = area.w;
                 let main_width = if master {
                     ((area.w as f64) * options.main_factor) as u32
-                } else { 0 };
+                } else {
+                    0
+                };
                 slave_width -= main_width;
                 for i in 0..client_count {
                     area.w = if master && i == options.main_index {

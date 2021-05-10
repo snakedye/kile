@@ -110,6 +110,7 @@ impl Output {
             .get_layout(&self.output, namespace);
         let mut reload = true;
         let mut resize = false;
+        let mut view_padding = 0;
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
@@ -119,15 +120,16 @@ impl Output {
                 serial,
                 mut tags,
             } => {
-                let mut view_padding = 0;
                 if reload {
                     if !resize {
-                        self.dimension = { Area {
-                            x: 0,
-                            y: 0,
-                            w: usable_width,
-                            h: usable_height
-                        }};
+                        self.dimension = {
+                            Area {
+                                x: 0,
+                                y: 0,
+                                w: usable_width,
+                                h: usable_height,
+                            }
+                        };
                         if !self.smart_padding || view_count > 1 {
                             self.dimension.apply_padding(self.outer_padding);
                         }
@@ -185,12 +187,7 @@ impl Output {
                                 "view_padding" => {
                                     let delta = value - tag.options.view_padding;
                                     tag.options.view_padding = value;
-                                    let view_amount = windows.len() > 1;
-                                    for area in &mut windows {
-                                        if !self.smart_padding || view_amount {
-                                            area.apply_padding(delta);
-                                        }
-                                    }
+                                    view_padding = delta;
                                     reload = false;
                                 }
                                 _ => {}
@@ -247,12 +244,7 @@ impl Output {
                             "view_padding" => {
                                 if tag.options.view_padding + delta >= 0 {
                                     tag.options.view_padding += delta;
-                                    let view_amount = windows.len() > 1;
-                                    for area in &mut windows {
-                                        if !self.smart_padding || view_amount {
-                                            area.apply_padding(delta);
-                                        }
-                                    }
+                                    view_padding = delta;
                                     reload = false;
                                 }
                             }
@@ -288,15 +280,19 @@ impl Output {
                             x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
                             y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
                             w: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
-                            h: argument.next().unwrap_or("500").parse::<u32>().unwrap()
+                            h: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
                         }
                     }
-                },
-                "resize" => resize = if let Ok(ans) = value.parse::<bool>() {
-                    ans
-                } else { false },
+                }
+                "resize" => {
+                    resize = if let Ok(ans) = value.parse::<bool>() {
+                        ans
+                    } else {
+                        false
+                    }
+                }
                 _ => parser::main(&mut self, name, value),
-            }
+            },
         });
     }
 }
