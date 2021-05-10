@@ -72,7 +72,8 @@ you need to modify or set theses layout values.
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
-	format: "<focused | all | _uint_>|<layout>"
+	format: "<tag>|<layout>|<main_amount>|<main_factor>|<main_index>"
+	Values possibles for *<tag>*: "focused", "all" and _uint_.
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)

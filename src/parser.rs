@@ -35,6 +35,9 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                             }
                         };
                         let layout = layout(fields.next().unwrap_or_default());
+                        let main_amount = fields.next().unwrap_or_default().parse::<u32>();
+                        let main_factor = fields.next().unwrap_or_default().parse::<f64>();
+                        let main_index = fields.next().unwrap_or_default().parse::<u32>();
                         let window_rule = match fields.next() {
                             Some(app_id) => {
                                 if let Ok(tag) = app_id.parse::<u32>() {
@@ -51,6 +54,15 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                                 Some(tag) => {
                                     tag.layout = layout.clone();
                                     tag.rule = window_rule.clone();
+                                    if let Ok(index) = main_index {
+                                        tag.options.main_index = index;
+                                    }
+                                    if let Ok(amount) = main_amount {
+                                        tag.options.main_amount = amount;
+                                    }
+                                    if let Ok(factor) = main_factor {
+                                        tag.options.main_factor = factor;
+                                    }
                                 }
                                 None => {
                                     output_handle.tags[i] = Some({
