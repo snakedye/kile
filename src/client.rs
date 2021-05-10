@@ -245,7 +245,7 @@ impl Output {
                                     ((tag.options.main_index as i32) + delta) as u32
                             }
                             "view_padding" => {
-                                if tag.options.view_padding >= delta {
+                                if tag.options.view_padding + delta >= 0 {
                                     tag.options.view_padding += delta;
                                     let view_amount = windows.len() > 1;
                                     for area in &mut windows {
@@ -287,8 +287,8 @@ impl Output {
                         Area {
                             x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
                             y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                            w: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                            h: argument.next().unwrap_or("0").parse::<u32>().unwrap()
+                            w: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
+                            h: argument.next().unwrap_or("500").parse::<u32>().unwrap()
                         }
                     }
                 },
