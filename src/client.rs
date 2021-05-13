@@ -24,6 +24,8 @@ pub struct Output {
     pub output: WlOutput,
     pub default: Tag,
     pub focused: usize,
+    pub reload: bool,
+    pub resize: bool,
     pub dimension: Area,
     pub outer_padding: i32,
     pub smart_padding: bool,
@@ -87,6 +89,8 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
+                reload: true,
+                resize: false,
                 outer_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
@@ -108,8 +112,6 @@ impl Output {
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
-        let mut reload = true;
-        let mut resize = false;
         let mut view_padding = 0;
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
@@ -118,10 +120,10 @@ impl Output {
                 usable_width,
                 usable_height,
                 serial,
-                mut tags,
+                tags,
             } => {
-                if reload {
-                    if !resize {
+                if self.reload {
+                    if !self.resize {
                         self.dimension = {
                             Area {
                                 x: 0,
@@ -136,9 +138,9 @@ impl Output {
                     }
                     self.focused = {
                         let mut i = 0;
-                        while tags > 1 {
-                            tags /= 2;
+                        while (1 << i) < tags {
                             i += 1;
+                            if i >= 31 { break }
                         }
                         i as usize
                     };
@@ -152,7 +154,7 @@ impl Output {
                             .update(&mut windows, view_count, self.dimension),
                     };
                 }
-                reload = true;
+                self.reload = true;
                 for area in &mut windows {
                     if !self.smart_padding || view_count > 1 {
                         area.apply_padding(view_padding);
@@ -188,7 +190,7 @@ impl Output {
                                     let delta = value - tag.options.view_padding;
                                     tag.options.view_padding = value;
                                     view_padding = delta;
-                                    reload = false;
+                                    self.reload = false;
                                 }
                                 _ => {}
                             }
@@ -203,32 +205,24 @@ impl Output {
                     }
                 }
                 "xoffset" => {
-                    if delta != 0 {
-                        if delta < 0 {
-                            self.dimension.x = 0;
-                            delta = delta * (-1);
-                        } else {
-                            self.dimension.x = delta as u32;
-                        }
-                        self.dimension.w -= delta as u32;
-                        resize = true;
+                    if delta < 0 {
+                        self.dimension.x = 0;
+                        delta = delta * (-1);
                     } else {
-                        resize = false;
+                        self.dimension.x = delta as u32;
                     }
+                    self.dimension.w -= delta as u32;
+                    self.resize = true;
                 }
                 "yoffset" => {
-                    if delta != 0 {
-                        if delta < 0 {
-                            self.dimension.y = 0;
-                            delta = delta * (-1);
-                        } else {
-                            self.dimension.y = delta as u32;
-                        }
-                        self.dimension.h -= delta as u32;
-                        resize = true;
+                    if delta < 0 {
+                        self.dimension.y = 0;
+                        delta = delta * (-1);
                     } else {
-                        resize = false;
+                        self.dimension.y = delta as u32;
                     }
+                    self.dimension.h -= delta as u32;
+                    self.resize = true;
                 }
                 _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
@@ -245,7 +239,7 @@ impl Output {
                                 if tag.options.view_padding + delta >= 0 {
                                     tag.options.view_padding += delta;
                                     view_padding = delta;
-                                    reload = false;
+                                    self.reload = false;
                                 }
                             }
                             _ => {}
@@ -271,34 +265,13 @@ impl Output {
                     }
                 }
             }
-            Event::SetStringValue { name, value } => match name.as_ref() {
-                "dimension" => {
-                    let mut argument = value.split_whitespace();
-                    self.dimension = {
-                        resize = true;
-                        Area {
-                            x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                            y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                            w: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
-                            h: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
-                        }
-                    }
-                }
-                "resize" => {
-                    resize = if let Ok(ans) = value.parse::<bool>() {
-                        ans
-                    } else {
-                        false
-                    }
-                }
-                _ => parser::main(&mut self, name, value),
-            },
+            Event::SetStringValue { name, value } => parser::main(&mut self, name, value),
         });
     }
 }
 
 impl Tag {
-    pub fn update(&mut self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
+    fn update(&mut self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
         let parent;
         *list = Vec::new();
         match &self.layout {

@@ -4,6 +4,25 @@ use super::layout::*;
 pub fn main(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
     match name.as_ref() {
+        "dimension" => {
+            let mut argument = value.split_whitespace();
+            output_handle.dimension = {
+                output_handle.resize = true;
+                Area {
+                    x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
+                    y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
+                    w: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
+                    h: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
+                }
+            }
+        }
+        "resize" => {
+            output_handle.resize = if let Ok(ans) = value.parse::<bool>() {
+                ans
+            } else {
+                false
+            }
+        }
         "smart_padding" => {
             if let Ok(ans) = command.next().unwrap().parse::<bool>() {
                 output_handle.smart_padding = ans;
@@ -87,7 +106,6 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
                         "-tag" => {
                             if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
                                 tag.rule = Rule::Tag(uint);
-                            } else {
                             }
                         }
                         "-app-id" => {
