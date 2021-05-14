@@ -1,16 +1,28 @@
 extern crate wayland_scanner;
 
 use std::path::Path;
-use std::process::Command;
+use std::fs::{File, OpenOptions};
+use std::process::{Command, Stdio};
 use wayland_scanner::{generate_code, Side};
 
 pub fn main() {
     generate("river_layout_v2");
-    Command::new("scdoc")
-        .arg("<output kile.1.scd > kile.1.gz")
-        .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/doc/"))
-        .spawn()
-        .expect("Failed to execute command");
+    match Command::new("scdoc").spawn() {
+        Ok(_) => {
+            let input = File::open(Path::new("./doc/kile.1.scd")).unwrap();
+            let output = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(Path::new("./doc/kile.1.gz"))
+            .unwrap();
+            Command::new("scdoc")
+                .stdin(Stdio::from(input))
+                .stdout(output)
+                .spawn()
+                .expect("Failed to execute command");
+        }
+        Err(_) => {}
+    }
 }
 
 fn generate(protocol_name: &str) {
