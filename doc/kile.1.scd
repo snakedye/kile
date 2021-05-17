@@ -24,11 +24,9 @@ that implements *river-layout-v2*.
 
 # CONFIGURATION
 
-On launch, the default configuration is `f:f` which would be 
-a full outer and inner layout similar to monocle.
+On launch, the default layout is **Full**.
 
-To configure and modify the layouts 
-you need to modify or set theses layout values.
+To configure kile you need to modify or set theses layout values using **riverctl**.
 
 ## LAYOUT VALUES
 
