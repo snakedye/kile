@@ -1,7 +1,7 @@
 use super::client::*;
 use super::layout::*;
 
-pub fn main(output_handle: &mut Output, name: String, value: String) {
+pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
     match name.as_ref() {
         "dimension" => {
@@ -137,28 +137,24 @@ pub fn main(output_handle: &mut Output, name: String, value: String) {
     }
 }
 
-fn brace(str: &str) -> (&str, usize) {
+fn wrap<'s>(string: &'s str, opening: &str, closing: &str) -> (&'s str, usize) {
     let mut start = 0;
     let mut end = 0;
-    let mut brace = 0;
+    let mut pattern = 0;
     let mut captured = "";
-    for i in 0..str.len() {
-        match &str[i..i + 1] {
-            "{" => {
-                brace += 1;
-                if brace == 0 {
-                    start = i + 1;
-                }
+    for i in 0..string.len() {
+        if &string[i..i+opening.len()] == opening {
+            pattern += 1;
+            if pattern == 0 {
+                start = i + 1;
             }
-            "}" => {
-                brace -= 1;
-                if brace == 0 {
-                    end = i;
-                    captured = &str[start + 1..end];
-                    break;
-                }
+        } else if &string[i..i+closing.len()] == closing {
+            pattern -= 1;
+            if pattern == 0 {
+                end = i;
+                captured = &string[start + 1..end];
+                break;
             }
-            _ => {}
         }
     }
     (captured, end)
@@ -173,7 +169,7 @@ fn layout(name: &str) -> Layout {
         "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
         "f" | "ful" | "full" => Layout::Full,
         _ => {
-            let captured = brace(name);
+            let captured = wrap(name, "{", "}");
             let closure = captured.0;
             match closure {
                 "" => Layout::Full,
@@ -184,7 +180,7 @@ fn layout(name: &str) -> Layout {
                         let c = &closure[i..i + 1];
                         match c {
                             "{" => {
-                                let nested = brace(closure);
+                                let nested = wrap(name, "{", "}");
                                 outer = &closure[i..nested.1 + 1];
                                 inner = &closure[i + nested.1 + 2..];
                                 break;
@@ -206,7 +202,7 @@ fn layout(name: &str) -> Layout {
                                 let char = &inner[i..i + 1];
                                 match char {
                                     "{" => {
-                                        let nested = brace(&inner[i..]);
+                                        let nested = wrap(name, "{", "}");
                                         if nested.1 == 0 {
                                             break;
                                         } else if nested.1 < 2 {

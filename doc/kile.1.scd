@@ -24,9 +24,9 @@ that implements *river-layout-v2*.
 
 # CONFIGURATION
 
-On launch, the default layout is **Full**.
+On launch, the default layout is *Full*.
 
-To configure kile you need to modify or set theses layout values using **riverctl**.
+To configure kile you need to modify or set theses layout values using *riverctl*.
 
 ## LAYOUT VALUES
 
@@ -58,23 +58,29 @@ To configure kile you need to modify or set theses layout values using **riverct
 
 *dimension* _(string)_
 	A custom dimension of the output.
+
 	format: "_(uint)_ _(uint)_ _(uint)_ _(uint)_"
 
 *resize* _(string)_
 	Declare if the output can or cannot be resized.
+
 	Possible values are "true" or "false".
 
 *smart_padding* _(string)_
 	Enables or disables smart padding.
+
 	Possible values are "true" or "false".
 
 *set_tag* _(string)_
 	Sets the tag configuration. All the fields except the first are escapable.
+
 	format: "<tag>|<layout>|<main_amount>|<main_factor>|<main_index>"
+
 	Values possibles for *<tag>*: "focused", "all" and _uint_.
 
 *clear_tag* _(string)_
 	Clear the configuration of the given tag(s)
+
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
 ## LAYOUTS

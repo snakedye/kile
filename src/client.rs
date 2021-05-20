@@ -68,7 +68,7 @@ impl Options {
     pub fn new() -> Options {
         return {
             Options {
-                view_padding: 0,
+                view_padding: 5,
                 main_factor: 0.55,
                 main_index: 0,
                 main_amount: 1,

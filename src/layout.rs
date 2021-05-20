@@ -40,14 +40,12 @@ impl Area {
             false
         };
         match layout {
-            Layout::Tab => {
-                while client_count > 0 {
-                    let delta = options.main_factor * 100.0;
-                    list.push(area);
-                    area.h -= delta as u32;
-                    area.y += delta as u32;
-                    client_count -= 1;
-                }
+            Layout::Tab => while client_count > 0 {
+                let delta = options.main_factor * 100.0;
+                list.push(area);
+                area.h -= delta as u32;
+                area.y += delta as u32;
+                client_count -= 1;
             }
             Layout::Horizontal => {
                 let reste = area.h % client_count;
@@ -140,7 +138,6 @@ impl Area {
                 }
             }
             Layout::Recursive { outer, inner } => {
-                let mut main_amount = 0;
                 let mut frame = Vec::new();
                 let frames_available = inner.len() as u32;
                 let mut frame_amount = {
@@ -158,17 +155,6 @@ impl Area {
                         client_count
                     }
                 };
-                if parent
-                    && frame_amount > 1
-                    && options.main_amount > 0
-                    && options.main_index < frames_available
-                {
-                    if options.main_index + options.main_amount > client_count {
-                        main_amount = client_count - options.main_index;
-                    } else {
-                        main_amount = options.main_amount;
-                    }
-                }
                 area.generate(
                     options,
                     frame_amount,
@@ -177,38 +163,33 @@ impl Area {
                     true,
                     factor,
                 );
-
-                if main_amount != 0 {
-                    frame_amount -= 1;
-                    options.main_amount = 0;
-                    client_count -= main_amount;
-                    frame[options.main_index as usize].generate(
+                if parent && options.main_amount > 0 
+                    && options.main_amount < client_count
+                    && options.main_index < frame.len() as u32 {
+                        frame_amount -= 1;
+                    client_count -= options.main_amount;
+                    frame.remove(options.main_index as usize).generate(
                         options,
-                        main_amount,
+                        options.main_amount,
                         &inner[options.main_index as usize],
                         list,
                         false,
                         false,
                     );
                 }
-
-                for (i, rect) in frame.iter_mut().enumerate() {
-                    if main_amount != 0 && i == options.main_index as usize {
-                        continue;
-                    }
+                for (mut i, rect) in frame.iter_mut().enumerate() {
                     let mut count = client_count / frame_amount;
                     if client_count % frame_amount != 0 && i as u32 != frame_amount {
                         client_count -= 1;
                         count += 1;
                     }
+                    if i >= options.main_index as usize { i+=1 }
                     rect.generate(options, count, &inner[i], list, false, false)
                 }
             }
-            Layout::Full => {
-                while client_count > 0 {
-                    list.push(area);
-                    client_count -= 1;
-                }
+            Layout::Full => while client_count > 0 {
+                list.push(area);
+                client_count -= 1;
             }
         }
     }
