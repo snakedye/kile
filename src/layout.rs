@@ -183,7 +183,7 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if i >= options.main_index as usize { i+=1 }
+                    if parent && i >= options.main_index as usize { i+=1 }
                     rect.generate(options, count, &inner[i], list, false, false)
                 }
             }
