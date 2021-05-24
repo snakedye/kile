@@ -207,21 +207,19 @@ impl Output {
                 "xoffset" => {
                     if delta < 0 {
                         self.dimension.x = 0;
-                        delta = delta * (-1);
                     } else {
-                        self.dimension.x = delta as u32;
+                        self.dimension.x = delta.abs() as u32;
                     }
-                    self.dimension.w -= delta as u32;
+                    self.dimension.w -= delta.abs() as u32;
                     self.resize = true;
                 }
                 "yoffset" => {
                     if delta < 0 {
                         self.dimension.y = 0;
-                        delta = delta * (-1);
                     } else {
-                        self.dimension.y = delta as u32;
+                        self.dimension.y = delta.abs() as u32;
                     }
-                    self.dimension.h -= delta as u32;
+                    self.dimension.h -= delta.abs() as u32;
                     self.resize = true;
                 }
                 _ => {
