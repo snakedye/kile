@@ -101,8 +101,8 @@ The base layouts are the following.
 
 ## RECURSIVE
 
-The syntax for initiate a *recursive* layout is "{}".
-The content of layout resides within the brackets.
+The syntax to create a *recursive* layout is "{}".
+The content of the layout resides within the brackets.
 *:* is the delimiter between the outer and inner layout. Both are property specific 
 to the *recursive* layout. Only characters are acceptable as layout denominators.
 
