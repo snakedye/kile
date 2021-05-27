@@ -74,20 +74,20 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                     tag.layout = layout.clone();
                                     tag.rule = window_rule.clone();
                                     if let Ok(index) = main_index {
-                                        tag.options.main_index = index;
+                                        tag.parameters.main_index = index;
                                     }
                                     if let Ok(amount) = main_amount {
-                                        tag.options.main_amount = amount;
+                                        tag.parameters.main_amount = amount;
                                     }
                                     if let Ok(factor) = main_factor {
-                                        tag.options.main_factor = factor;
+                                        tag.parameters.main_factor = factor;
                                     }
                                 }
                                 None => {
                                     output_handle.tags[i] = Some({
                                         Tag {
                                             rule: window_rule.clone(),
-                                            options: Options::new(),
+                                            parameters: Parameters::new(),
                                             layout: layout.clone(),
                                         }
                                     })

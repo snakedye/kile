@@ -25,7 +25,7 @@ impl Area {
     }
     pub fn generate(
         self,
-        mut options: Options,
+        parameters: &Parameters,
         mut client_count: u32,
         layout: &Layout,
         list: &mut Vec<Area>,
@@ -33,15 +33,15 @@ impl Area {
         factor: bool,
     ) {
         let mut area = self;
-
-        let master = if parent && factor && client_count > 1 && options.main_index < client_count {
+        let master = if parent && factor && client_count > 1 && parameters.main_index < client_count {
             true
         } else {
             false
         };
+
         match layout {
             Layout::Tab => while client_count > 0 {
-                let delta = options.main_factor * 100.0;
+                let delta = parameters.main_factor * 100.0;
                 list.push(area);
                 area.h -= delta as u32;
                 area.y += delta as u32;
@@ -51,13 +51,13 @@ impl Area {
                 let reste = area.h % client_count;
                 let mut slave_height = area.h;
                 let main_height = if master {
-                    ((area.h as f64) * options.main_factor) as u32
+                    ((area.h as f64) * parameters.main_factor) as u32
                 } else {
                     0
                 };
                 slave_height -= main_height;
                 for i in 0..client_count {
-                    area.h = if master && i == options.main_index {
+                    area.h = if master && i == parameters.main_index {
                         main_height
                     } else if master {
                         slave_height / (client_count - 1)
@@ -76,13 +76,13 @@ impl Area {
                 let reste = area.w % client_count;
                 let mut slave_width = area.w;
                 let main_width = if master {
-                    ((area.w as f64) * options.main_factor) as u32
+                    ((area.w as f64) * parameters.main_factor) as u32
                 } else {
                     0
                 };
                 slave_width -= main_width;
                 for i in 0..client_count {
-                    area.w = if master && i == options.main_index {
+                    area.w = if master && i == parameters.main_index {
                         main_width
                     } else if master {
                         slave_width / (client_count - 1)
@@ -102,8 +102,8 @@ impl Area {
                     let reste;
                     if i < client_count - 1 {
                         if (i + modi) % 2 == 0 {
-                            if master && i == options.main_index {
-                                area.w = ((area.w as f64) * options.main_factor) as u32;
+                            if master && i == parameters.main_index {
+                                area.w = ((area.w as f64) * parameters.main_factor) as u32;
                             } else {
                                 reste = area.w % 2;
                                 area.w /= 2;
@@ -111,14 +111,14 @@ impl Area {
                             }
                             list.push(area);
                             area.x += area.w;
-                            if master && i == options.main_index {
-                                area.w = (((area.w as f64) * (1.0 - options.main_factor))
-                                    / options.main_factor)
+                            if master && i == parameters.main_index {
+                                area.w = (((area.w as f64) * (1.0 - parameters.main_factor))
+                                    / parameters.main_factor)
                                     .ceil() as u32;
                             }
                         } else {
-                            if master && i == options.main_index {
-                                area.h = ((area.h as f64) * options.main_factor) as u32;
+                            if master && i == parameters.main_index {
+                                area.h = ((area.h as f64) * parameters.main_factor) as u32;
                             } else {
                                 reste = area.h % 2;
                                 area.h /= 2;
@@ -126,9 +126,9 @@ impl Area {
                             }
                             list.push(area);
                             area.y += area.h;
-                            if master && i == options.main_index {
-                                area.h = (((area.h as f64) * (1.0 - options.main_factor))
-                                    / options.main_factor)
+                            if master && i == parameters.main_index {
+                                area.h = (((area.h as f64) * (1.0 - parameters.main_factor))
+                                    / parameters.main_factor)
                                     .ceil() as u32;
                             }
                         }
@@ -141,37 +141,30 @@ impl Area {
                 let mut frame = Vec::new();
                 let frames_available = inner.len() as u32;
                 let mut frame_amount = {
-                    let main = options.main_amount >= 1
+                    let main = parameters.main_amount >= 1
                         && frames_available > 1
-                        && options.main_index < frames_available
-                        && client_count > options.main_amount;
-                    if options.main_amount >= client_count {
+                        && parameters.main_index < frames_available
+                        && client_count > parameters.main_amount;
+                    if parameters.main_amount >= client_count {
                         1
-                    } else if main && client_count - options.main_amount < frames_available {
-                        1 + client_count - options.main_amount
+                    } else if main && client_count - parameters.main_amount < frames_available {
+                        1 + client_count - parameters.main_amount
                     } else if client_count > frames_available || main {
                         frames_available
                     } else {
                         client_count
                     }
                 };
-                area.generate(
-                    options,
-                    frame_amount,
-                    outer.deref(),
-                    &mut frame,
-                    true,
-                    factor,
-                );
-                if parent && options.main_amount > 0 
-                    && options.main_amount < client_count
-                    && options.main_index < frame.len() as u32 {
+                area.generate( parameters, frame_amount, outer.deref(), &mut frame, true, factor,);
+                if parent && parameters.main_amount > 0 
+                    && parameters.main_amount < client_count
+                    && parameters.main_index < frame.len() as u32 {
                         frame_amount -= 1;
-                    client_count -= options.main_amount;
-                    frame.remove(options.main_index as usize).generate(
-                        options,
-                        options.main_amount,
-                        &inner[options.main_index as usize],
+                    client_count -= parameters.main_amount;
+                    frame.remove(parameters.main_index as usize).generate(
+                        parameters,
+                        parameters.main_amount,
+                        &inner[parameters.main_index as usize],
                         list,
                         false,
                         false,
@@ -183,8 +176,8 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent && i >= options.main_index as usize { i+=1 }
-                    rect.generate(options, count, &inner[i], list, false, false)
+                    if parent && i >= parameters.main_index as usize { i+=1 }
+                    rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }
             Layout::Full => while client_count > 0 {

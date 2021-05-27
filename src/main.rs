@@ -3,9 +3,9 @@ mod layout;
 mod parser;
 mod wayland;
 
-use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;
-use client::{Context, Output};
 use std::env;
+use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;
+use client::{Globals, Output};
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
 
@@ -33,10 +33,9 @@ fn main() {
         }
     }
 
+    let mut globals = Globals::new();
     let display = Display::connect_to_env().unwrap();
-
     let mut event_queue = display.create_event_queue();
-
     let attached_display = (*display).clone().attach(event_queue.token());
 
     GlobalManager::new_with_cb(
@@ -45,29 +44,28 @@ fn main() {
             [
                 RiverLayoutManagerV2,
                 1,
-                |layout_manager: Main<RiverLayoutManagerV2>, mut context: DispatchData| {
-                    context.get::<Context>().unwrap().layout_manager = Some(layout_manager);
+                |layout_manager: Main<RiverLayoutManagerV2>, mut globals: DispatchData| {
+                    globals.get::<Globals>().unwrap().layout_manager = Some(layout_manager);
                 }
             ],
             [
                 WlOutput,
                 3,
-                |output: Main<WlOutput>, mut context: DispatchData| {
+                |output: Main<WlOutput>, mut globals: DispatchData| {
                     output.quick_assign(move |_, _, _| {});
                     let output = Output::new(output.detach());
-                    context.get::<Context>().unwrap().outputs.push(output);
+                    globals.get::<Globals>().unwrap().outputs.push(output);
                 }
             ]
         ),
     );
 
-    let mut context = Context::new();
     event_queue
-        .sync_roundtrip(&mut context, |_, _, _| unreachable!())
+        .sync_roundtrip(&mut globals, |_, _, _| unreachable!())
         .unwrap();
 
-    let layout_manager = context.layout_manager.as_ref();
-    for output in context.outputs {
+    let layout_manager = globals.layout_manager.as_ref();
+    for output in globals.outputs {
         output.layout_filter(layout_manager, namespace.clone());
     }
 

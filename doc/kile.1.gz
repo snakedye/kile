@@ -5,7 +5,7 @@
 .nh
 .ad l
 .\" Begin generated content:
-.TH "KILE" "1" "2021-05-25" "https://gitlab.com/snakedye/kile" "General Commands Manual"
+.TH "KILE" "1" "2021-05-27" "https://gitlab.com/snakedye/kile" "General Commands Manual"
 .P
 .SH NAME
 .P
@@ -192,8 +192,8 @@ The base layouts are the following.\&
 .RE
 .SS RECURSIVE
 .P
-The syntax for initiate a \fBrecursive\fR layout is "{}".\&
-The content of layout resides within the brackets.\&
+The syntax to create a \fBrecursive\fR layout is "{}".\&
+The content of the layout resides within the brackets.\&
 \fB:\fR is the delimiter between the outer and inner layout.\& Both are property specific 
 to the \fBrecursive\fR layout.\& Only characters are acceptable as layout denominators.\&
 .P

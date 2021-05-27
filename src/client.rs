@@ -7,13 +7,13 @@ use crate::wayland::{
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
 
-pub struct Context {
+pub struct Globals {
     pub outputs: Vec<Output>,
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Options {
+pub struct Parameters {
     pub main_amount: u32,
     pub main_index: u32,
     pub main_factor: f64,
@@ -34,7 +34,7 @@ pub struct Output {
 
 pub struct Tag {
     pub rule: Rule,
-    pub options: Options,
+    pub parameters: Parameters,
     pub layout: Layout,
 }
 
@@ -53,10 +53,10 @@ pub enum Rule {
     None,
 }
 
-impl Context {
-    pub fn new() -> Context {
+impl Globals {
+    pub fn new() -> Globals {
         return {
-            Context {
+            Globals {
                 layout_manager: None,
                 outputs: Vec::new(),
             }
@@ -64,10 +64,10 @@ impl Context {
     }
 }
 
-impl Options {
-    pub fn new() -> Options {
+impl Parameters {
+    pub fn new() -> Parameters {
         return {
-            Options {
+            Parameters {
                 view_padding: 5,
                 main_factor: 0.55,
                 main_index: 0,
@@ -97,7 +97,7 @@ impl Output {
                 default: {
                     Tag {
                         rule: Rule::None,
-                        options: Options::new(),
+                        parameters: Parameters::new(),
                         layout: Layout::Full,
                     }
                 },
@@ -138,15 +138,15 @@ impl Output {
                     }
                     self.focused = {
                         let mut i = 0;
-                        while (1 << i) < tags {
+                        while (1 << i) <= tags {
                             i += 1;
-                            if i >= 31 { break }
+                            if i == 32 { break }
                         }
                         i as usize
                     };
                     match self.tags[self.focused].as_mut() {
                         Some(tag) => {
-                            view_padding = tag.options.view_padding;
+                            view_padding = tag.parameters.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
                         }
                         None => self
@@ -184,11 +184,11 @@ impl Output {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value >= 0 {
                             match name.as_ref() {
-                                "main_amount" => tag.options.main_amount = value as u32,
-                                "main_index" => tag.options.main_index = value as u32,
+                                "main_amount" => tag.parameters.main_amount = value as u32,
+                                "main_index" => tag.parameters.main_index = value as u32,
                                 "view_padding" => {
-                                    let delta = value - tag.options.view_padding;
-                                    tag.options.view_padding = value;
+                                    let delta = value - tag.parameters.view_padding;
+                                    tag.parameters.view_padding = value;
                                     view_padding = delta;
                                     self.reload = false;
                                 }
@@ -198,7 +198,7 @@ impl Output {
                     }
                 }
             },
-            Event::ModIntValue { name, mut delta } => match name.as_ref() {
+            Event::ModIntValue { name, delta } => match name.as_ref() {
                 "outer_padding" => {
                     if self.outer_padding as i32 >= delta {
                         self.outer_padding += delta
@@ -226,16 +226,16 @@ impl Output {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         match name.as_ref() {
                             "main_amount" => {
-                                tag.options.main_amount =
-                                    ((tag.options.main_amount as i32) + delta) as u32
+                                tag.parameters.main_amount =
+                                    ((tag.parameters.main_amount as i32) + delta) as u32
                             }
                             "main_index" => {
-                                tag.options.main_index =
-                                    ((tag.options.main_index as i32) + delta) as u32
+                                tag.parameters.main_index =
+                                    ((tag.parameters.main_index as i32) + delta) as u32
                             }
                             "view_padding" => {
-                                if tag.options.view_padding + delta >= 0 {
-                                    tag.options.view_padding += delta;
+                                if tag.parameters.view_padding + delta >= 0 {
+                                    tag.parameters.view_padding += delta;
                                     view_padding = delta;
                                     self.reload = false;
                                 }
@@ -249,7 +249,7 @@ impl Output {
                 if name == "main_factor" {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value > 0.0 && value < 1.0 {
-                            tag.options.main_factor = value
+                            tag.parameters.main_factor = value
                         }
                     }
                 }
@@ -257,8 +257,8 @@ impl Output {
             Event::ModFixedValue { name, delta } => {
                 if name == "main_factor" {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if delta <= tag.options.main_factor {
-                            tag.options.main_factor += delta;
+                        if delta <= tag.parameters.main_factor {
+                            tag.parameters.main_factor += delta;
                         }
                     }
                 }
@@ -278,6 +278,6 @@ impl Tag {
             }
             _ => parent = false,
         };
-        area.generate(self.options, view_amount, &self.layout, list, parent, true);
+        area.generate(&self.parameters, view_amount, &self.layout, list, parent, true);
     }
 }
