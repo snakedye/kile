@@ -46,8 +46,9 @@ pub struct Area {
     pub h: u32,
 }
 
-#[derive(Clone, Debug, std::cmp::PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Rule {
+    Position{ app_id: String, area: Area },
     AppId(String),
     Tag(u32),
     None,
@@ -136,14 +137,7 @@ impl Output {
                             self.dimension.apply_padding(self.outer_padding);
                         }
                     }
-                    self.focused = {
-                        let mut i = 0;
-                        while (1 << i) <= tags {
-                            i += 1;
-                            if i == 32 { break }
-                        }
-                        i as usize
-                    };
+                    self.focused = tag(tags) as usize;
                     match self.tags[self.focused].as_mut() {
                         Some(tag) => {
                             view_padding = tag.parameters.view_padding;
@@ -280,4 +274,20 @@ impl Tag {
         };
         area.generate(&self.parameters, view_amount, &self.layout, list, parent, true);
     }
+}
+
+fn tag(tagmask: u32) -> u32 {
+    let mut int = 0;
+    let mut current: u32;
+    while {
+        current = 1 << int;
+        current <= tagmask
+    } {
+        int += 1;
+        if current != tagmask && (tagmask / current) % 2 != 0 {
+            int = tag(tagmask - current);
+            break;
+        } else if int == 32 { break; }
+    }
+    int
 }

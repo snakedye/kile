@@ -99,14 +99,23 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 }
             }
         }
-        "window_rule" => {
+        "rule" => {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
                     Some(arg) => match arg {
-                        "-tag" => {
-                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                                tag.rule = Rule::Tag(uint);
-                            }
+                        "-position" => if let Some(app_id) = command.next() {
+                            Rule::Position{
+                                app_id: app_id.to_owned(),
+                                area: { Area {
+                                    x: command.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                    y: command.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                    w: command.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                    h: command.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                } }
+                            };
+                        }
+                        "-tag" => if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                            tag.rule = Rule::Tag(uint);
                         }
                         "-app-id" => {
                             tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
