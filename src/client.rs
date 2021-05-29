@@ -21,7 +21,7 @@ pub struct Parameters {
 }
 
 pub struct Output {
-    pub output: WlOutput,
+    pub output: Main<WlOutput>,
     pub default: Tag,
     pub focused: usize,
     pub reload: bool,
@@ -79,7 +79,7 @@ impl Parameters {
 }
 
 impl Output {
-    pub fn new(output: WlOutput) -> Output {
+    pub fn new(output: Main<WlOutput>) -> Output {
         {
             Output {
                 output: output,

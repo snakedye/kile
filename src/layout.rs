@@ -156,10 +156,10 @@ impl Area {
                     }
                 };
                 area.generate( parameters, frame_amount, outer.deref(), &mut frame, true, factor,);
-                if parent && parameters.main_amount > 0 
+                if parent && parameters.main_amount > 0
                     && parameters.main_amount < client_count
                     && parameters.main_index < frame.len() as u32 {
-                        frame_amount -= 1;
+                    frame_amount -= 1;
                     client_count -= parameters.main_amount;
                     frame.remove(parameters.main_index as usize).generate(
                         parameters,
@@ -176,7 +176,8 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent && i >= parameters.main_index as usize { i+=1 }
+                    if parent 
+                        && parameters.main_amount > 0 && i > parameters.main_index as usize { i+=1 }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }

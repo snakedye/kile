@@ -53,7 +53,7 @@ fn main() {
                 3,
                 |output: Main<WlOutput>, mut globals: DispatchData| {
                     output.quick_assign(move |_, _, _| {});
-                    let output = Output::new(output.detach());
+                    let output = Output::new(output);
                     globals.get::<Globals>().unwrap().outputs.push(output);
                 }
             ]
