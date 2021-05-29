@@ -281,13 +281,13 @@ fn tag(tagmask: u32) -> u32 {
     let mut current: u32;
     while {
         current = 1 << int;
-        current <= tagmask
+        current < tagmask
     } {
         int += 1;
         if current != tagmask && (tagmask / current) % 2 != 0 {
             int = tag(tagmask - current);
             break;
-        } else if int == 32 { break; }
+        } else if int == 31 { break; }
     }
     int
 }
