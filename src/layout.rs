@@ -177,7 +177,7 @@ impl Area {
                         count += 1;
                     }
                     if parent 
-                        && parameters.main_amount > 0 && i > parameters.main_index as usize { i+=1 }
+                        && parameters.main_amount > 0 && i >= parameters.main_index as usize { i+=1 }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }

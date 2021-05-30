@@ -239,21 +239,17 @@ impl Output {
                     }
                 }
             },
-            Event::SetFixedValue { name, value } => {
-                if name == "main_factor" {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if value > 0.0 && value < 1.0 {
-                            tag.parameters.main_factor = value
-                        }
+            Event::SetFixedValue { name, value } => if name == "main_factor" {
+                if let Some(tag) = self.tags[self.focused].as_mut() {
+                    if value > 0.0 && value < 1.0 {
+                        tag.parameters.main_factor = value
                     }
                 }
             }
-            Event::ModFixedValue { name, delta } => {
-                if name == "main_factor" {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if delta <= tag.parameters.main_factor {
-                            tag.parameters.main_factor += delta;
-                        }
+            Event::ModFixedValue { name, delta } => if name == "main_factor" {
+                if let Some(tag) = self.tags[self.focused].as_mut() {
+                    if delta <= tag.parameters.main_factor {
+                        tag.parameters.main_factor += delta;
                     }
                 }
             }
@@ -287,7 +283,7 @@ fn tag(tagmask: u32) -> u32 {
         if current != tagmask && (tagmask / current) % 2 != 0 {
             int = tag(tagmask - current);
             break;
-        } else if int == 31 { break; }
+        }
     }
     int
 }
