@@ -22,7 +22,6 @@ pub struct Parameters {
 
 pub struct Output {
     pub output: Main<WlOutput>,
-    pub default: Tag,
     pub focused: usize,
     pub reload: bool,
     pub resize: bool,
@@ -54,25 +53,23 @@ pub enum Rule {
     None,
 }
 
+static DEFAULT: Tag = { Tag {
+    rule: Rule::None,
+    parameters: { Parameters {
+        view_padding: 5,
+        main_amount: 1,
+        main_index: 0,
+        main_factor: 0.55
+    } },
+    layout: Layout::Full,
+}};
+
 impl Globals {
     pub fn new() -> Globals {
         return {
             Globals {
                 layout_manager: None,
                 outputs: Vec::new(),
-            }
-        };
-    }
-}
-
-impl Parameters {
-    pub fn new() -> Parameters {
-        return {
-            Parameters {
-                view_padding: 5,
-                main_factor: 0.55,
-                main_index: 0,
-                main_amount: 1,
             }
         };
     }
@@ -95,13 +92,6 @@ impl Output {
                 outer_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
-                default: {
-                    Tag {
-                        rule: Rule::None,
-                        parameters: Parameters::new(),
-                        layout: Layout::Full,
-                    }
-                },
             }
         }
     }
@@ -143,9 +133,7 @@ impl Output {
                             view_padding = tag.parameters.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
                         }
-                        None => self
-                            .default
-                            .update(&mut windows, view_count, self.dimension),
+                        None => DEFAULT.update(&mut windows, view_count, self.dimension),
                     };
                 }
                 self.reload = true;
@@ -259,7 +247,7 @@ impl Output {
 }
 
 impl Tag {
-    fn update(&mut self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
+    fn update(&self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
         let parent;
         *list = Vec::new();
         match &self.layout {
