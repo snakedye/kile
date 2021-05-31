@@ -89,7 +89,7 @@ impl Output {
                 focused: 0,
                 reload: true,
                 resize: false,
-                outer_padding: 5,
+                outer_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
             }
