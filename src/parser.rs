@@ -90,7 +90,7 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                             parameters: { Parameters {
                                                 view_padding: 5,
                                                 main_index: if let Ok(index) = main_index { index } else { 1 },
-                                                main_amount: if let Ok(amount) = main_amount { amount } else { 0 },
+                                                main_amount: if let Ok(amount) = main_amount { amount } else { 1 },
                                                 main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
                                             }},
                                             layout: layout.clone(),
