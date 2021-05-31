@@ -5,14 +5,14 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
     match name.as_ref() {
         "dimension" => {
-            let mut argument = value.split_whitespace();
+            let mut arguments = value.split_whitespace();
             output_handle.dimension = {
                 output_handle.resize = true;
                 Area {
-                    x: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                    y: argument.next().unwrap_or("0").parse::<u32>().unwrap(),
-                    w: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
-                    h: argument.next().unwrap_or("500").parse::<u32>().unwrap(),
+                    x: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
+                    y: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
+                    w: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
+                    h: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
                 }
             }
         }
@@ -87,7 +87,12 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                     output_handle.tags[i] = Some({
                                         Tag {
                                             rule: window_rule.clone(),
-                                            parameters: Parameters::new(),
+                                            parameters: { Parameters {
+                                                view_padding: 5,
+                                                main_index: if let Ok(index) = main_index { index } else { 1 },
+                                                main_amount: if let Ok(amount) = main_amount { amount } else { 0 },
+                                                main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
+                                            }},
                                             layout: layout.clone(),
                                         }
                                     })
