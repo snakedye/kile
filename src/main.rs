@@ -22,8 +22,8 @@ fn main() {
                     }
                 }
                 "--help" | "-h" | "--h" => {
-                    println!("Usage: kile [option]\n");
-                    println!("  -n | --n | --namespace <string> : the namespace of kile.");
+                    print!("Usage: kile [option]\n\n");
+                    print!("  -n | --n | --namespace <string> : the namespace of kile.\n");
                     println!("  -h | --h | --help : shows this help message.");
                     std::process::exit(0);
                 }

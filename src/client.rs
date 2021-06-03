@@ -12,7 +12,7 @@ pub struct Globals {
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Parameters {
     pub main_amount: u32,
     pub main_index: u32,
@@ -37,7 +37,7 @@ pub struct Tag {
     pub layout: Layout,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Area {
     pub x: u32,
     pub y: u32,
@@ -45,7 +45,7 @@ pub struct Area {
     pub h: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Rule {
     Position{ app_id: String, area: Area },
     AppId(String),
@@ -56,7 +56,7 @@ pub enum Rule {
 static DEFAULT: Tag = { Tag {
     rule: Rule::None,
     parameters: { Parameters {
-        view_padding: 5,
+        view_padding: 0,
         main_amount: 1,
         main_index: 0,
         main_factor: 0.55
@@ -248,13 +248,12 @@ impl Output {
 
 impl Tag {
     fn update(&self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
-        let parent;
         *list = Vec::new();
-        match &self.layout {
+        let parent = match &self.layout {
             Layout::Recursive { outer: _, inner: _ } => {
-                parent = true;
+                true
             }
-            _ => parent = false,
+            _ => false,
         };
         area.generate(&self.parameters, view_amount, &self.layout, list, parent, true);
     }

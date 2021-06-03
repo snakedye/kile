@@ -28,7 +28,7 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 output_handle.smart_padding = ans;
             }
         }
-        "set_tag" => {
+        "set_tag" | "layout" => {
             let mut value = value.split_whitespace();
             loop {
                 match value.next() {
