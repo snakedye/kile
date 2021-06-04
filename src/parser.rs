@@ -2,11 +2,21 @@ use super::client::*;
 use super::layout::*;
 
 fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>) {
+    let mut brace = 0;
+    let mut bracket = 0;
+    // println!("{}",string);
     let (mut left, mut right) = (string, None);
     for (i, c) in string.to_string().chars().enumerate() {
-        if c == pattern {
+        match c {
+            '{' => bracket+=1,
+            '}' => bracket-=1,
+            '(' => brace+=1,
+            ')' => brace-=1,
+            _ => {}
+        }
+        if c == pattern && brace == 0 && bracket == 0 {
             left = &string[0..i];
-            if i != string.len() {
+            if &string[i + 1..] != "" {
                 right = Some(&string[i + 1..]);
             }
             break;
@@ -35,14 +45,14 @@ fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
     captured
 }
 fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
-    match string.chars().next().unwrap_or_default() {
-        '{' | '(' => f(string),
-        _ => {
-            let (previous, next) = split_ounce(string,pattern);
-            f(previous);
-            if let Some(next) = next {
-                filter(next, pattern, f);
-            }
+    if clamp(string, "{", "}").len() + 2 == string.len() ||
+        clamp(string, "(", ")").len() + 2 == string.len() {
+            f(string)
+    } else {
+        let (previous, next) = split_ounce(string,pattern);
+        f(previous);
+        if let Some(next) = next {
+            filter(next, pattern, f);
         }
     }
 }
@@ -210,7 +220,7 @@ fn layout<'s>(name: &str) -> Layout {
                 '{' => {
                     let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
                     Layout::Recursive {
-                        outer: { Box::new(layout(&outer.clone())) },
+                        outer: { Box::new(layout(outer)) },
                         inner: {
                             let mut vec = Vec::new();
                             if let Some(inner) = inner {
@@ -243,3 +253,35 @@ fn layout<'s>(name: &str) -> Layout {
         } else { Layout::Full }
     }
 }
+
+// fn debug(layout: &Layout) {
+//     match layout {
+//         Layout::Full => print!("Full "),
+//         Layout::Tab => print!("Tab "),
+//         Layout::Vertical => print!("Vertical "),
+//         Layout::Horizontal => print!("Horizontal "),
+//         Layout::Dwindle( uint ) => print!("Dwindle ({}) ", uint),
+//         Layout::Recursive{ outer, inner } => {
+//             print!("\n{{\n");
+//             print!("    outer: "); debug(outer);
+//             print!("\n    inner: [");
+//             for (i,layout) in inner.iter().enumerate() {
+//                 debug(layout);
+//                 if i+1 < inner.len() {
+//                     print!(",");
+//                 }
+//             }
+//             print!("]");
+//             print!("\n}}\n");
+//         }
+//         Layout::Assisted{ layout, main_amount, main_factor, main_index } => {
+//             print!("\n{{\n");
+//             print!("    layout: "); debug(layout);
+//             print!("\n    main_amount: {},", main_amount);
+//             print!("\n    main_index: {},", main_index);
+//             print!("\n    main_factor: {},", main_factor);
+//             print!("\n}}\n");
+//         }
+//         _ => {}
+//     }
+// }
