@@ -253,35 +253,3 @@ fn layout<'s>(name: &str) -> Layout {
         } else { Layout::Full }
     }
 }
-
-// fn debug(layout: &Layout) {
-//     match layout {
-//         Layout::Full => print!("Full "),
-//         Layout::Tab => print!("Tab "),
-//         Layout::Vertical => print!("Vertical "),
-//         Layout::Horizontal => print!("Horizontal "),
-//         Layout::Dwindle( uint ) => print!("Dwindle ({}) ", uint),
-//         Layout::Recursive{ outer, inner } => {
-//             print!("\n{{\n");
-//             print!("    outer: "); debug(outer);
-//             print!("\n    inner: [");
-//             for (i,layout) in inner.iter().enumerate() {
-//                 debug(layout);
-//                 if i+1 < inner.len() {
-//                     print!(",");
-//                 }
-//             }
-//             print!("]");
-//             print!("\n}}\n");
-//         }
-//         Layout::Assisted{ layout, main_amount, main_factor, main_index } => {
-//             print!("\n{{\n");
-//             print!("    layout: "); debug(layout);
-//             print!("\n    main_amount: {},", main_amount);
-//             print!("\n    main_index: {},", main_index);
-//             print!("\n    main_factor: {},", main_factor);
-//             print!("\n}}\n");
-//         }
-//         _ => {}
-//     }
-// }
