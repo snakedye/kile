@@ -214,16 +214,16 @@ fn layout<'s>(name: &str) -> Layout {
                         inner: {
                             let mut vec = Vec::new();
                             if let Some(inner) = inner {
-                                filter(inner, ';',|s| { vec.push(layout(s)) });
+                                filter(inner, ',',|s| { vec.push(layout(s)) });
                             }
                             vec
                         },
                     }
                 }
                 '(' => {
-                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ',');
+                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
                     if let Some(parameters) = parameters {
-                    let mut values = parameters.split(',');
+                    let mut values = parameters.split(';');
                         Layout::Assisted {
                             layout: Box::new(layout(layout_denominator)),
                             main_amount: if let Some(main_amount) = values.next() {

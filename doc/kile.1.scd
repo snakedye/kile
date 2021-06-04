@@ -103,15 +103,22 @@ The base layouts are the following.
 
 The syntax to create a *recursive* layout is "{}".
 The content of the layout resides within the brackets.
-*:* is the delimiter between the outer and inner layout. Both are property specific 
-to the *recursive* layout. Only characters are acceptable as layout denominators.
-
-It will never and should never give an empty area,
-no matter how funky your combinations may be.
+*:* is the delimiter between the outer and inner layout. Both are property specific to the *recursive* layout.
 
 *examples:*
-	- {v:hh}
-	- {d:h{v:dd}}
-	- {{v:dd}:tt}
+	- {v:h,h}
+	- {d:h{v:dwd,d}}
+	- {{ver:dwindle,d}:tab,t}
+
+## ASSISTED
+
+The syntax to create a *assisted* layout is "()".
+The content of the layout resides within the braces.
+*;* is the delimiter between each field .ie *layout;main_amount;main_factor;main_index* 
+to the *recursive* layout. Only characters are acceptable as layout denominators.
+
+*examples:*
+	- (vertical;0;0.6;0)
+  - ({v:h,h};2;0.6;0)
 
 *riverctl*(1), *rivertile*(7)
