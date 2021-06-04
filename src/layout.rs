@@ -46,6 +46,10 @@ impl Area {
         };
 
         match layout {
+            Layout::Full => while client_count > 0 {
+                list.push(area);
+                client_count -= 1;
+            }
             Layout::Tab => while client_count > 0 {
                 let delta = parameters.main_factor * 100.0;
                 list.push(area);
@@ -194,10 +198,6 @@ impl Area {
                     main_factor: *main_factor
                 } };
                 area.generate(&substitute, client_count, layout.deref(), list, true, true);
-            }
-            Layout::Full => while client_count > 0 {
-                list.push(area);
-                client_count -= 1;
             }
         }
     }

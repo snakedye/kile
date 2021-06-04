@@ -4,7 +4,6 @@ use super::layout::*;
 fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>) {
     let mut brace = 0;
     let mut bracket = 0;
-    // println!("{}",string);
     let (mut left, mut right) = (string, None);
     for (i, c) in string.to_string().chars().enumerate() {
         match c {
@@ -54,6 +53,52 @@ fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
         if let Some(next) = next {
             filter(next, pattern, f);
         }
+    }
+}
+fn layout<'s>(name: &str) -> Layout {
+    match name {
+        "v" | "ver" | "vertical" => Layout::Vertical,
+        "h" | "hor" | "horizontal" => Layout::Horizontal,
+        "t" | "tab" | "tabbed" => Layout::Tab,
+        "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
+        "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
+        "f" | "ful" | "full" => Layout::Full,
+        _ => if let Some(char) = name.chars().next() {
+            match char {
+                '{' => {
+                    let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
+                    Layout::Recursive {
+                        outer: { Box::new(layout(outer)) },
+                        inner: {
+                            let mut vec = Vec::new();
+                            if let Some(inner) = inner {
+                                filter(inner, ',',|s| { vec.push(layout(s)) });
+                            }
+                            vec
+                        },
+                    }
+                }
+                '(' => {
+                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
+                    if let Some(parameters) = parameters {
+                    let mut values = parameters.split(';');
+                        Layout::Assisted {
+                            layout: Box::new(layout(layout_denominator)),
+                            main_amount: if let Some(main_amount) = values.next() {
+                                main_amount.parse::<u32>().unwrap()
+                            } else { 0 },
+                            main_factor: if let Some(main_factor) = values.next() {
+                                main_factor.parse::<f64>().unwrap()
+                            } else { 0.6 },
+                            main_index: if let Some(main_index) = values.next() {
+                                main_index.parse::<u32>().unwrap()
+                            } else { 0 },
+                        }
+                    } else { Layout::Full }
+                }
+                _ => Layout::Full
+            }
+        } else { Layout::Full }
     }
 }
 
@@ -204,52 +249,5 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             }
         }
         _ => {}
-    }
-}
-
-fn layout<'s>(name: &str) -> Layout {
-    match name {
-        "v" | "ver" | "vertical" => Layout::Vertical,
-        "h" | "hor" | "horizontal" => Layout::Horizontal,
-        "t" | "tab" | "tabbed" => Layout::Tab,
-        "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
-        "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
-        "f" | "ful" | "full" => Layout::Full,
-        _ => if let Some(char) = name.chars().next() {
-            match char {
-                '{' => {
-                    let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
-                    Layout::Recursive {
-                        outer: { Box::new(layout(outer)) },
-                        inner: {
-                            let mut vec = Vec::new();
-                            if let Some(inner) = inner {
-                                filter(inner, ',',|s| { vec.push(layout(s)) });
-                            }
-                            vec
-                        },
-                    }
-                }
-                '(' => {
-                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
-                    if let Some(parameters) = parameters {
-                    let mut values = parameters.split(';');
-                        Layout::Assisted {
-                            layout: Box::new(layout(layout_denominator)),
-                            main_amount: if let Some(main_amount) = values.next() {
-                                main_amount.parse::<u32>().unwrap()
-                            } else { 0 },
-                            main_factor: if let Some(main_factor) = values.next() {
-                                main_factor.parse::<f64>().unwrap()
-                            } else { 0.6 },
-                            main_index: if let Some(main_index) = values.next() {
-                                main_index.parse::<u32>().unwrap()
-                            } else { 0 },
-                        }
-                    } else { Layout::Full }
-                }
-                _ => Layout::Full
-            }
-        } else { Layout::Full }
     }
 }
