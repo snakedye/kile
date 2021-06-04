@@ -11,6 +11,12 @@ pub enum Layout {
         outer: Box<Layout>,
         inner: Vec<Layout>,
     },
+    Assisted {
+        layout: Box<Layout>,
+        main_amount: u32,
+        main_index: u32,
+        main_factor: f64,
+    },
     Horizontal,
 }
 
@@ -179,6 +185,15 @@ impl Area {
                     if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize { i+=1 }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
+            }
+            Layout::Assisted { layout, main_amount, main_index, main_factor } => {
+                let substitute = { Parameters {
+                    view_padding: parameters.view_padding,
+                    main_amount: *main_amount,
+                    main_index: *main_index,
+                    main_factor: *main_factor
+                } };
+                area.generate(&substitute, client_count, layout.deref(), list, true, true);
             }
             Layout::Full => while client_count > 0 {
                 list.push(area);

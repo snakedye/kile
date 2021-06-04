@@ -1,6 +1,52 @@
 use super::client::*;
 use super::layout::*;
 
+fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>) {
+    let (mut left, mut right) = (string, None);
+    for (i, c) in string.to_string().chars().enumerate() {
+        if c == pattern {
+            left = &string[0..i];
+            if i != string.len() {
+                right = Some(&string[i + 1..]);
+            }
+            break;
+        }
+    } 
+    (left, right)
+}
+fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
+    let mut start = 0;
+    let mut brace = 0;
+    let mut captured = "";
+    for i in 0..string.len() {
+        if &string[i..i+opening.len()] == opening {
+            if brace == 0 {
+                start = i;
+            }
+            brace += 1;
+        } else if &string[i..i+closing.len()] == closing {
+            brace -= 1;
+            if brace == 0 {
+                captured = &string[start + 1..i];
+                break;
+            }
+        }
+    }
+    captured
+}
+fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
+    match string.chars().next().unwrap_or_default() {
+        '{' | '(' => f(string),
+        _ => {
+            let (previous, next) = split_ounce(string,pattern);
+            f(previous);
+            if let Some(next) = next {
+                filter(next, pattern, f);
+            }
+        }
+    }
+}
+
 pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
     match name.as_ref() {
@@ -151,30 +197,7 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
     }
 }
 
-fn wrap<'s>(string: &'s str, opening: &str, closing: &str) -> (&'s str, usize) {
-    let mut start = 0;
-    let mut end = 0;
-    let mut pattern = 0;
-    let mut captured = "";
-    for i in 0..string.len() {
-        if &string[i..i+opening.len()] == opening {
-            pattern += 1;
-            if pattern == 0 {
-                start = i + 1;
-            }
-        } else if &string[i..i+closing.len()] == closing {
-            pattern -= 1;
-            if pattern == 0 {
-                end = i;
-                captured = &string[start + 1..end];
-                break;
-            }
-        }
-    }
-    (captured, end)
-}
-
-fn layout(name: &str) -> Layout {
+fn layout<'s>(name: &str) -> Layout {
     match name {
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
@@ -182,63 +205,41 @@ fn layout(name: &str) -> Layout {
         "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
         "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
         "f" | "ful" | "full" => Layout::Full,
-        _ => {
-            let captured = wrap(name, "{", "}");
-            let closure = captured.0;
-            match closure {
-                "" => Layout::Full,
-                _ => {
-                    let mut outer = "";
-                    let mut inner = "";
-                    for i in 0..closure.len() {
-                        let c = &closure[i..i + 1];
-                        match c {
-                            "{" => {
-                                let nested = wrap(name, "{", "}");
-                                outer = &closure[i..nested.1 + 1];
-                                inner = &closure[i + nested.1 + 2..];
-                                break;
-                            }
-                            ":" => {
-                                outer = &closure[0..i];
-                                inner = &closure[i + 1..];
-                                break;
-                            }
-                            _ => {}
-                        }
-                    }
+        _ => if let Some(char) = name.chars().next() {
+            match char {
+                '{' => {
+                    let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
                     Layout::Recursive {
-                        outer: { Box::new(layout(outer)) },
+                        outer: { Box::new(layout(&outer.clone())) },
                         inner: {
                             let mut vec = Vec::new();
-                            let mut i = 0;
-                            while i < inner.len() {
-                                let char = &inner[i..i + 1];
-                                match char {
-                                    "{" => {
-                                        let nested = wrap(name, "{", "}");
-                                        if nested.1 == 0 {
-                                            break;
-                                        } else if nested.1 < 2 {
-                                            i += 1;
-                                            continue;
-                                        } else {
-                                            vec.push(layout(&inner[i..]));
-                                            i += nested.1;
-                                        }
-                                    }
-                                    " " | "}" => i += 1,
-                                    _ => {
-                                        vec.push(layout(char));
-                                        i += 1
-                                    }
-                                }
+                            if let Some(inner) = inner {
+                                filter(inner, ';',|s| { vec.push(layout(s)) });
                             }
                             vec
                         },
                     }
                 }
+                '(' => {
+                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ',');
+                    if let Some(parameters) = parameters {
+                    let mut values = parameters.split(',');
+                        Layout::Assisted {
+                            layout: Box::new(layout(layout_denominator)),
+                            main_amount: if let Some(main_amount) = values.next() {
+                                main_amount.parse::<u32>().unwrap()
+                            } else { 0 },
+                            main_factor: if let Some(main_factor) = values.next() {
+                                main_factor.parse::<f64>().unwrap()
+                            } else { 0.6 },
+                            main_index: if let Some(main_index) = values.next() {
+                                main_index.parse::<u32>().unwrap()
+                            } else { 0 },
+                        }
+                    } else { Layout::Full }
+                }
+                _ => Layout::Full
             }
-        }
+        } else { Layout::Full }
     }
 }
