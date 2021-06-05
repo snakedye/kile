@@ -33,7 +33,7 @@ impl Area {
     pub fn generate(
         self,
         parameters: &Parameters,
-        client_count: u32,
+        mut client_count: u32,
         layout: &Layout,
         list: &mut Vec<Area>,
         parent: bool,
