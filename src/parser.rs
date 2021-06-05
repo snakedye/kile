@@ -81,18 +81,30 @@ fn layout<'s>(name: &str) -> Layout {
                 '(' => {
                     let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
                     if let Some(parameters) = parameters {
-                    let mut values = parameters.split(';');
+                        let mut assisted = { Parameters {
+                            view_padding: 0,
+                            main_amount: 0,
+                            main_factor: 0.6,
+                            main_index: 0,
+                        } };
+                        let mut configured = (false, false, false);
+                        filter(parameters, ';', |s| {
+                            if !configured.0 {
+                                if let Ok(main_amount) = s.parse::<u32>() { assisted.main_amount = main_amount }
+                                configured.0 = true;
+                            } else if !configured.1 {
+                                if let Ok(main_factor) = s.parse::<f64>() { assisted.main_factor = main_factor }
+                                configured.1 = true;
+                            } else if !configured.2 {
+                                if let Ok(main_index) = s.parse::<u32>() { assisted.main_index = main_index }
+                                configured.2 = true;
+                            } 
+                        });
                         Layout::Assisted {
                             layout: Box::new(layout(layout_denominator)),
-                            main_amount: if let Some(main_amount) = values.next() {
-                                main_amount.parse::<u32>().unwrap()
-                            } else { 0 },
-                            main_factor: if let Some(main_factor) = values.next() {
-                                main_factor.parse::<f64>().unwrap()
-                            } else { 0.6 },
-                            main_index: if let Some(main_index) = values.next() {
-                                main_index.parse::<u32>().unwrap()
-                            } else { 0 },
+                            main_amount: assisted.main_amount,
+                            main_factor: assisted.main_factor,
+                            main_index: assisted.main_index,
                         }
                     } else { Layout::Full }
                 }
@@ -130,78 +142,63 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             }
         }
         "set_tag" | "layout" => {
-            let mut value = value.split_whitespace();
-            loop {
-                match value.next() {
-                    Some(fields) => {
-                        let mut fields = fields.split('|');
-                        let tags = match fields.next() {
-                            Some(tag) => match tag {
-                                "focused" => output_handle.focused..output_handle.focused + 1,
-                                "all" => 0..32,
-                                _ => match tag.parse::<usize>() {
-                                    Ok(int) => {
-                                        if int > 0 && int < 33 {
-                                            int - 1..int
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                    Err(_) => break,
-                                },
-                            },
-                            None => {
-                                break;
-                            }
-                        };
-                        let layout = layout(fields.next().unwrap_or_default());
-                        let main_amount = fields.next().unwrap_or_default().parse::<u32>();
-                        let main_factor = fields.next().unwrap_or_default().parse::<f64>();
-                        let main_index = fields.next().unwrap_or_default().parse::<u32>();
-                        let window_rule = match fields.next() {
-                            Some(app_id) => {
-                                if let Ok(tag) = app_id.parse::<u32>() {
-                                    Rule::Tag(tag)
-                                } else {
-                                    Rule::AppId(app_id.to_string())
-                                }
-                            }
-                            None => Rule::None,
-                        };
-                        for i in tags {
-                            let tag = output_handle.tags[i].as_mut();
-                            match tag {
-                                Some(tag) => {
-                                    tag.layout = layout.clone();
-                                    tag.rule = window_rule.clone();
-                                    if let Ok(index) = main_index {
-                                        tag.parameters.main_index = index;
-                                    }
-                                    if let Ok(amount) = main_amount {
-                                        tag.parameters.main_amount = amount;
-                                    }
-                                    if let Ok(factor) = main_factor {
-                                        tag.parameters.main_factor = factor;
-                                    }
-                                }
-                                None => {
-                                    output_handle.tags[i] = Some({
-                                        Tag {
-                                            rule: window_rule.clone(),
-                                            parameters: { Parameters {
-                                                view_padding: 5,
-                                                main_index: if let Ok(index) = main_index { index } else { 1 },
-                                                main_amount: if let Ok(amount) = main_amount { amount } else { 1 },
-                                                main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
-                                            }},
-                                            layout: layout.clone(),
-                                        }
-                                    })
-                                }
-                            }
+            let mut value = value.split('|');
+            let tags = match value.next() {
+                Some(tag) => match tag {
+                    "focused" => output_handle.focused..output_handle.focused + 1,
+                    "all" => 0..32,
+                    _ => match tag.parse::<usize>() {
+                        Ok(int) => int - 1..int,
+                        Err(_) => 33..34,
+                    },
+                },
+                None => 33..34
+            };
+            let layout = layout(value.next().unwrap_or_default());
+            let main_amount = value.next().unwrap_or_default().parse::<u32>();
+            let main_factor = value.next().unwrap_or_default().parse::<f64>();
+            let main_index = value.next().unwrap_or_default().parse::<u32>();
+            let window_rule = match value.next() {
+                Some(app_id) => {
+                    if let Ok(tag) = app_id.parse::<u32>() {
+                        Rule::Tag(tag)
+                    } else {
+                        Rule::AppId(app_id.to_string())
+                    }
+                }
+                None => Rule::None,
+            };
+            for i in tags {
+                if i > 32 { break }
+                let tag = output_handle.tags[i].as_mut();
+                match tag {
+                    Some(tag) => {
+                        tag.layout = layout.clone();
+                        tag.rule = window_rule.clone();
+                        if let Ok(index) = main_index {
+                            tag.parameters.main_index = index;
+                        }
+                        if let Ok(amount) = main_amount {
+                            tag.parameters.main_amount = amount;
+                        }
+                        if let Ok(factor) = main_factor {
+                            tag.parameters.main_factor = factor;
                         }
                     }
-                    None => break,
+                    None => {
+                        output_handle.tags[i] = Some({
+                            Tag {
+                                rule: window_rule.clone(),
+                                parameters: { Parameters {
+                                    view_padding: 5,
+                                    main_index: if let Ok(index) = main_index { index } else { 1 },
+                                    main_amount: if let Ok(amount) = main_amount { amount } else { 1 },
+                                    main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
+                                }},
+                                layout: layout.clone(),
+                            }
+                        })
+                    }
                 }
             }
         }
