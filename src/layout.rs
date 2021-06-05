@@ -5,7 +5,9 @@ use std::ops::Deref;
 pub enum Layout {
     Tab,
     Full,
+    Deck,
     Vertical,
+    Horizontal,
     Dwindle(u32),
     Recursive {
         outer: Box<Layout>,
@@ -17,7 +19,6 @@ pub enum Layout {
         main_index: u32,
         main_factor: f64,
     },
-    Horizontal,
 }
 
 impl Area {
@@ -32,7 +33,7 @@ impl Area {
     pub fn generate(
         self,
         parameters: &Parameters,
-        mut client_count: u32,
+        client_count: u32,
         layout: &Layout,
         list: &mut Vec<Area>,
         parent: bool,
@@ -46,16 +47,27 @@ impl Area {
         };
 
         match layout {
-            Layout::Full => while client_count > 0 {
+            Layout::Full => for _i in 0..client_count {
                 list.push(area);
-                client_count -= 1;
             }
-            Layout::Tab => while client_count > 0 {
-                let delta = parameters.main_factor * 100.0;
+            Layout::Deck => {
+                let yoffset = ((self.h as f64 * 0.1) / (client_count as f64 - 1.0)).floor() as u32;
+                let xoffset = ((self.w as f64 * 0.1) / (client_count as f64 - 1.0)).floor() as u32;
+                for _i in 0..client_count {
+                    area.w = self.w - (xoffset*(client_count-1));
+                    area.h = self.h - (yoffset*(client_count-1));
+                    list.push(area);
+                    area.x += xoffset;
+                    area.y += yoffset;
+                }
+            }
+            Layout::Tab => for _i in 0..client_count {
+                let delta = if factor {
+                    parameters.main_factor * 100.0
+                } else { 30.0 };
                 list.push(area);
                 area.h -= delta as u32;
                 area.y += delta as u32;
-                client_count -= 1;
             }
             Layout::Horizontal => {
                 let reste = area.h % client_count;

@@ -57,12 +57,13 @@ fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
 }
 fn layout<'s>(name: &str) -> Layout {
     match name {
+        "f" | "ful" | "full" => Layout::Full,
+        "dec" | "deck" => Layout::Deck,
+        "t" | "tab" | "tabbed" => Layout::Tab,
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
-        "t" | "tab" | "tabbed" => Layout::Tab,
-        "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
-        "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
-        "f" | "ful" | "full" => Layout::Full,
+        "d" | "d0" | "dwindle" => Layout::Dwindle(0),
+        "D" | "d1" | "Dwindle" => Layout::Dwindle(1),
         _ => if let Some(char) = name.chars().next() {
             match char {
                 '{' => {

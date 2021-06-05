@@ -89,6 +89,8 @@ The base layouts are the following.
 
 	- "v" | "ver" | "vertical"
 
+	- "dec" | "deck"
+
 	- "h" | "hor" | "horizontal"
 
 	- "t" | "tab" | "tabbed"
