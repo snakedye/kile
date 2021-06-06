@@ -31,9 +31,9 @@ impl<'s> Match<'s> {
                 _ => {}
             }
             if c == pattern && brace == 0 && bracket == 0 {
-                left.set(&self.string[0..i]);
+                left.set(&self.string[0..i].trim());
                 if &self.string[i + 1..] != "" {
-                    right = Some(Match::new(&self.string[i + 1..]));
+                    right = Some(Match::new(&self.string[i + 1..].trim()));
                 }
                 break;
             }
@@ -41,8 +41,7 @@ impl<'s> Match<'s> {
         (left, right)
     }
     fn clamp(&self, opening: &'s str, closing: &'s str) -> Option<Match> {
-        let mut start = 0;
-        let mut brace = 0;
+        let (mut start, mut brace) = (0, 0);
         for i in 0..self.string.len() {
             if &self.string[i..i+opening.len()] == opening {
                 if brace == 0 {
@@ -52,7 +51,7 @@ impl<'s> Match<'s> {
             } else if &self.string[i..i+closing.len()] == closing {
                 brace -= 1;
                 if brace == 0 {
-                    return Some(Match::new(&self.string[start + 1..i]));
+                    return Some(Match::new(&self.string[start + 1..i].trim()));
                 }
             }
         }
@@ -71,15 +70,16 @@ impl<'s> Match<'s> {
         self.string
     }
 }
+
 fn layout<'s>(name: &str) -> Layout {
     match name {
-        "f" | "ful" | "full" => Layout::Full,
         "dec" | "deck" => Layout::Deck,
+        "f" | "ful" | "full" => Layout::Full,
         "t" | "tab" | "tabbed" => Layout::Tab,
+        "d0" | "dwindle" => Layout::Dwindle(0),
+        "d1" | "Dwindle" => Layout::Dwindle(1),
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
-        "d" | "d0" | "dwindle" => Layout::Dwindle(0),
-        "D" | "d1" | "Dwindle" => Layout::Dwindle(1),
         _ => if let Some(char) = name.chars().next() {
             match char {
                 '{' => if let Some(r) = Match::new(name).clamp("{","}") {
