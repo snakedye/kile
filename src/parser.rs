@@ -234,23 +234,12 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             let main_amount = value.next().unwrap_or_default().parse::<u32>();
             let main_factor = value.next().unwrap_or_default().parse::<f64>();
             let main_index = value.next().unwrap_or_default().parse::<u32>();
-            let window_rule = match value.next() {
-                Some(app_id) => {
-                    if let Ok(tag) = app_id.parse::<u32>() {
-                        Rule::Tag(tag)
-                    } else {
-                        Rule::AppId(app_id.to_string())
-                    }
-                }
-                None => Rule::None,
-            };
             for i in tags {
                 if i > 32 { break }
                 let tag = output_handle.tags[i].as_mut();
                 match tag {
                     Some(tag) => {
                         tag.layout = layout.clone();
-                        tag.rule = window_rule.clone();
                         if let Ok(index) = main_index {
                             tag.parameters.main_index = index;
                         }
@@ -264,7 +253,7 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                     None => {
                         output_handle.tags[i] = Some({
                             Tag {
-                                rule: window_rule.clone(),
+                                rule: Rule::None,
                                 parameters: { Parameters {
                                     view_padding: 5,
                                     main_index: if let Ok(index) = main_index { index } else { 1 },

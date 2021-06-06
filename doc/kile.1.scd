@@ -74,8 +74,8 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 *focused*, *all* or *1..32* _(string)_
 	Sets the tag configuration. _0..32_ means all values between 1 and 32 inclusively.
-	*focused* will edit the layout of the focused tag, *all*, all the tag and for numbers
-	between 1 and 32, the layout of each corresponding tag.
+	*focused* will edit the layout of the focused tag, *all*, all tags and for numbers
+	between *1 and 32*, the layout of the corresponding tag.
 
 	format: "<layout> | <main_amount> | <main_factor> | <main_index>"
 
