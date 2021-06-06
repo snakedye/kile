@@ -1,58 +1,74 @@
 use super::client::*;
 use super::layout::*;
 
-fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>) {
-    let mut brace = 0;
-    let mut bracket = 0;
-    let (mut left, mut right) = (string, None);
-    for (i, c) in string.to_string().chars().enumerate() {
-        match c {
-            '{' => bracket+=1,
-            '}' => bracket-=1,
-            '(' => brace+=1,
-            ')' => brace-=1,
-            _ => {}
-        }
-        if c == pattern && brace == 0 && bracket == 0 {
-            left = &string[0..i];
-            if &string[i + 1..] != "" {
-                right = Some(&string[i + 1..]);
-            }
-            break;
-        }
-    } 
-    (left, right)
+#[derive(Copy, Clone, Debug)]
+struct Match<'s>{
+    string: &'s str
 }
-fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
-    let mut start = 0;
-    let mut brace = 0;
-    let mut captured = "";
-    for i in 0..string.len() {
-        if &string[i..i+opening.len()] == opening {
-            if brace == 0 {
-                start = i;
+
+impl<'s> Match<'s> {
+    fn new(string: &'s str) -> Match {
+        { Match {
+            string: string
+        } }
+    }
+    fn set(&mut self, string: &'s str) {
+        self.string = string;
+    }
+    fn len(&self) -> usize {
+        self.string.len()
+    }
+    fn split_ounce(&self, pattern: char) -> (Match, Option<Match>) {
+        let mut right = None;
+        let mut left = self.clone();
+        let (mut brace, mut bracket) = (0, 0);
+        for (i, c) in self.string.to_string().chars().enumerate() {
+            match c {
+                '{' => bracket+=1,
+                '}' => bracket-=1,
+                '(' => brace+=1,
+                ')' => brace-=1,
+                _ => {}
             }
-            brace += 1;
-        } else if &string[i..i+closing.len()] == closing {
-            brace -= 1;
-            if brace == 0 {
-                captured = &string[start + 1..i];
+            if c == pattern && brace == 0 && bracket == 0 {
+                left.set(&self.string[0..i]);
+                if &self.string[i + 1..] != "" {
+                    right = Some(Match::new(&self.string[i + 1..]));
+                }
                 break;
             }
+        } 
+        (left, right)
+    }
+    fn clamp(&self, opening: &'s str, closing: &'s str) -> Option<Match> {
+        let mut start = 0;
+        let mut brace = 0;
+        for i in 0..self.string.len() {
+            if &self.string[i..i+opening.len()] == opening {
+                if brace == 0 {
+                    start = i;
+                }
+                brace += 1;
+            } else if &self.string[i..i+closing.len()] == closing {
+                brace -= 1;
+                if brace == 0 {
+                    return Some(Match::new(&self.string[start + 1..i]));
+                }
+            }
+        }
+        None
+    }
+    fn filter(&self, pattern: char, mut f: impl FnMut(Match) -> Result<(), &'static str>) {
+        let (previous, next) = self.split_ounce(pattern);
+        match f(previous) {
+            Ok(_) => if let Some(next) = next {
+                next.filter(pattern, f);
+            }
+            Err(m) => if m != "" { println!("{}",m) }
         }
     }
-    captured
-}
-fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
-    if clamp(string, "{", "}").len() + 2 == string.len() ||
-        clamp(string, "(", ")").len() + 2 == string.len() {
-            f(string)
-    } else {
-        let (previous, next) = split_ounce(string,pattern);
-        f(previous);
-        if let Some(next) = next {
-            filter(next, pattern, f);
-        }
+    fn release(self) -> &'s str {
+        self.string
     }
 }
 fn layout<'s>(name: &str) -> Layout {
@@ -66,49 +82,68 @@ fn layout<'s>(name: &str) -> Layout {
         "D" | "d1" | "Dwindle" => Layout::Dwindle(1),
         _ => if let Some(char) = name.chars().next() {
             match char {
-                '{' => {
-                    let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
+                '{' => if let Some(r) = Match::new(name).clamp("{","}") {
+                    let (outer, inner) = r.split_ounce(':');
                     Layout::Recursive {
-                        outer: { Box::new(layout(outer)) },
+                        outer: { Box::new(layout(outer.release())) },
                         inner: {
                             let mut vec = Vec::new();
                             if let Some(inner) = inner {
-                                filter(inner, ',',|s| { vec.push(layout(s)) });
+                                inner.filter(',',|s| { 
+                                    if let Some(s) = inner.clamp("{","}") {
+                                        if s.len() + 2 == inner.len() { return Err("") }
+                                    }
+                                    if let Some(s) = inner.clamp("(",")") {
+                                        if s.len() + 2 == inner.len() { return Err("") }
+                                    }
+                                    vec.push(layout(s.release()));
+                                    Ok(())
+                                });
                             }
                             vec
                         },
                     }
-                }
-                '(' => {
-                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
+                } else { Layout::Full }
+                '(' => if let Some(s) = Match::new(name).clamp("(",")") {
+                    let (layout_denominator, parameters) = s.split_ounce(';');
                     if let Some(parameters) = parameters {
-                        let mut assisted = { Parameters {
-                            view_padding: 0,
-                            main_amount: 0,
-                            main_factor: 0.6,
-                            main_index: 0,
-                        } };
-                        let mut configured = (false, false, false);
-                        filter(parameters, ';', |s| {
-                            if !configured.0 {
-                                if let Ok(main_amount) = s.parse::<u32>() { assisted.main_amount = main_amount }
-                                configured.0 = true;
-                            } else if !configured.1 {
-                                if let Ok(main_factor) = s.parse::<f64>() { assisted.main_factor = main_factor }
-                                configured.1 = true;
-                            } else if !configured.2 {
-                                if let Ok(main_index) = s.parse::<u32>() { assisted.main_index = main_index }
-                                configured.2 = true;
-                            } 
+                        let mut i = 0;
+                        let mut var: (u32, f64, u32) = (0, 0.6, 0);
+                        parameters.filter(';', |s| {
+                            i += 1;
+                            match i {
+                                1 => match s.release().parse::<u32>() {
+                                    Ok(main_amount) => {
+                                        var.0 = main_amount;
+                                        return Ok(())
+                                    }
+                                    Err(_) => return Err("Invalid main amount")
+                                }
+                                2 => match s.release().parse::<f64>() {
+                                    Ok(main_factor) => {
+                                        var.1 = main_factor;
+                                        return Ok(())
+                                    }
+                                    Err(_) => return Err("Invalid main factor")
+                                }
+                                3 => match s.release().parse::<u32>() {
+                                    Ok(main_index) => {
+                                        var.2 = main_index;
+                                        return Ok(())
+                                    }
+                                    Err(_) => return Err("Invalid main index")
+                                }
+                                _ => { Ok(()) }
+                            }
                         });
                         Layout::Assisted {
-                            layout: Box::new(layout(layout_denominator)),
-                            main_amount: assisted.main_amount,
-                            main_factor: assisted.main_factor,
-                            main_index: assisted.main_index,
+                            layout: Box::new(layout(layout_denominator.release())),
+                            main_amount: var.0,
+                            main_factor: var.1,
+                            main_index: var.2,
                         }
                     } else { Layout::Full }
-                }
+                } else { Layout::Full }
                 _ => Layout::Full
             }
         } else { Layout::Full }

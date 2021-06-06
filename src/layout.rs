@@ -40,11 +40,7 @@ impl Area {
         factor: bool,
     ) {
         let mut area = self;
-        let master = if parent && factor && client_count > 1 && parameters.main_index < client_count {
-            true
-        } else {
-            false
-        };
+        let master = parent && factor && client_count > 1 && parameters.main_index < client_count;
 
         match layout {
             Layout::Full => for _i in 0..client_count {

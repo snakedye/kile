@@ -152,14 +152,14 @@ impl Output {
                 layout.commit(serial);
             }
             Event::AdvertiseView {
-                tags,
-                app_id,
-                serial,
+                tags: _,
+                app_id: _,
+                serial: _,
             } => {}
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
             }
-            Event::AdvertiseDone { serial } => {}
+            Event::AdvertiseDone { serial: _ } => {}
             Event::SetIntValue { name, value } => match name.as_ref() {
                 "outer_padding" => self.outer_padding = value,
                 _ => {
