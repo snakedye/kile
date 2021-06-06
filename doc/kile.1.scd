@@ -71,14 +71,14 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 	Possible values are "true" or "false".
 
-*set_tag* _(string)_
-	Sets the tag configuration. All the fields except the first are escapable.
+*focused*, *all* or *1..32* _(string)_
+	Sets the tag configuration.  _0..32_ means all values between 1 and 32 inclusively.
+  *focused* will edit the layout of the focused tag, *all*, all the tag and for numbers
+  between 1 and 32, the layout of each corresponding tag.
 
-	format: "<tag>|<layout>|<main_amount>|<main_factor>|<main_index>"
+	format: "<layout> | <main_amount> | <main_factor> | <main_index>"
 
-	Values possibles for *<tag>*: "focused", "all" and _uint_.
-
-*clear_tag* _(string)_
+*clear* _(string)_
 	Clear the configuration of the given tag(s)
 
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
@@ -87,19 +87,19 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 The base layouts are the following.
 
-	- "v" | "ver" | "vertical"
-
 	- "dec" | "deck"
 
-	- "h" | "hor" | "horizontal"
+	- "d1" | "dwindle0"
 
-	- "t" | "tab" | "tabbed"
+	- "d1" | "dwindle1"
 
 	- "f" | "ful" | "full"
 
-	- "d" | "dwd" | "dwindle"
+	- "t" | "tab" | "tabbed"
 
-	- "D" | "Dwd" | "Dwindle"
+	- "v" | "ver" | "vertical"
+
+	- "h" | "hor" | "horizontal"
 
 ## RECURSIVE
 
@@ -108,9 +108,9 @@ The content of the layout resides within the brackets.
 *:* is the delimiter between the outer and inner layout. Both are property specific to the *recursive* layout.
 
 *examples:*
-	- {v:h,h}
-	- {d:h{v:dwd,d}}
-	- {{ver:dwindle,d}:tab,t}
+	- {v: h,h}
+	- {d: h{v: dwd,d}}
+	- {{ver: dwindle,d}: tab,t}
 
 ## ASSISTED
 
@@ -120,7 +120,7 @@ The content of the layout resides within the braces.
 to the *recursive* layout. Only characters are acceptable as layout denominators.
 
 *examples:*
-	- (vertical;0;0.6;0)
-  - ({v:h,h};2;0.6;0)
+	- (deck; 0; 0.6; 0)
+  - ({v: h,h}; 2; 0.6; 0)
 
 *riverctl*(1), *rivertile*(7)

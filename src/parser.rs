@@ -76,8 +76,8 @@ fn layout<'s>(name: &str) -> Layout {
         "dec" | "deck" => Layout::Deck,
         "f" | "ful" | "full" => Layout::Full,
         "t" | "tab" | "tabbed" => Layout::Tab,
-        "d0" | "dwindle" => Layout::Dwindle(0),
-        "d1" | "Dwindle" => Layout::Dwindle(1),
+        "d0" | "dwindle0" => Layout::Dwindle(0),
+        "d1" | "dwindle1" => Layout::Dwindle(1),
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
         _ => if let Some(char) = name.chars().next() {
@@ -177,19 +177,59 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 output_handle.smart_padding = ans;
             }
         }
-        "set_tag" | "layout" => {
-            let mut value = value.split('|');
-            let tags = match value.next() {
-                Some(tag) => match tag {
-                    "focused" => output_handle.focused..output_handle.focused + 1,
-                    "all" => 0..32,
-                    _ => match tag.parse::<usize>() {
-                        Ok(int) => int - 1..int,
-                        Err(_) => 33..34,
+        "rule" => {
+            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
+                match command.next() {
+                    Some(arg) => match arg {
+                        "-position" => if let Some(app_id) = command.next() {
+                            Rule::Position{
+                                app_id: app_id.to_owned(),
+                                area: { Area {
+                                    x: command.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                    y: command.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                    w: command.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                    h: command.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                } }
+                            };
+                        }
+                        "-tag" => if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                            tag.rule = Rule::Tag(uint);
+                        }
+                        "-app-id" => {
+                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
+                        }
+                        _ => {}
                     },
+                    None => tag.rule = Rule::None,
+                }
+            }
+        }
+        "clear" => {
+            for arg in command {
+                match arg {
+                    "all" => output_handle.tags = Default::default(),
+                    "focused" => output_handle.tags[output_handle.focused] = None,
+                    _ => match arg.parse::<usize>() {
+                        Ok(int) => {
+                            if int > 0 && int < 33 {
+                                output_handle.tags[int - 1] = None
+                            }
+                        }
+                        Err(_) => {}
+                    },
+                }
+            }
+        }
+        _ => {
+            let tags = match name.as_ref() {
+                "focused" => output_handle.focused..output_handle.focused + 1,
+                "all" => 0..32,
+                _ => match name.parse::<usize>() {
+                    Ok(int) => int - 1..int,
+                    Err(_) => 33..34,
                 },
-                None => 33..34
             };
+            let mut value = value.split('|');
             let layout = layout(value.next().unwrap_or_default());
             let main_amount = value.next().unwrap_or_default().parse::<u32>();
             let main_factor = value.next().unwrap_or_default().parse::<f64>();
@@ -238,49 +278,5 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 }
             }
         }
-        "rule" => {
-            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
-                match command.next() {
-                    Some(arg) => match arg {
-                        "-position" => if let Some(app_id) = command.next() {
-                            Rule::Position{
-                                app_id: app_id.to_owned(),
-                                area: { Area {
-                                    x: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    y: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    w: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                    h: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                } }
-                            };
-                        }
-                        "-tag" => if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                            tag.rule = Rule::Tag(uint);
-                        }
-                        "-app-id" => {
-                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
-                        }
-                        _ => {}
-                    },
-                    None => tag.rule = Rule::None,
-                }
-            }
-        }
-        "clear_tag" => {
-            for arg in command {
-                match arg {
-                    "all" => output_handle.tags = Default::default(),
-                    "focused" => output_handle.tags[output_handle.focused] = None,
-                    _ => match arg.parse::<usize>() {
-                        Ok(int) => {
-                            if int > 0 && int < 33 {
-                                output_handle.tags[int - 1] = None
-                            }
-                        }
-                        Err(_) => {}
-                    },
-                }
-            }
-        }
-        _ => {}
     }
 }
