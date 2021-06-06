@@ -8,7 +8,8 @@ kile - a tiling a layout generator for river
 
 *kile* is a layout generator for *river*.
 
-It receives layout events and creates a dynamic layouts of windows.
+The idea behind kile is that it's supposed to the layout generator that does it all.
+A few basic layouts are provided and through the *recursive* and *assisted* layout syntax, users can declare new unique nested layouts.
 
 Note: *kile* could work on any Wayland compositor 
 that implements *river-layout-v2*.
@@ -72,7 +73,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	Possible values are "true" or "false".
 
 *focused*, *all* or *1..32* _(string)_
-	Sets the tag configuration.  _0..32_ means all values between 1 and 32 inclusively.
+	Sets the tag configuration. _0..32_ means all values between 1 and 32 inclusively.
 	*focused* will edit the layout of the focused tag, *all*, all the tag and for numbers
 	between 1 and 32, the layout of each corresponding tag.
 
@@ -121,6 +122,6 @@ to the *recursive* layout. Only characters are acceptable as layout denominators
 
 *examples:*
 	- (deck; 0; 0.6; 0)
-  - ({v: h,h}; 2; 0.6; 0)
+	- ({v: h,h}; 2; 0.6; 0)
 
 *riverctl*(1), *rivertile*(7)
