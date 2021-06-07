@@ -6,6 +6,21 @@ struct Match<'s>{
     string: &'s str
 }
 
+#[derive(Copy, Clone, Debug)]
+struct Tape<'s>{
+    current: Match<'s>,
+    next: Option<Match<'s>>
+}
+
+impl<'s> Tape<'s> {
+    fn new(current: Match<'s>, next: Option<Match<'s>>) -> Tape<'s> {
+      { Tape {
+         current: current,
+         next: next
+      }}
+    }
+}
+
 impl<'s> Match<'s> {
     fn new(string: &'s str) -> Match {
         { Match {
@@ -18,10 +33,34 @@ impl<'s> Match<'s> {
     fn len(&self) -> usize {
         self.string.len()
     }
-    fn split_ounce(&self, pattern: char) -> (Match, Option<Match>) {
+    fn _split(self, pattern: char) -> Vec<Match<'s>> {
+        let mut v = Vec::new();
+        let mut tape = self.split_ounce(pattern);
+        loop {
+            v.push(tape.current);
+            if let Some(next) = tape.next {
+                tape = next.split_ounce(pattern);
+            } else { break v }
+        }
+    }
+    fn _split_for(self, f: &mut impl FnMut(char) -> bool) -> Tape<'s>  {
         let mut right = None;
         let mut left = self.clone();
-        let (mut brace, mut bracket) = (0, 0);
+        for (i, c) in self.string.to_string().chars().enumerate() {
+            if f(c) {
+                left.set(&self.string[0..i].trim());
+                if &self.string[i + 1..] != "" {
+                    right = Some(Match::new(&self.string[i + 1..].trim()));
+                }
+                break;
+            }
+        }
+        Tape::new(left, right)
+    }
+    fn split_ounce(self, pattern: char) -> Tape<'s> {
+        let mut right = None;
+        let mut left = self.clone();
+        let (mut bracket, mut brace) = (0, 0);
         for (i, c) in self.string.to_string().chars().enumerate() {
             match c {
                 '{' => bracket+=1,
@@ -38,7 +77,7 @@ impl<'s> Match<'s> {
                 break;
             }
         } 
-        (left, right)
+        Tape::new(left, right)
     }
     fn clamp(&self, opening: &'s str, closing: &'s str) -> Option<Match> {
         let (mut start, mut brace) = (0, 0);
@@ -58,9 +97,9 @@ impl<'s> Match<'s> {
         None
     }
     fn filter(&self, pattern: char, mut f: impl FnMut(Match) -> Result<(), &'static str>) {
-        let (previous, next) = self.split_ounce(pattern);
-        match f(previous) {
-            Ok(_) => if let Some(next) = next {
+        let tape = self.split_ounce(pattern);
+        match f(tape.current) {
+            Ok(_) => if let Some(next) = tape.next {
                 next.filter(pattern, f);
             }
             Err(m) => if m != "" { println!("{}",m) }
@@ -83,18 +122,18 @@ fn layout<'s>(name: &str) -> Layout {
         _ => if let Some(char) = name.chars().next() {
             match char {
                 '{' => if let Some(r) = Match::new(name).clamp("{","}") {
-                    let (outer, inner) = r.split_ounce(':');
+                    let tape = r.split_ounce(':');
                     Layout::Recursive {
-                        outer: { Box::new(layout(outer.release())) },
+                        outer: { Box::new(layout(tape.current.release())) },
                         inner: {
                             let mut vec = Vec::new();
-                            if let Some(inner) = inner {
-                                inner.filter(',',|s| { 
-                                    if let Some(s) = inner.clamp("{","}") {
-                                        if s.len() + 2 == inner.len() { return Err("") }
+                            if let Some(next) = tape.next {
+                                next.filter(',',|s| { 
+                                    if let Some(s) = next.clamp("{","}") {
+                                        if s.len() + 2 == next.len() { return Err("") }
                                     }
-                                    if let Some(s) = inner.clamp("(",")") {
-                                        if s.len() + 2 == inner.len() { return Err("") }
+                                    if let Some(s) = next.clamp("(",")") {
+                                        if s.len() + 2 == next.len() { return Err("") }
                                     }
                                     vec.push(layout(s.release()));
                                     Ok(())
@@ -105,8 +144,8 @@ fn layout<'s>(name: &str) -> Layout {
                     }
                 } else { Layout::Full }
                 '(' => if let Some(s) = Match::new(name).clamp("(",")") {
-                    let (layout_denominator, parameters) = s.split_ounce(';');
-                    if let Some(parameters) = parameters {
+                    let tape = s.split_ounce(';');
+                    if let Some(parameters) = tape.next {
                         let mut i = 0;
                         let mut var: (u32, f64, u32) = (0, 0.6, 0);
                         parameters.filter(';', |s| {
@@ -137,7 +176,7 @@ fn layout<'s>(name: &str) -> Layout {
                             }
                         });
                         Layout::Assisted {
-                            layout: Box::new(layout(layout_denominator.release())),
+                            layout: Box::new(layout(tape.current.release())),
                             main_amount: var.0,
                             main_factor: var.1,
                             main_index: var.2,
