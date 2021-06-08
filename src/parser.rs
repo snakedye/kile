@@ -2,30 +2,28 @@ use super::client::*;
 use super::layout::*;
 
 #[derive(Copy, Clone, Debug)]
-struct Match<'s>{
-    string: &'s str
+struct Match<'s> {
+    string: &'s str,
 }
 
 #[derive(Copy, Clone, Debug)]
-struct Tape<'s>{
+struct Tape<'s> {
     current: Match<'s>,
-    next: Option<Match<'s>>
+    next: Option<Match<'s>>,
 }
 
 impl<'s> Tape<'s> {
     fn new(current: Match<'s>, next: Option<Match<'s>>) -> Tape<'s> {
-      { Tape {
-         current: current,
-         next: next
-      }}
+        Tape {
+            current: current,
+            next: next,
+        }
     }
 }
 
 impl<'s> Match<'s> {
     fn new(string: &'s str) -> Match {
-        { Match {
-            string: string
-        } }
+        Match { string: string }
     }
     fn set(&mut self, string: &'s str) {
         self.string = string;
@@ -40,10 +38,12 @@ impl<'s> Match<'s> {
             v.push(tape.current);
             if let Some(next) = tape.next {
                 tape = next.split_ounce(pattern);
-            } else { break v }
+            } else {
+                break v;
+            }
         }
     }
-    fn _split_for(self, f: &mut impl FnMut(char) -> bool) -> Tape<'s>  {
+    fn _split_for(self, f: &mut impl FnMut(char) -> bool) -> Tape<'s> {
         let mut right = None;
         let mut left = self.clone();
         for (i, c) in self.string.to_string().chars().enumerate() {
@@ -63,10 +63,10 @@ impl<'s> Match<'s> {
         let (mut bracket, mut brace) = (0, 0);
         for (i, c) in self.string.to_string().chars().enumerate() {
             match c {
-                '{' => bracket+=1,
-                '}' => bracket-=1,
-                '(' => brace+=1,
-                ')' => brace-=1,
+                '{' => bracket += 1,
+                '}' => bracket -= 1,
+                '(' => brace += 1,
+                ')' => brace -= 1,
                 _ => {}
             }
             if c == pattern && brace == 0 && bracket == 0 {
@@ -76,18 +76,18 @@ impl<'s> Match<'s> {
                 }
                 break;
             }
-        } 
+        }
         Tape::new(left, right)
     }
     fn clamp(&self, opening: &'s str, closing: &'s str) -> Option<Match> {
         let (mut start, mut brace) = (0, 0);
         for i in 0..self.string.len() {
-            if &self.string[i..i+opening.len()] == opening {
+            if &self.string[i..i + opening.len()] == opening {
                 if brace == 0 {
                     start = i;
                 }
                 brace += 1;
-            } else if &self.string[i..i+closing.len()] == closing {
+            } else if &self.string[i..i + closing.len()] == closing {
                 brace -= 1;
                 if brace == 0 {
                     return Some(Match::new(&self.string[start + 1..i].trim()));
@@ -99,10 +99,16 @@ impl<'s> Match<'s> {
     fn filter(&self, pattern: char, mut f: impl FnMut(Match) -> Result<(), &'static str>) {
         let tape = self.split_ounce(pattern);
         match f(tape.current) {
-            Ok(_) => if let Some(next) = tape.next {
-                next.filter(pattern, f);
+            Ok(_) => {
+                if let Some(next) = tape.next {
+                    next.filter(pattern, f);
+                }
             }
-            Err(m) => if m != "" { println!("{}",m) }
+            Err(m) => {
+                if m != "" {
+                    println!("{}", m)
+                }
+            }
         }
     }
     fn release(self) -> &'s str {
@@ -119,73 +125,91 @@ fn layout<'s>(name: &str) -> Layout {
         "d1" | "dwindle1" => Layout::Dwindle(1),
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
-        _ => if let Some(char) = name.chars().next() {
-            match char {
-                '{' => if let Some(r) = Match::new(name).clamp("{","}") {
-                    let tape = r.split_ounce(':');
-                    Layout::Recursive {
-                        outer: { Box::new(layout(tape.current.release())) },
-                        inner: {
-                            let mut vec = Vec::new();
-                            if let Some(next) = tape.next {
-                                next.filter(',',|s| { 
-                                    if let Some(s) = next.clamp("{","}") {
-                                        if s.len() + 2 == next.len() { return Err("") }
+        _ => {
+            if let Some(char) = name.chars().next() {
+                match char {
+                    '{' => {
+                        if let Some(r) = Match::new(name).clamp("{", "}") {
+                            let tape = r.split_ounce(':');
+                            Layout::Recursive {
+                                outer: { Box::new(layout(tape.current.release())) },
+                                inner: {
+                                    let mut vec = Vec::new();
+                                    if let Some(next) = tape.next {
+                                        next.filter(',', |s| {
+                                            if let Some(s) = next.clamp("{", "}") {
+                                                if s.len() + 2 == next.len() {
+                                                    return Err("");
+                                                }
+                                            }
+                                            if let Some(s) = next.clamp("(", ")") {
+                                                if s.len() + 2 == next.len() {
+                                                    return Err("");
+                                                }
+                                            }
+                                            vec.push(layout(s.release()));
+                                            Ok(())
+                                        });
                                     }
-                                    if let Some(s) = next.clamp("(",")") {
-                                        if s.len() + 2 == next.len() { return Err("") }
-                                    }
-                                    vec.push(layout(s.release()));
-                                    Ok(())
-                                });
+                                    vec
+                                },
                             }
-                            vec
-                        },
-                    }
-                } else { Layout::Full }
-                '(' => if let Some(s) = Match::new(name).clamp("(",")") {
-                    let tape = s.split_ounce(';');
-                    if let Some(parameters) = tape.next {
-                        let mut i = 0;
-                        let mut var: (u32, f64, u32) = (0, 0.6, 0);
-                        parameters.filter(';', |s| {
-                            i += 1;
-                            match i {
-                                1 => match s.release().parse::<u32>() {
-                                    Ok(main_amount) => {
-                                        var.0 = main_amount;
-                                        return Ok(())
-                                    }
-                                    Err(_) => return Err("Invalid main amount")
-                                }
-                                2 => match s.release().parse::<f64>() {
-                                    Ok(main_factor) => {
-                                        var.1 = main_factor;
-                                        return Ok(())
-                                    }
-                                    Err(_) => return Err("Invalid main factor")
-                                }
-                                3 => match s.release().parse::<u32>() {
-                                    Ok(main_index) => {
-                                        var.2 = main_index;
-                                        return Ok(())
-                                    }
-                                    Err(_) => return Err("Invalid main index")
-                                }
-                                _ => { Ok(()) }
-                            }
-                        });
-                        Layout::Assisted {
-                            layout: Box::new(layout(tape.current.release())),
-                            main_amount: var.0,
-                            main_factor: var.1,
-                            main_index: var.2,
+                        } else {
+                            Layout::Full
                         }
-                    } else { Layout::Full }
-                } else { Layout::Full }
-                _ => Layout::Full
+                    }
+                    '(' => {
+                        if let Some(s) = Match::new(name).clamp("(", ")") {
+                            let tape = s.split_ounce(';');
+                            if let Some(parameters) = tape.next {
+                                let mut i = 0;
+                                let mut var: (u32, f64, u32) = (0, 0.6, 0);
+                                parameters.filter(';', |s| {
+                                    i += 1;
+                                    match i {
+                                        1 => match s.release().parse::<u32>() {
+                                            Ok(main_amount) => {
+                                                var.0 = main_amount;
+                                                return Ok(());
+                                            }
+                                            Err(_) => return Err("Invalid main amount"),
+                                        },
+                                        2 => match s.release().parse::<f64>() {
+                                            Ok(main_factor) => {
+                                                var.1 = main_factor;
+                                                return Ok(());
+                                            }
+                                            Err(_) => return Err("Invalid main factor"),
+                                        },
+                                        3 => match s.release().parse::<u32>() {
+                                            Ok(main_index) => {
+                                                var.2 = main_index;
+                                                return Ok(());
+                                            }
+                                            Err(_) => return Err("Invalid main index"),
+                                        },
+                                        _ => Ok(()),
+                                    }
+                                });
+                                Layout::Assisted {
+                                    layout: Box::new(layout(tape.current.release())),
+                                    main_amount: var.0,
+                                    main_factor: var.1,
+                                    main_index: var.2,
+                                }
+                            } else {
+                                Layout::Full
+                            }
+                        } else {
+                            Layout::Full
+                        }
+                    }
+                    _ => Layout::Full,
+                }
+            } else {
+                Layout::Full
             }
-        } else { Layout::Full }
+        }
     }
 }
 
@@ -220,19 +244,41 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
                     Some(arg) => match arg {
-                        "-position" => if let Some(app_id) = command.next() {
-                            Rule::Position{
-                                app_id: app_id.to_owned(),
-                                area: { Area {
-                                    x: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    y: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    w: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                    h: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                } }
-                            };
+                        "-position" => {
+                            if let Some(app_id) = command.next() {
+                                Rule::Position {
+                                    app_id: app_id.to_owned(),
+                                    area: {
+                                        Area {
+                                            x: command
+                                                .next()
+                                                .unwrap_or("0")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            y: command
+                                                .next()
+                                                .unwrap_or("0")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            w: command
+                                                .next()
+                                                .unwrap_or("500")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            h: command
+                                                .next()
+                                                .unwrap_or("500")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                        }
+                                    },
+                                };
+                            }
                         }
-                        "-tag" => if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                            tag.rule = Rule::Tag(uint);
+                        "-tag" => {
+                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                                tag.rule = Rule::Tag(uint);
+                            }
                         }
                         "-app-id" => {
                             tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
@@ -274,7 +320,9 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             let main_factor = value.next().unwrap_or_default().parse::<f64>();
             let main_index = value.next().unwrap_or_default().parse::<u32>();
             for i in tags {
-                if i > 32 { break }
+                if i > 32 {
+                    break;
+                }
                 let tag = output_handle.tags[i].as_mut();
                 match tag {
                     Some(tag) => {
@@ -293,12 +341,26 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                         output_handle.tags[i] = Some({
                             Tag {
                                 rule: Rule::None,
-                                parameters: { Parameters {
-                                    view_padding: 5,
-                                    main_index: if let Ok(index) = main_index { index } else { 1 },
-                                    main_amount: if let Ok(amount) = main_amount { amount } else { 1 },
-                                    main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
-                                }},
+                                parameters: {
+                                    Parameters {
+                                        view_padding: 5,
+                                        main_index: if let Ok(index) = main_index {
+                                            index
+                                        } else {
+                                            1
+                                        },
+                                        main_amount: if let Ok(amount) = main_amount {
+                                            amount
+                                        } else {
+                                            1
+                                        },
+                                        main_factor: if let Ok(factor) = main_factor {
+                                            factor
+                                        } else {
+                                            0.55
+                                        },
+                                    }
+                                },
                                 layout: layout.clone(),
                             }
                         })

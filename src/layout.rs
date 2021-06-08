@@ -43,27 +43,33 @@ impl Area {
         let master = parent && factor && client_count > 1 && parameters.main_index < client_count;
 
         match layout {
-            Layout::Full => for _i in 0..client_count {
-                list.push(area);
+            Layout::Full => {
+                for _i in 0..client_count {
+                    list.push(area);
+                }
             }
             Layout::Deck => {
                 let yoffset = ((self.h as f64 * 0.1) / (client_count as f64 - 1.0)).floor() as u32;
                 let xoffset = ((self.w as f64 * 0.1) / (client_count as f64 - 1.0)).floor() as u32;
                 for _i in 0..client_count {
-                    area.w = self.w - (xoffset*(client_count-1));
-                    area.h = self.h - (yoffset*(client_count-1));
+                    area.w = self.w - (xoffset * (client_count - 1));
+                    area.h = self.h - (yoffset * (client_count - 1));
                     list.push(area);
                     area.x += xoffset;
                     area.y += yoffset;
                 }
             }
-            Layout::Tab => for _i in 0..client_count {
-                let delta = if factor {
-                    parameters.main_factor * 100.0
-                } else { 30.0 };
-                list.push(area);
-                area.h -= delta as u32;
-                area.y += delta as u32;
+            Layout::Tab => {
+                for _i in 0..client_count {
+                    let delta = if factor {
+                        parameters.main_factor * 100.0
+                    } else {
+                        30.0
+                    };
+                    list.push(area);
+                    area.h -= delta as u32;
+                    area.y += delta as u32;
+                }
             }
             Layout::Horizontal => {
                 let reste = area.h % client_count;
@@ -173,10 +179,19 @@ impl Area {
                         client_count
                     }
                 };
-                area.generate( parameters, frame_amount, outer.deref(), &mut frame, true, factor,);
-                if parent && parameters.main_amount > 0
+                area.generate(
+                    parameters,
+                    frame_amount,
+                    outer.deref(),
+                    &mut frame,
+                    true,
+                    factor,
+                );
+                if parent
+                    && parameters.main_amount > 0
                     && parameters.main_amount < client_count
-                    && parameters.main_index < frame.len() as u32 {
+                    && parameters.main_index < frame.len() as u32
+                {
                     frame_amount -= 1;
                     client_count -= parameters.main_amount;
                     frame.remove(parameters.main_index as usize).generate(
@@ -194,17 +209,26 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize { i+=1 }
+                    if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize {
+                        i += 1
+                    }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }
-            Layout::Assisted { layout, main_amount, main_index, main_factor } => {
-                let substitute = { Parameters {
-                    view_padding: parameters.view_padding,
-                    main_amount: *main_amount,
-                    main_index: *main_index,
-                    main_factor: *main_factor
-                } };
+            Layout::Assisted {
+                layout,
+                main_amount,
+                main_index,
+                main_factor,
+            } => {
+                let substitute = {
+                    Parameters {
+                        view_padding: parameters.view_padding,
+                        main_amount: *main_amount,
+                        main_index: *main_index,
+                        main_factor: *main_factor,
+                    }
+                };
                 area.generate(&substitute, client_count, layout.deref(), list, true, true);
             }
         }
