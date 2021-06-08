@@ -117,8 +117,7 @@ The content of the layout resides within the brackets.
 
 The syntax to create a *assisted* layout is "()".
 The content of the layout resides within the braces.
-*;* is the delimiter between each field .ie *layout;main_amount;main_factor;main_index* 
-to the *recursive* layout. Only characters are acceptable as layout denominators.
+*;* is the delimiter between each field .ie *(layout; main_amount; main_factor; main_index)* 
 
 *examples:*
 	- (deck; 0; 0.6; 0)
