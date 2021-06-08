@@ -193,9 +193,9 @@ fn layout<'s>(name: &str) -> Layout {
                                 });
                                 Layout::Assisted {
                                     layout: Box::new(layout(tape.current.release())),
-                                    main_amount: var.0,
-                                    main_factor: var.1,
-                                    main_index: var.2,
+                                    amount: var.0,
+                                    factor: var.1,
+                                    index: var.2,
                                 }
                             } else {
                                 Layout::Full
@@ -265,13 +265,15 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                     Err(_) => 33..34,
                 },
             };
+            let mut main_index = 0;
+            let mut main_amount = 1;
+            let mut main_factor = 0.6;
             let mut main_layout = layout(&value);
-            let (mut amount, mut factor, mut index) = (1, 0.6, 0);
-            if let Layout::Assisted{ layout, main_amount, main_factor, main_index } = main_layout {
+            if let Layout::Assisted{ layout, amount, factor, index } = main_layout {
                 main_layout = *layout;
-                amount = main_amount;
-                factor = main_factor;
-                index = main_index;
+                main_amount = amount;
+                main_factor = factor;
+                main_index = index;
             }
             for i in tags {
                 if i > 32 {
@@ -281,9 +283,9 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 match tag {
                     Some(tag) => {
                         tag.layout = main_layout.clone();
-                        tag.parameters.main_index = index;
-                        tag.parameters.main_amount = amount;
-                        tag.parameters.main_factor = factor;
+                        tag.parameters.main_index = main_index;
+                        tag.parameters.main_amount = main_amount;
+                        tag.parameters.main_factor = main_factor;
                     }
                     None => {
                         output_handle.tags[i] = Some({
@@ -292,9 +294,9 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                 parameters: {
                                     Parameters {
                                         view_padding: 5,
-                                        main_index: index,
-                                        main_amount: amount,
-                                        main_factor: factor,
+                                        main_index: main_index,
+                                        main_amount: main_amount,
+                                        main_factor: main_factor,
                                     }
                                 },
                             }

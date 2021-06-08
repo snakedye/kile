@@ -14,9 +14,9 @@ pub enum Layout {
     },
     Assisted {
         layout: Box<Layout>,
-        main_amount: u32,
-        main_index: u32,
-        main_factor: f64,
+        amount: u32,
+        index: u32,
+        factor: f64,
     },
 }
 
@@ -188,8 +188,7 @@ impl Area {
                 );
                 if parent
                     && parameters.main_amount > 0
-                    && parameters.main_amount < client_count
-                    && parameters.main_index < frame.len() as u32
+                    && parameters.main_index < frame_amount
                 {
                     frame_amount -= 1;
                     client_count -= parameters.main_amount;
@@ -208,24 +207,30 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize {
+                    if parent 
+                        && parameters.main_amount > 0 
+                        && i >= parameters.main_index as usize {
                         i += 1
+                    } else if parameters.main_index >= frame_amount
+                        && parameters.main_index < frames_available
+                    {
+                        i = parameters.main_index as usize;
                     }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }
             Layout::Assisted {
                 layout,
-                main_amount,
-                main_index,
-                main_factor,
+                amount,
+                index,
+                factor,
             } => {
                 let substitute = {
                     Parameters {
                         view_padding: parameters.view_padding,
-                        main_amount: *main_amount,
-                        main_index: *main_index,
-                        main_factor: *main_factor,
+                        main_amount: *amount,
+                        main_index: *index,
+                        main_factor: *factor,
                     }
                 };
                 area.generate(&substitute, client_count, &*layout, list, true, true);

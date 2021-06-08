@@ -122,7 +122,7 @@ impl Output {
                         }
                     }
                     self.focused = tag(tags) as usize;
-                    match self.tags[self.focused].as_mut() {
+                    match self.tags[self.focused].as_ref() {
                         Some(tag) => {
                             view_padding = tag.parameters.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
