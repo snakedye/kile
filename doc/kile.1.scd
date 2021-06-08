@@ -109,9 +109,9 @@ The content of the layout resides within the brackets.
 *:* is the delimiter between the outer and inner layout. Both are property specific to the *recursive* layout.
 
 *examples:*
-	- {v: h,h}
-	- {d: h{v: dwd,d}}
-	- {{ver: dwindle,d}: tab,t}
+	- {v: h, h}
+	- {d: h, {v: full , dec}}
+	- {{ver: d0, d1}: tab, t}
 
 ## ASSISTED
 
@@ -122,6 +122,6 @@ to the *recursive* layout. Only characters are acceptable as layout denominators
 
 *examples:*
 	- (deck; 0; 0.6; 0)
-	- ({v: h,h}; 2; 0.6; 0)
+	- ({v: h, h}; 2; 0.6; 0)
 
 *riverctl*(1), *rivertile*(7)
