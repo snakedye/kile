@@ -39,23 +39,28 @@ impl Area {
         factor: bool,
     ) {
         let mut area = self;
-        let master = if parent && factor && client_count > 1 && parameters.main_index < client_count {
+        let master = if parent && factor && client_count > 1 && parameters.main_index < client_count
+        {
             true
         } else {
             false
         };
 
         match layout {
-            Layout::Full => while client_count > 0 {
-                list.push(area);
-                client_count -= 1;
+            Layout::Full => {
+                while client_count > 0 {
+                    list.push(area);
+                    client_count -= 1;
+                }
             }
-            Layout::Tab => while client_count > 0 {
-                let delta = parameters.main_factor * 100.0;
-                list.push(area);
-                area.h -= delta as u32;
-                area.y += delta as u32;
-                client_count -= 1;
+            Layout::Tab => {
+                while client_count > 0 {
+                    let delta = parameters.main_factor * 100.0;
+                    list.push(area);
+                    area.h -= delta as u32;
+                    area.y += delta as u32;
+                    client_count -= 1;
+                }
             }
             Layout::Horizontal => {
                 let reste = area.h % client_count;
@@ -165,10 +170,19 @@ impl Area {
                         client_count
                     }
                 };
-                area.generate( parameters, frame_amount, outer.deref(), &mut frame, true, factor,);
-                if parent && parameters.main_amount > 0
+                area.generate(
+                    parameters,
+                    frame_amount,
+                    outer.deref(),
+                    &mut frame,
+                    true,
+                    factor,
+                );
+                if parent
+                    && parameters.main_amount > 0
                     && parameters.main_amount < client_count
-                    && parameters.main_index < frame.len() as u32 {
+                    && parameters.main_index < frame.len() as u32
+                {
                     frame_amount -= 1;
                     client_count -= parameters.main_amount;
                     frame.remove(parameters.main_index as usize).generate(
@@ -186,17 +200,26 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize { i+=1 }
+                    if parent && parameters.main_amount > 0 && i >= parameters.main_index as usize {
+                        i += 1
+                    }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
             }
-            Layout::Assisted { layout, main_amount, main_index, main_factor } => {
-                let substitute = { Parameters {
-                    view_padding: parameters.view_padding,
-                    main_amount: *main_amount,
-                    main_index: *main_index,
-                    main_factor: *main_factor
-                } };
+            Layout::Assisted {
+                layout,
+                main_amount,
+                main_index,
+                main_factor,
+            } => {
+                let substitute = {
+                    Parameters {
+                        view_padding: parameters.view_padding,
+                        main_amount: *main_amount,
+                        main_index: *main_index,
+                        main_factor: *main_factor,
+                    }
+                };
                 area.generate(&substitute, client_count, layout.deref(), list, true, true);
             }
         }

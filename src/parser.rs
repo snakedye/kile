@@ -7,10 +7,10 @@ fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>)
     let (mut left, mut right) = (string, None);
     for (i, c) in string.to_string().chars().enumerate() {
         match c {
-            '{' => bracket+=1,
-            '}' => bracket-=1,
-            '(' => brace+=1,
-            ')' => brace-=1,
+            '{' => bracket += 1,
+            '}' => bracket -= 1,
+            '(' => brace += 1,
+            ')' => brace -= 1,
             _ => {}
         }
         if c == pattern && brace == 0 && bracket == 0 {
@@ -20,7 +20,7 @@ fn split_ounce<'s>(string: &'s str, pattern: char) -> (&'s str, Option<&'s str>)
             }
             break;
         }
-    } 
+    }
     (left, right)
 }
 fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
@@ -28,12 +28,12 @@ fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
     let mut brace = 0;
     let mut captured = "";
     for i in 0..string.len() {
-        if &string[i..i+opening.len()] == opening {
+        if &string[i..i + opening.len()] == opening {
             if brace == 0 {
                 start = i;
             }
             brace += 1;
-        } else if &string[i..i+closing.len()] == closing {
+        } else if &string[i..i + closing.len()] == closing {
             brace -= 1;
             if brace == 0 {
                 captured = &string[start + 1..i];
@@ -44,11 +44,12 @@ fn clamp<'s>(string: &'s str, opening: &'s str, closing: &'s str) -> &'s str {
     captured
 }
 fn filter<'s>(string: &'s str, pattern: char, mut f: impl FnMut(&'s str)) {
-    if clamp(string, "{", "}").len() + 2 == string.len() ||
-        clamp(string, "(", ")").len() + 2 == string.len() {
-            f(string)
+    if clamp(string, "{", "}").len() + 2 == string.len()
+        || clamp(string, "(", ")").len() + 2 == string.len()
+    {
+        f(string)
     } else {
-        let (previous, next) = split_ounce(string,pattern);
+        let (previous, next) = split_ounce(string, pattern);
         f(previous);
         if let Some(next) = next {
             filter(next, pattern, f);
@@ -63,42 +64,55 @@ fn layout<'s>(name: &str) -> Layout {
         "d" | "dwd" | "dwindle" => Layout::Dwindle(0),
         "D" | "Dwd" | "Dwindle" => Layout::Dwindle(1),
         "f" | "ful" | "full" => Layout::Full,
-        _ => if let Some(char) = name.chars().next() {
-            match char {
-                '{' => {
-                    let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
-                    Layout::Recursive {
-                        outer: { Box::new(layout(outer)) },
-                        inner: {
-                            let mut vec = Vec::new();
-                            if let Some(inner) = inner {
-                                filter(inner, ',',|s| { vec.push(layout(s)) });
-                            }
-                            vec
-                        },
-                    }
-                }
-                '(' => {
-                    let (layout_denominator, parameters) = split_ounce(clamp(name, "(", ")"), ';');
-                    if let Some(parameters) = parameters {
-                    let mut values = parameters.split(';');
-                        Layout::Assisted {
-                            layout: Box::new(layout(layout_denominator)),
-                            main_amount: if let Some(main_amount) = values.next() {
-                                main_amount.parse::<u32>().unwrap()
-                            } else { 0 },
-                            main_factor: if let Some(main_factor) = values.next() {
-                                main_factor.parse::<f64>().unwrap()
-                            } else { 0.6 },
-                            main_index: if let Some(main_index) = values.next() {
-                                main_index.parse::<u32>().unwrap()
-                            } else { 0 },
+        _ => {
+            if let Some(char) = name.chars().next() {
+                match char {
+                    '{' => {
+                        let (outer, inner) = split_ounce(clamp(name, "{", "}"), ':');
+                        Layout::Recursive {
+                            outer: { Box::new(layout(outer)) },
+                            inner: {
+                                let mut vec = Vec::new();
+                                if let Some(inner) = inner {
+                                    filter(inner, ',', |s| vec.push(layout(s)));
+                                }
+                                vec
+                            },
                         }
-                    } else { Layout::Full }
+                    }
+                    '(' => {
+                        let (layout_denominator, parameters) =
+                            split_ounce(clamp(name, "(", ")"), ';');
+                        if let Some(parameters) = parameters {
+                            let mut values = parameters.split(';');
+                            Layout::Assisted {
+                                layout: Box::new(layout(layout_denominator)),
+                                main_amount: if let Some(main_amount) = values.next() {
+                                    main_amount.parse::<u32>().unwrap()
+                                } else {
+                                    0
+                                },
+                                main_factor: if let Some(main_factor) = values.next() {
+                                    main_factor.parse::<f64>().unwrap()
+                                } else {
+                                    0.6
+                                },
+                                main_index: if let Some(main_index) = values.next() {
+                                    main_index.parse::<u32>().unwrap()
+                                } else {
+                                    0
+                                },
+                            }
+                        } else {
+                            Layout::Full
+                        }
+                    }
+                    _ => Layout::Full,
                 }
-                _ => Layout::Full
+            } else {
+                Layout::Full
             }
-        } else { Layout::Full }
+        }
     }
 }
 
@@ -188,12 +202,26 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                     output_handle.tags[i] = Some({
                                         Tag {
                                             rule: window_rule.clone(),
-                                            parameters: { Parameters {
-                                                view_padding: 5,
-                                                main_index: if let Ok(index) = main_index { index } else { 1 },
-                                                main_amount: if let Ok(amount) = main_amount { amount } else { 1 },
-                                                main_factor: if let Ok(factor) = main_factor { factor } else { 0.55 }
-                                            }},
+                                            parameters: {
+                                                Parameters {
+                                                    view_padding: 5,
+                                                    main_index: if let Ok(index) = main_index {
+                                                        index
+                                                    } else {
+                                                        1
+                                                    },
+                                                    main_amount: if let Ok(amount) = main_amount {
+                                                        amount
+                                                    } else {
+                                                        1
+                                                    },
+                                                    main_factor: if let Ok(factor) = main_factor {
+                                                        factor
+                                                    } else {
+                                                        0.55
+                                                    },
+                                                }
+                                            },
                                             layout: layout.clone(),
                                         }
                                     })
@@ -209,19 +237,41 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
                 match command.next() {
                     Some(arg) => match arg {
-                        "-position" => if let Some(app_id) = command.next() {
-                            Rule::Position{
-                                app_id: app_id.to_owned(),
-                                area: { Area {
-                                    x: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    y: command.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                    w: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                    h: command.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                } }
-                            };
+                        "-position" => {
+                            if let Some(app_id) = command.next() {
+                                Rule::Position {
+                                    app_id: app_id.to_owned(),
+                                    area: {
+                                        Area {
+                                            x: command
+                                                .next()
+                                                .unwrap_or("0")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            y: command
+                                                .next()
+                                                .unwrap_or("0")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            w: command
+                                                .next()
+                                                .unwrap_or("500")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                            h: command
+                                                .next()
+                                                .unwrap_or("500")
+                                                .parse::<u32>()
+                                                .unwrap(),
+                                        }
+                                    },
+                                };
+                            }
                         }
-                        "-tag" => if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                            tag.rule = Rule::Tag(uint);
+                        "-tag" => {
+                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
+                                tag.rule = Rule::Tag(uint);
+                            }
                         }
                         "-app-id" => {
                             tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())

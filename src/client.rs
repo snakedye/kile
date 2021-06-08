@@ -47,22 +47,26 @@ pub struct Area {
 
 #[derive(Clone)]
 pub enum Rule {
-    Position{ app_id: String, area: Area },
+    Position { app_id: String, area: Area },
     AppId(String),
     Tag(u32),
     None,
 }
 
-static DEFAULT: Tag = { Tag {
-    rule: Rule::None,
-    parameters: { Parameters {
-        view_padding: 0,
-        main_amount: 1,
-        main_index: 0,
-        main_factor: 0.55
-    } },
-    layout: Layout::Full,
-}};
+static DEFAULT: Tag = {
+    Tag {
+        rule: Rule::None,
+        parameters: {
+            Parameters {
+                view_padding: 0,
+                main_amount: 1,
+                main_index: 0,
+                main_factor: 0.55,
+            }
+        },
+        layout: Layout::Full,
+    }
+};
 
 impl Globals {
     pub fn new() -> Globals {
@@ -227,17 +231,21 @@ impl Output {
                     }
                 }
             },
-            Event::SetFixedValue { name, value } => if name == "main_factor" {
-                if let Some(tag) = self.tags[self.focused].as_mut() {
-                    if value > 0.0 && value < 1.0 {
-                        tag.parameters.main_factor = value
+            Event::SetFixedValue { name, value } => {
+                if name == "main_factor" {
+                    if let Some(tag) = self.tags[self.focused].as_mut() {
+                        if value > 0.0 && value < 1.0 {
+                            tag.parameters.main_factor = value
+                        }
                     }
                 }
             }
-            Event::ModFixedValue { name, delta } => if name == "main_factor" {
-                if let Some(tag) = self.tags[self.focused].as_mut() {
-                    if delta <= tag.parameters.main_factor {
-                        tag.parameters.main_factor += delta;
+            Event::ModFixedValue { name, delta } => {
+                if name == "main_factor" {
+                    if let Some(tag) = self.tags[self.focused].as_mut() {
+                        if delta <= tag.parameters.main_factor {
+                            tag.parameters.main_factor += delta;
+                        }
                     }
                 }
             }
@@ -250,12 +258,17 @@ impl Tag {
     fn update(&self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
         *list = Vec::new();
         let parent = match &self.layout {
-            Layout::Recursive { outer: _, inner: _ } => {
-                true
-            }
+            Layout::Recursive { outer: _, inner: _ } => true,
             _ => false,
         };
-        area.generate(&self.parameters, view_amount, &self.layout, list, parent, true);
+        area.generate(
+            &self.parameters,
+            view_amount,
+            &self.layout,
+            list,
+            parent,
+            true,
+        );
     }
 }
 

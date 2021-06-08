@@ -1,7 +1,7 @@
 extern crate wayland_scanner;
 
-use std::path::Path;
 use std::fs::{File, OpenOptions};
+use std::path::Path;
 use std::process::{Command, Stdio};
 use wayland_scanner::{generate_code, Side};
 
@@ -11,10 +11,10 @@ pub fn main() {
         Ok(_) => {
             let input = File::open(Path::new("./doc/kile.1.scd")).unwrap();
             let output = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(Path::new("./doc/kile.1.gz"))
-            .unwrap();
+                .write(true)
+                .create(true)
+                .open(Path::new("./doc/kile.1.gz"))
+                .unwrap();
             Command::new("scdoc")
                 .stdin(Stdio::from(input))
                 .stdout(output)
