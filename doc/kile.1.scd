@@ -90,7 +90,7 @@ The base layouts are the following.
 
 	- "dec" | "deck"
 
-	- "d1" | "dwindle0"
+	- "d0" | "dwindle0"
 
 	- "d1" | "dwindle1"
 
