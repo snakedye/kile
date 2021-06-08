@@ -1,5 +1,4 @@
 use super::client::*;
-use std::ops::Deref;
 
 #[derive(Clone, Debug)]
 pub enum Layout {
@@ -182,7 +181,7 @@ impl Area {
                 area.generate(
                     parameters,
                     frame_amount,
-                    outer.deref(),
+                    &*outer,
                     &mut frame,
                     true,
                     factor,
@@ -229,7 +228,7 @@ impl Area {
                         main_factor: *main_factor,
                     }
                 };
-                area.generate(&substitute, client_count, layout.deref(), list, true, true);
+                area.generate(&substitute, client_count, &*layout, list, true, true);
             }
         }
     }

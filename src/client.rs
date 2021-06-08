@@ -32,7 +32,6 @@ pub struct Output {
 }
 
 pub struct Tag {
-    pub rule: Rule,
     pub parameters: Parameters,
     pub layout: Layout,
 }
@@ -45,17 +44,8 @@ pub struct Area {
     pub h: u32,
 }
 
-#[derive(Clone)]
-pub enum Rule {
-    Position { app_id: String, area: Area },
-    AppId(String),
-    Tag(u32),
-    None,
-}
-
 static DEFAULT: Tag = {
     Tag {
-        rule: Rule::None,
         parameters: {
             Parameters {
                 view_padding: 0,

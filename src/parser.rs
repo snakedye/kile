@@ -240,55 +240,6 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 output_handle.smart_padding = ans;
             }
         }
-        "rule" => {
-            if let Some(tag) = output_handle.tags[output_handle.focused].as_mut() {
-                match command.next() {
-                    Some(arg) => match arg {
-                        "-position" => {
-                            if let Some(app_id) = command.next() {
-                                Rule::Position {
-                                    app_id: app_id.to_owned(),
-                                    area: {
-                                        Area {
-                                            x: command
-                                                .next()
-                                                .unwrap_or("0")
-                                                .parse::<u32>()
-                                                .unwrap(),
-                                            y: command
-                                                .next()
-                                                .unwrap_or("0")
-                                                .parse::<u32>()
-                                                .unwrap(),
-                                            w: command
-                                                .next()
-                                                .unwrap_or("500")
-                                                .parse::<u32>()
-                                                .unwrap(),
-                                            h: command
-                                                .next()
-                                                .unwrap_or("500")
-                                                .parse::<u32>()
-                                                .unwrap(),
-                                        }
-                                    },
-                                };
-                            }
-                        }
-                        "-tag" => {
-                            if let Ok(uint) = command.next().unwrap_or_default().parse::<u32>() {
-                                tag.rule = Rule::Tag(uint);
-                            }
-                        }
-                        "-app-id" => {
-                            tag.rule = Rule::AppId(command.next().unwrap_or_default().to_string())
-                        }
-                        _ => {}
-                    },
-                    None => tag.rule = Rule::None,
-                }
-            }
-        }
         "clear" => {
             for arg in command {
                 match arg {
@@ -314,11 +265,14 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                     Err(_) => 33..34,
                 },
             };
-            let mut value = value.split('|');
-            let layout = layout(value.next().unwrap_or_default());
-            let main_amount = value.next().unwrap_or_default().parse::<u32>();
-            let main_factor = value.next().unwrap_or_default().parse::<f64>();
-            let main_index = value.next().unwrap_or_default().parse::<u32>();
+            let mut main_layout = layout(&value);
+            let (mut amount, mut factor, mut index) = (1, 0.6, 0);
+            if let Layout::Assisted{ layout, main_amount, main_factor, main_index } = main_layout {
+                main_layout = *layout;
+                amount = main_amount;
+                factor = main_factor;
+                index = main_index;
+            }
             for i in tags {
                 if i > 32 {
                     break;
@@ -326,42 +280,23 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 let tag = output_handle.tags[i].as_mut();
                 match tag {
                     Some(tag) => {
-                        tag.layout = layout.clone();
-                        if let Ok(index) = main_index {
-                            tag.parameters.main_index = index;
-                        }
-                        if let Ok(amount) = main_amount {
-                            tag.parameters.main_amount = amount;
-                        }
-                        if let Ok(factor) = main_factor {
-                            tag.parameters.main_factor = factor;
-                        }
+                        tag.layout = main_layout.clone();
+                        tag.parameters.main_index = index;
+                        tag.parameters.main_amount = amount;
+                        tag.parameters.main_factor = factor;
                     }
                     None => {
                         output_handle.tags[i] = Some({
                             Tag {
-                                rule: Rule::None,
+                                layout: main_layout.clone(),
                                 parameters: {
                                     Parameters {
                                         view_padding: 5,
-                                        main_index: if let Ok(index) = main_index {
-                                            index
-                                        } else {
-                                            1
-                                        },
-                                        main_amount: if let Ok(amount) = main_amount {
-                                            amount
-                                        } else {
-                                            1
-                                        },
-                                        main_factor: if let Ok(factor) = main_factor {
-                                            factor
-                                        } else {
-                                            0.55
-                                        },
+                                        main_index: index,
+                                        main_amount: amount,
+                                        main_factor: factor,
                                     }
                                 },
-                                layout: layout.clone(),
                             }
                         })
                     }
