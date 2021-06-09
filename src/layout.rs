@@ -221,15 +221,15 @@ impl Area {
                 index,
                 factor,
             } => {
-                let substitute = {
+                let parameters = {
                     Parameters {
-                        view_padding: parameters.view_padding,
+                        view_padding: 0,
                         main_amount: *amount,
                         main_index: *index,
                         main_factor: *factor,
                     }
                 };
-                area.generate(&substitute, client_count, &*layout, list, true, true);
+                area.generate(&parameters, client_count, &*layout, list, true, true);
             }
         }
     }
