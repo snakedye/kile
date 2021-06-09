@@ -207,14 +207,10 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if parent 
+                    if master 
                         && parameters.main_amount > 0 
                         && i >= parameters.main_index as usize {
                         i += 1
-                    } else if parameters.main_index >= frame_amount
-                        && parameters.main_index < frames_available
-                    {
-                        i = parameters.main_index as usize;
                     }
                     rect.generate(parameters, count, &inner[i], list, false, false)
                 }
