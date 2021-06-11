@@ -2,7 +2,6 @@ use super::client::*;
 
 #[derive(Clone, Debug)]
 pub enum Layout {
-    Tab,
     Full,
     Deck,
     Vertical,
@@ -56,18 +55,6 @@ impl Area {
                     list.push(area);
                     area.x += xoffset;
                     area.y += yoffset;
-                }
-            }
-            Layout::Tab => {
-                for _i in 0..client_count {
-                    let delta = if factor {
-                        parameters.main_factor * 100.0
-                    } else {
-                        30.0
-                    };
-                    list.push(area);
-                    area.h -= delta as u32;
-                    area.y += delta as u32;
                 }
             }
             Layout::Horizontal => {

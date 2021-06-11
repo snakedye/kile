@@ -120,7 +120,6 @@ fn layout<'s>(name: &str) -> Layout {
     match name {
         "dec" | "deck" => Layout::Deck,
         "f" | "ful" | "full" => Layout::Full,
-        "t" | "tab" | "tabbed" => Layout::Tab,
         "d0" | "dwindle0" => Layout::Dwindle(0),
         "d1" | "dwindle1" => Layout::Dwindle(1),
         "v" | "ver" | "vertical" => Layout::Vertical,
@@ -161,9 +160,9 @@ fn layout<'s>(name: &str) -> Layout {
                     '(' => {
                         if let Some(s) = Match::new(name).clamp("(", ")") {
                             let tape = s.split_ounce(';');
+                            let mut var: (u32, f64, u32) = (0, 0.6, 0);
                             if let Some(parameters) = tape.next {
                                 let mut i = 0;
-                                let mut var: (u32, f64, u32) = (0, 0.6, 0);
                                 parameters.filter(';', |s| {
                                     i += 1;
                                     match i {
@@ -191,14 +190,12 @@ fn layout<'s>(name: &str) -> Layout {
                                         _ => Ok(()),
                                     }
                                 });
-                                Layout::Assisted {
-                                    layout: Box::new(layout(tape.current.release())),
-                                    amount: var.0,
-                                    factor: var.1,
-                                    index: var.2,
-                                }
-                            } else {
-                                Layout::Full
+                            }
+                            Layout::Assisted {
+                                layout: Box::new(layout(tape.current.release())),
+                                amount: var.0,
+                                factor: var.1,
+                                index: var.2,
                             }
                         } else {
                             Layout::Full
@@ -276,9 +273,7 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 main_index = index;
             }
             for i in tags {
-                if i > 32 {
-                    break;
-                }
+                if i > 32 { break; }
                 let tag = output_handle.tags[i].as_mut();
                 match tag {
                     Some(tag) => {

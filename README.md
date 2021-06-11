@@ -2,7 +2,7 @@
 
 kile is a layout client for river. It comes with a few layouts like tabbed, vertical and horizontal split and dwindle. You can [combine](https://gitlab.com/snakedye/kile/-/blob/main/doc/kile.1.scd#L98) those layouts with [layout values](https://gitlab.com/snakedye/kile/-/blob/main/doc/kile.1.scd#L33) to create new unique layouts.
 
-Layout example [here](https://gitlab.com/snakedye/wlr_config/-/blob/master/river/.config/river/init#L74).
+Layouts are provided in the [contrib](https://gitlab.com/snakedye/kile/-/blob/master/doc/contrib) file as examples.
 
 ### Dependencies
 - rust

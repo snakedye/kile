@@ -96,8 +96,6 @@ The base layouts are the following.
 
 	- "f" | "ful" | "full"
 
-	- "t" | "tab" | "tabbed"
-
 	- "v" | "ver" | "vertical"
 
 	- "h" | "hor" | "horizontal"
@@ -111,7 +109,7 @@ The content of the layout resides within the brackets.
 *examples:*
 	- {v: h, h}
 	- {d: h, {v: full , dec}}
-	- {{ver: d0, d1}: tab, t}
+	- {{ver: d0, d1}: horizontal, d0}
 
 ## ASSISTED
 
@@ -121,7 +119,7 @@ The content of the layout resides within the braces.
 
 *examples:*
 	- (deck; 0; 0.6; 0)
-	- ({v: h, h}; 2; 0.6; 0)
+	- ({v: h, h}; 1; 0.6; 0)
 
 
 
