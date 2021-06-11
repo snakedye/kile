@@ -3,10 +3,10 @@
 # Nested layouts (examples)
 # Source this file in yout init
 
-# Looks like the ordinary master and stack layout when mai_count is one
+# Looks like the ordinary master and stack layout when main_count is one
 # but when increased, the additional windows in the main area will be aligned
 # below the main window.
-read -r -d '' TAB << EOM
+read -r -d '' STACK << EOM
 (
   {
     vertical:
@@ -20,8 +20,8 @@ read -r -d '' TAB << EOM
 )
 EOM
 
-# Like of TAB except the main and slave areas are inverted
-read -r -d '' RTAB << EOM
+# Like STACK except the main and slave areas are inverted
+read -r -d '' RSTACK << EOM
 (
   {
     vertical:
@@ -35,11 +35,11 @@ read -r -d '' RTAB << EOM
 )
 EOM
 
-# Split the output area vertically into 2 layout areas.
+# Splits the output area vertically in 2 areas.
 # The main area has a count of one and a horizontal layout.
-# The slave area top area is slightly large and windows below are stacked on
-# top of each others like a deck of cards
-read -r -d '' STACK << EOM
+# Below the the top window in the slave area windows are stacked on
+# top of each others like a deck of cards.
+read -r -d '' DECK << EOM
 (
   {
     vertical:
@@ -53,8 +53,8 @@ read -r -d '' STACK << EOM
 )
 EOM
 
-# Like of STACK except the main and slave areas are inverted
-read -r -d '' RSTACK << EOM
+# Like DECK except the main and slave areas are inverted
+read -r -d '' RDECK << EOM
 (
   {
     vertical:
