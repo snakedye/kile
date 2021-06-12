@@ -97,7 +97,7 @@ If you wish to combine theses layouts the syntax is similar s-expressions.
 
 ## RECURSIVE
 
-*Recursive* layouts are contained within brackets "{}".
+*Recursive* layouts are contained within braces "{}".
 	format: *{ layout : layout layout ... }* 
 
 *examples:*
@@ -107,7 +107,7 @@ If you wish to combine theses layouts the syntax is similar s-expressions.
 
 ## ASSISTED
 
-*Assisted* layouts are contained within braces "()".
+*Assisted* layouts are contained within parentheses "()".
 	format: *( layout main_amount main_factor main_index )* 
 
 *examples:*
