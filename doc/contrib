@@ -10,7 +10,7 @@ read -r -d '' CENTERED << EOM
   {
     ver: hor, hor, hor
   };
-  1;0.65;1
+  1;0.50;1
 )
 EOM
 
@@ -37,10 +37,9 @@ EOM
 read -r -d '' GROUP << EOM
 (
   {
-    {vertical: horizontal, horizontal}:
+    ver:
     deck,
-    deck,
-    deck,
+    { hor: full, full }
   };
   1
 )
@@ -52,12 +51,12 @@ EOM
 read -r -d '' STACK << EOM
 (
   {
-    vertical:
+    ver:
     (
-      {horizontal: full, vertical};
+      { hor: full, ver };
       1;0.6;0
     ),
-    horizontal
+    hor
   };
   1;0.65;0
 )
@@ -67,10 +66,10 @@ EOM
 read -r -d '' RSTACK << EOM
 (
   {
-    vertical:
-    horizontal,
+    ver:
+    hor,
     (
-      {horizontal: full, vertical};
+      { hor: full, ver };
       1;0.60;0
     )
   };
@@ -86,10 +85,10 @@ EOM
 read -r -d '' DECK << EOM
 (
   {
-    vertical:
-    horizontal,
+    ver:
+    hor,
     (
-      {horizontal: full, deck};
+      { hor: full, deck };
       1;0.65;0
     )
   };
@@ -103,10 +102,10 @@ read -r -d '' RDECK << EOM
   {
     vertical:
     (
-      {horizontal: full, deck};
+      { hor: full, deck };
       1;0.65;0
     ),
-    horizontal
+    hor
   };
   1;0.65;1
 )
