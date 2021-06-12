@@ -96,26 +96,26 @@ The base layouts are the following.
 
 	- "h" | "hor" | "horizontal"
 
+If you wish to combine theses layouts the syntax is similar s-expressions.
+
 ## RECURSIVE
 
-The syntax to create a *recursive* layout is "{}".
-The content of the layout resides within the brackets.
-*:* is the delimiter between the outer and inner layout. Both are property specific to the *recursive* layout.
+*Recursive* layouts are contained within brackets "{}".
+	format: *{ layout : layout layout ... }* 
 
 *examples:*
-	- {v: h, h}
-	- {d: h, {v: full , dec}}
-	- {{ver: d0, d1}: horizontal, d0}
+	- { v: h h }
+	- { d: h { v: full dec } }
+	- { { ver: h h } : ver ful }
 
 ## ASSISTED
 
-The syntax to create a *assisted* layout is "()".
-The content of the layout resides within the braces.
-*;* is the delimiter between each field .ie *(layout; main_amount; main_factor; main_index)* 
+*Assisted* layouts are contained within braces "()".
+	format: *( layout main_amount main_factor main_index )* 
 
 *examples:*
-	- (deck; 0; 0.6; 0)
-	- ({v: h, h}; 1; 0.6; 0)
+	- ( deck 0 0.6 0 )
+	- ( { v: h h } 1 0.6 0 )
 
 
 

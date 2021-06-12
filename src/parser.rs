@@ -133,7 +133,7 @@ fn layout<'s>(name: &str) -> Layout {
                                 inner: {
                                     let mut vec = Vec::new();
                                     if let Some(next) = tape.next {
-                                        next.filter(',', |s| {
+                                        next.filter(' ', |s| {
                                             if let Some(s) = next.clamp("{", "}") {
                                                 if s.len() + 2 == next.len() {
                                                     return Err("");
@@ -157,11 +157,11 @@ fn layout<'s>(name: &str) -> Layout {
                     }
                     '(' => {
                         if let Some(s) = Match::new(name).clamp("(", ")") {
-                            let tape = s.split_ounce(';');
+                            let tape = s.split_ounce(' ');
                             let mut var: (u32, f64, u32) = (0, 0.6, 0);
                             if let Some(parameters) = tape.next {
                                 let mut i = 0;
-                                parameters.filter(';', |s| {
+                                parameters.filter(' ', |s| {
                                     i += 1;
                                     match i {
                                         1 => match s.release().parse::<u32>() {

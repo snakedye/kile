@@ -8,9 +8,9 @@
 read -r -d '' CENTERED << EOM
 (
   {
-    ver: hor, hor, hor
-  };
-  1;0.50;1
+    ver:
+    hor hor hor
+  } 1 0.65 1
 )
 EOM
 
@@ -20,16 +20,36 @@ read -r -d '' DWINDLE << EOM
 (
   {
     ver:
-    hor, (
-      { hor: full, (
-          { ver: full, deck };
-          1;0.5
+    hor (
+      { hor: 
+        full
+        (
+          { ver: full deck } 
+          1 0.5
         )
-      };
-      1;0.6
+      }
+      1 0.6
     )
-  };
-  1;0.55
+  } 
+  1 0.55
+)
+EOM
+
+# Horizontal split layout with stacking on the last area
+read -r -d '' HORIZONTAL << EOM
+(
+  {
+    horizontal:
+    (
+      { ver: full deck }
+      1 0.6
+    ) 
+    (
+      { ver: full deck }
+      1 0.5
+    )
+  } 
+  1
 )
 EOM
 
@@ -37,10 +57,10 @@ EOM
 read -r -d '' GROUP << EOM
 (
   {
-    ver:
-    deck,
-    { hor: full, full }
-  };
+    vertical:
+    $HORIZONTAL 
+    { hor: full full }
+  } 
   1
 )
 EOM
@@ -53,12 +73,12 @@ read -r -d '' STACK << EOM
   {
     ver:
     (
-      { hor: full, ver };
-      1;0.6;0
-    ),
+      { hor: full ver }
+      1 0.6 0
+    )
     hor
-  };
-  1;0.65;0
+  }
+  1 0.65 0
 )
 EOM
 
@@ -67,13 +87,13 @@ read -r -d '' RSTACK << EOM
 (
   {
     ver:
-    hor,
+    hor
     (
-      { hor: full, ver };
-      1;0.60;0
+      { hor: full ver }
+      1 0.60 0
     )
-  };
-  1;0.65;1
+  }
+  1 0.65 1
 )
 EOM
 
@@ -86,13 +106,13 @@ read -r -d '' DECK << EOM
 (
   {
     ver:
-    hor,
+    hor
     (
-      { hor: full, deck };
-      1;0.65;0
+      { hor: full deck }
+      1 0.65 0
     )
-  };
-  1;0.65;0
+  }
+  1 0.65 0
 )
 EOM
 
@@ -102,11 +122,11 @@ read -r -d '' RDECK << EOM
   {
     vertical:
     (
-      { hor: full, deck };
-      1;0.65;0
-    ),
+      { hor: full deck }
+      1 0.65 0
+    )
     hor
-  };
-  1;0.65;1
+  }
+  1 0.65 1
 )
 EOM
