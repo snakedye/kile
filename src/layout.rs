@@ -6,7 +6,6 @@ pub enum Layout {
     Deck,
     Vertical,
     Horizontal,
-    Dwindle(u32),
     Recursive {
         outer: Box<Layout>,
         inner: Vec<Layout>,
@@ -105,46 +104,6 @@ impl Area {
 
                     list.push(area);
                     area.x += area.w;
-                }
-            }
-            Layout::Dwindle(modi) => {
-                for i in 0..client_count {
-                    let reste;
-                    if i < client_count - 1 {
-                        if (i + modi) % 2 == 0 {
-                            if master && i == parameters.main_index {
-                                area.w = ((area.w as f64) * parameters.main_factor) as u32;
-                            } else {
-                                reste = area.w % 2;
-                                area.w /= 2;
-                                area.w += reste;
-                            }
-                            list.push(area);
-                            area.x += area.w;
-                            if master && i == parameters.main_index {
-                                area.w = (((area.w as f64) * (1.0 - parameters.main_factor))
-                                    / parameters.main_factor)
-                                    .ceil() as u32;
-                            }
-                        } else {
-                            if master && i == parameters.main_index {
-                                area.h = ((area.h as f64) * parameters.main_factor) as u32;
-                            } else {
-                                reste = area.h % 2;
-                                area.h /= 2;
-                                area.h += reste;
-                            }
-                            list.push(area);
-                            area.y += area.h;
-                            if master && i == parameters.main_index {
-                                area.h = (((area.h as f64) * (1.0 - parameters.main_factor))
-                                    / parameters.main_factor)
-                                    .ceil() as u32;
-                            }
-                        }
-                    } else {
-                        list.push(area);
-                    }
                 }
             }
             Layout::Recursive { outer, inner } => {

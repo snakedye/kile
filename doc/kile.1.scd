@@ -88,13 +88,9 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 The base layouts are the following.
 
-	- "dec" | "deck"
-
-	- "d0" | "dwindle0"
-
-	- "d1" | "dwindle1"
-
 	- "f" | "ful" | "full"
+
+	- "d" | "dec" | "deck"
 
 	- "v" | "ver" | "vertical"
 

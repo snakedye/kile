@@ -118,10 +118,8 @@ impl<'s> Match<'s> {
 
 fn layout<'s>(name: &str) -> Layout {
     match name {
-        "dec" | "deck" => Layout::Deck,
         "f" | "ful" | "full" => Layout::Full,
-        "d0" | "dwindle0" => Layout::Dwindle(0),
-        "d1" | "dwindle1" => Layout::Dwindle(1),
+        "d" | "dec" | "deck" => Layout::Deck,
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
         _ => {
