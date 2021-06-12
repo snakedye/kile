@@ -1,8 +1,11 @@
 # A layout generator for [river](https://github.com/ifreund/river)
 
-kile is a layout client for river. It comes with a few layouts like deck, vertical and horizontal split you can [use](https://gitlab.com/snakedye/kile/-/blob/main/doc/kile.1.scd#L98) with [layout values](https://gitlab.com/snakedye/kile/-/blob/main/doc/kile.1.scd#L33) to create new unique dynamic layouts.
+kile is a layout client for river. 
 
-Layout examples are provided in the [contrib](https://gitlab.com/snakedye/kile/-/blob/main/doc/contrib) file.
+Through a lisp like syntax, users can define new dynamic layouts from existing ones. 
+
+Layout examples are provided in the [contrib](https://gitlab.com/snakedye/kile/-/blob/main/contrib/layout) file.
+The documentation is in the man page. 
 
 ### Dependencies
 - rust

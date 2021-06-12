@@ -8,8 +8,7 @@ kile - a tiling a layout generator for river
 
 *kile* is a layout generator for *river*.
 
-The idea behind kile is that it's supposed to the layout generator that does it all.
-A few basic layouts are provided and through the *recursive* and *assisted* layout syntax, users can declare new unique nested layouts.
+Through a lisp like syntax, users can define new dynamic layouts from existing ones. 
 
 Note: *kile* could work on any Wayland compositor 
 that implements *river-layout-v2*.
