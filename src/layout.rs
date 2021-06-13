@@ -124,18 +124,8 @@ impl Area {
                         client_count
                     }
                 };
-                area.generate(
-                    parameters,
-                    frame_amount,
-                    &*outer,
-                    &mut frame,
-                    true,
-                    factor,
-                );
-                if parent
-                    && parameters.main_amount > 0
-                    && parameters.main_index < frame_amount
-                {
+                area.generate(parameters, frame_amount, &*outer, &mut frame, true, factor);
+                if parent && parameters.main_amount > 0 && parameters.main_index < frame_amount {
                     frame_amount -= 1;
                     client_count -= parameters.main_amount;
                     frame.remove(parameters.main_index as usize).generate(
@@ -153,9 +143,7 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if master 
-                        && parameters.main_amount > 0 
-                        && i >= parameters.main_index as usize {
+                    if master && parameters.main_amount > 0 && i >= parameters.main_index as usize {
                         i += 1
                     }
                     rect.generate(parameters, count, &inner[i], list, false, false)

@@ -1,5 +1,5 @@
+use super::cmd;
 use super::layout::Layout;
-use super::parser;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
     river_layout_v2::river_layout_v2::Event,
@@ -202,15 +202,19 @@ impl Output {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         match name.as_ref() {
                             "main_amount" => {
-                                tag.parameters.main_amount =
-                                    ((tag.parameters.main_amount as i32) + delta) as u32
+                                if (tag.parameters.main_amount as i32) + delta >= 0 {
+                                    tag.parameters.main_amount =
+                                        ((tag.parameters.main_amount as i32) + delta) as u32
+                                }
                             }
                             "main_index" => {
-                                tag.parameters.main_index =
-                                    ((tag.parameters.main_index as i32) + delta) as u32
+                                if (tag.parameters.main_index as i32) + delta >= 0 {
+                                    tag.parameters.main_index =
+                                        ((tag.parameters.main_index as i32) + delta) as u32
+                                }
                             }
                             "view_padding" => {
-                                if tag.parameters.view_padding + delta >= 0 {
+                                if (tag.parameters.view_padding as i32) + delta >= 0 {
                                     tag.parameters.view_padding += delta;
                                     view_padding = delta;
                                     self.reload = false;
@@ -239,7 +243,7 @@ impl Output {
                     }
                 }
             }
-            Event::SetStringValue { name, value } => parser::main(&mut self, name, value),
+            Event::SetStringValue { name, value } => cmd::main(&mut self, name, value),
         });
     }
 }
