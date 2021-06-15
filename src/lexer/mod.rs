@@ -3,6 +3,7 @@ pub mod lexer;
 use crate::client::*;
 use crate::layout::*;
 
+// Handles string events
 pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
     let mut command = value.split_whitespace();
     match name.as_ref() {

@@ -1,4 +1,4 @@
-use super::cmd;
+use super::lexer;
 use super::layout::Layout;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
@@ -7,11 +7,13 @@ use crate::wayland::{
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
 
+// Holds all the globals necessary to operate the client
 pub struct Globals {
     pub outputs: Vec<Output>,
     pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
 }
 
+// Parameters necessary to generate a layout
 #[derive(Copy, Clone)]
 pub struct Parameters {
     pub main_amount: u32,
@@ -20,17 +22,24 @@ pub struct Parameters {
     pub view_padding: i32,
 }
 
+// The state of an Output
 pub struct Output {
     pub output: Main<WlOutput>,
+    // This is the index of the focused Tag
     pub focused: usize,
+    // Defines if a layout should regenerated or not
     pub reload: bool,
+    // Defines if a the layout area should reajusted to the output dimension or not
     pub resize: bool,
+    // Dimensions of the output
     pub dimension: Area,
     pub outer_padding: i32,
     pub smart_padding: bool,
+    // The configuration of all Tags
     pub tags: [Option<Tag>; 32],
 }
 
+// The configuration of a Tag
 pub struct Tag {
     pub parameters: Parameters,
     pub layout: Layout,
@@ -44,6 +53,7 @@ pub struct Area {
     pub h: u32,
 }
 
+// A generic default configuration used when a Tag isn't defined
 static DEFAULT: Tag = {
     Tag {
         parameters: {
@@ -98,6 +108,7 @@ impl Output {
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
         let mut view_padding = 0;
+        // A vector holding the geometry of all the windows from the most recent layout demand
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
             Event::LayoutDemand {
@@ -243,7 +254,8 @@ impl Output {
                     }
                 }
             }
-            Event::SetStringValue { name, value } => cmd::main(&mut self, name, value),
+            // All String events are delegated to the lexer
+            Event::SetStringValue { name, value } => lexer::main(&mut self, name, value),
         });
     }
 }

@@ -1,5 +1,5 @@
 mod client;
-mod cmd;
+mod lexer;
 mod layout;
 mod wayland;
 
