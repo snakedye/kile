@@ -32,6 +32,7 @@ pub struct Output {
     pub resize: bool,
     // Dimensions of the output
     pub dimension: Area,
+    pub view_padding: i32,
     pub smart_padding: bool,
     // The configuration of all Tags
     pub tags: [Option<Tag>; 32],
@@ -90,6 +91,7 @@ impl Output {
                 focused: 0,
                 reload: true,
                 resize: false,
+                view_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
             }
@@ -132,7 +134,7 @@ impl Output {
                     self.focused = tag(tags) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
-                            // view_padding = tag.parameters.view_padding;
+                            view_padding = self.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
                         }
                         None => DEFAULT.update(&mut windows, view_count, self.dimension),
@@ -165,8 +167,8 @@ impl Output {
             Event::SetIntValue { name, value } => match name.as_ref() {
                 "outer_padding" => outer_padding = value,
                 "view_padding" => {
-                    let delta = value - view_padding;
-                    view_padding = delta;
+                    view_padding = value - view_padding;
+                    self.view_padding = value;
                     self.reload = false;
                 }
                 _ => {
@@ -184,7 +186,14 @@ impl Output {
             Event::ModIntValue { name, delta } => match name.as_ref() {
                 "outer_padding" => {
                     if outer_padding as i32 >= delta {
-                        outer_padding += delta
+                        outer_padding += delta;
+                    }
+                }
+                "view_padding" => {
+                    if (self.view_padding as i32) + delta >= 0 {
+                        self.view_padding += delta;
+                        view_padding = delta;
+                        self.reload = false;
                     }
                 }
                 "xoffset" => {
@@ -204,12 +213,6 @@ impl Output {
                     }
                     self.dimension.h -= delta.abs() as u32;
                     self.resize = true;
-                }
-                "view_padding" => {
-                    if (view_padding as i32) + delta >= 0 {
-                        view_padding += delta;
-                        self.reload = false;
-                    }
                 }
                 _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
