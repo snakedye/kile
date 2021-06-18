@@ -70,12 +70,12 @@ static DEFAULT: Tag = {
 
 impl Globals {
     pub fn new() -> Globals {
-        return {
+        {
             Globals {
                 layout_manager: None,
                 outputs: Vec::new(),
             }
-        };
+        }
     }
 }
 
@@ -83,7 +83,7 @@ impl Output {
     pub fn new(output: Main<WlOutput>) -> Output {
         {
             Output {
-                output: output,
+                output,
                 dimension: Area {
                     x: 0,
                     y: 0,

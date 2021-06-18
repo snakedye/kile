@@ -15,8 +15,8 @@ struct Tape<'s> {
 impl<'s> Tape<'s> {
     fn new(current: Expression<'s>, next: Expression<'s>) -> Tape<'s> {
         Tape {
-            current: current,
-            next: next,
+            current,
+            next,
         }
     }
     fn _next(&mut self, pattern: char) -> Expression<'s> {
@@ -73,9 +73,9 @@ impl<'s> Expression<'s> {
                 }
                 if c == pattern && brace == 0 && paren == 0 {
                     return Tape::new(
-                        Expression::Some(&s[0..i].trim()),
-                        if &s[i + 1..] != "" {
-                            Expression::new(&s[i + 1..].trim())
+                        Expression::Some(s[0..i].trim()),
+                        if !&s[i + 1..].is_empty() {
+                            Expression::new(s[i + 1..].trim())
                         } else {
                             Expression::None
                         },
@@ -98,7 +98,7 @@ impl<'s> Expression<'s> {
                 } else if &s[i..i + closing.len()] == closing {
                     brace -= 1;
                     if brace == 0 {
-                        return Expression::new(&s[start + 1..i].trim());
+                        return Expression::new(s[start + 1..i].trim());
                     }
                 }
             }
@@ -116,7 +116,7 @@ impl<'s> Expression<'s> {
                 }
             }
             Err(m) => {
-                if m != "" {
+                if !m.is_empty() {
                     println!("{}", m)
                 }
             }
