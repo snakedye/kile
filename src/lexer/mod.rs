@@ -90,7 +90,6 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                 layout: main_layout.clone(),
                                 parameters: {
                                     Parameters {
-                                        view_padding: 5,
                                         main_index,
                                         main_amount,
                                         main_factor,

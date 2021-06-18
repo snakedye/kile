@@ -19,7 +19,6 @@ pub struct Parameters {
     pub main_amount: u32,
     pub main_index: u32,
     pub main_factor: f64,
-    pub view_padding: i32,
 }
 
 // The state of an Output
@@ -33,7 +32,6 @@ pub struct Output {
     pub resize: bool,
     // Dimensions of the output
     pub dimension: Area,
-    pub outer_padding: i32,
     pub smart_padding: bool,
     // The configuration of all Tags
     pub tags: [Option<Tag>; 32],
@@ -58,7 +56,6 @@ static DEFAULT: Tag = {
     Tag {
         parameters: {
             Parameters {
-                view_padding: 0,
                 main_amount: 1,
                 main_index: 0,
                 main_factor: 0.55,
@@ -93,7 +90,6 @@ impl Output {
                 focused: 0,
                 reload: true,
                 resize: false,
-                outer_padding: 5,
                 smart_padding: false,
                 tags: Default::default(),
             }
@@ -107,6 +103,7 @@ impl Output {
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v2")
             .get_layout(&self.output, namespace);
+        let mut outer_padding = 0;
         let mut view_padding = 0;
         // A vector holding the geometry of all the windows from the most recent layout demand
         let mut windows: Vec<Area> = Vec::new();
@@ -129,13 +126,13 @@ impl Output {
                             }
                         };
                         if !self.smart_padding || view_count > 1 {
-                            self.dimension.apply_padding(self.outer_padding);
+                            self.dimension.apply_padding(outer_padding);
                         }
                     }
                     self.focused = tag(tags) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
-                            view_padding = tag.parameters.view_padding;
+                            // view_padding = tag.parameters.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
                         }
                         None => DEFAULT.update(&mut windows, view_count, self.dimension),
@@ -166,19 +163,18 @@ impl Output {
             }
             Event::AdvertiseDone { serial: _ } => {}
             Event::SetIntValue { name, value } => match name.as_ref() {
-                "outer_padding" => self.outer_padding = value,
+                "outer_padding" => outer_padding = value,
+                "view_padding" => {
+                    let delta = value - view_padding;
+                    view_padding = delta;
+                    self.reload = false;
+                }
                 _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         if value >= 0 {
                             match name.as_ref() {
                                 "main_amount" => tag.parameters.main_amount = value as u32,
                                 "main_index" => tag.parameters.main_index = value as u32,
-                                "view_padding" => {
-                                    let delta = value - tag.parameters.view_padding;
-                                    tag.parameters.view_padding = value;
-                                    view_padding = delta;
-                                    self.reload = false;
-                                }
                                 _ => {}
                             }
                         }
@@ -187,8 +183,8 @@ impl Output {
             },
             Event::ModIntValue { name, delta } => match name.as_ref() {
                 "outer_padding" => {
-                    if self.outer_padding as i32 >= delta {
-                        self.outer_padding += delta
+                    if outer_padding as i32 >= delta {
+                        outer_padding += delta
                     }
                 }
                 "xoffset" => {
@@ -209,6 +205,12 @@ impl Output {
                     self.dimension.h -= delta.abs() as u32;
                     self.resize = true;
                 }
+                "view_padding" => {
+                    if (view_padding as i32) + delta >= 0 {
+                        view_padding += delta;
+                        self.reload = false;
+                    }
+                }
                 _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
                         match name.as_ref() {
@@ -222,13 +224,6 @@ impl Output {
                                 if (tag.parameters.main_index as i32) + delta >= 0 {
                                     tag.parameters.main_index =
                                         ((tag.parameters.main_index as i32) + delta) as u32
-                                }
-                            }
-                            "view_padding" => {
-                                if (tag.parameters.view_padding as i32) + delta >= 0 {
-                                    tag.parameters.view_padding += delta;
-                                    view_padding = delta;
-                                    self.reload = false;
                                 }
                             }
                             _ => {}

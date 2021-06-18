@@ -157,7 +157,6 @@ impl Area {
             } => {
                 let parameters = {
                     Parameters {
-                        view_padding: 0,
                         main_amount: *amount,
                         main_index: *index,
                         main_factor: *factor,
