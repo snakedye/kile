@@ -14,10 +14,7 @@ struct Tape<'s> {
 
 impl<'s> Tape<'s> {
     fn new(current: Expression<'s>, next: Expression<'s>) -> Tape<'s> {
-        Tape {
-            current,
-            next,
-        }
+        Tape { current, next }
     }
     fn _next(&mut self, pattern: char) -> Expression<'s> {
         let m = self.next;
@@ -105,7 +102,7 @@ impl<'s> Expression<'s> {
         }
         Expression::None
     }
-    // Iterates over all expressions delimited by a character 
+    // Iterates over all expressions delimited by a character
     // and excutes a function on each one of them
     fn filter(&self, pattern: char, mut f: impl FnMut(Expression) -> Result<(), &'static str>) {
         let tape = self.split_ounce(pattern);
