@@ -1,6 +1,6 @@
 mod client;
-mod lexer;
 mod layout;
+mod lexer;
 mod wayland;
 
 use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;

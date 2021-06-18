@@ -19,11 +19,6 @@ impl<'s> Tape<'s> {
             next: next,
         }
     }
-    fn _next(&mut self, pattern: char) -> Expression<'s> {
-        let m = self.next;
-        (*self) = m.split_ounce(pattern);
-        m
-    }
 }
 
 impl<'s> Expression<'s> {
@@ -35,29 +30,6 @@ impl<'s> Expression<'s> {
             Expression::Some(s) => s.len(),
             Expression::None => 0,
         }
-    }
-    fn _split(self, pattern: char) -> Vec<Expression<'s>> {
-        let mut v = Vec::new();
-        let mut tape = self.split_ounce(pattern);
-        loop {
-            v.push(tape.current);
-            if let Expression::Some(_) = tape.next {
-                tape = tape.next.split_ounce(pattern);
-            } else {
-                break v;
-            }
-        }
-    }
-    fn _split_for(self, f: &mut impl FnMut(char) -> bool) -> Tape<'s> {
-        if let Expression::Some(s) = self {
-            for (i, c) in s.to_string().chars().enumerate() {
-                if f(c) {
-                    let (left, right) = s.split_at(i);
-                    return Tape::new(Expression::new(left), Expression::new(right));
-                }
-            }
-        }
-        Tape::new(self, Expression::None)
     }
     // Splits an expression in 2 at the index of a character
     fn split_ounce(self, pattern: char) -> Tape<'s> {
@@ -86,16 +58,16 @@ impl<'s> Expression<'s> {
         Tape::new(self, Expression::None)
     }
     // Captures a string slice contained within specific patterns
-    fn clamp(&self, opening: &'s str, closing: &'s str) -> Expression<'s> {
+    fn clamp(&self, opening: char, closing: char) -> Expression<'s> {
         let (mut start, mut brace) = (0, 0);
         if let Expression::Some(s) = self {
-            for i in 0..s.len() {
-                if &s[i..i + opening.len()] == opening {
+            for (i, c) in s.to_string().chars().enumerate() {
+                if c == opening {
                     if brace == 0 {
                         start = i;
                     }
                     brace += 1;
-                } else if &s[i..i + closing.len()] == closing {
+                } else if c == closing {
                     brace -= 1;
                     if brace == 0 {
                         return Expression::new(&s[start + 1..i].trim());
@@ -105,7 +77,7 @@ impl<'s> Expression<'s> {
         }
         Expression::None
     }
-    // Iterates over all expressions delimited by a character 
+    // Iterates over all expressions delimited by a character
     // and excutes a function on each one of them
     fn filter(&self, pattern: char, mut f: impl FnMut(Expression) -> Result<(), &'static str>) {
         let tape = self.split_ounce(pattern);
@@ -142,15 +114,15 @@ pub fn layout<'s>(name: &str) -> Layout {
                 match char {
                     '{' => {
                         // Turns "{ a : b }" into this: current: a, next: b
-                        let tape = Expression::new(name).clamp("{", "}").split_ounce(':');
+                        let tape = Expression::new(name).clamp('{', '}').split_ounce(':');
 
                         Layout::Recursive {
                             outer: { Box::new(layout(tape.current.release())) },
                             inner: {
                                 let mut vec = Vec::new();
                                 tape.next.filter(' ', |s| {
-                                    if s.len() == s.clamp("{", "}").len() + 2
-                                        || s.len() == s.clamp("(", ")").len() + 2
+                                    if s.len() == s.clamp('{', '}').len() + 2
+                                        || s.len() == s.clamp('(', ')').len() + 2
                                     {
                                         return Err("");
                                     }
@@ -164,7 +136,7 @@ pub fn layout<'s>(name: &str) -> Layout {
                     '(' => {
                         let mut i = 0;
                         let mut var: (u32, f64, u32) = (0, 0.6, 0);
-                        let tape = Expression::new(name).clamp("(", ")").split_ounce(' ');
+                        let tape = Expression::new(name).clamp('(', ')').split_ounce(' ');
                         // Dispatches layout values to the field corresponding to an index
                         tape.next.filter(' ', |s| {
                             i += 1;

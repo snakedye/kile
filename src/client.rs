@@ -1,5 +1,5 @@
-use super::lexer;
 use super::layout::Layout;
+use super::lexer;
 use crate::wayland::{
     river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
     river_layout_v2::river_layout_v2::Event,
