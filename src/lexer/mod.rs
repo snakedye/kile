@@ -91,9 +91,9 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                                 parameters: {
                                     Parameters {
                                         view_padding: 5,
-                                        main_index: main_index,
-                                        main_amount: main_amount,
-                                        main_factor: main_factor,
+                                        main_index,
+                                        main_amount,
+                                        main_factor,
                                     }
                                 },
                             }
