@@ -23,8 +23,7 @@ fn main() {
                 }
                 "--help" | "-h" | "--h" => {
                     print!("Usage: kile [option]\n\n");
-                    println!("  -n | --n | --namespace <string> : the namespace of kile.");
-                    println!("  -h | --h | --help : shows this help message.");
+                    print!("  -n, --n, --namespace <string> : the namespace of kile.\n");
                     std::process::exit(0);
                 }
                 _ => break,
@@ -69,16 +68,18 @@ fn main() {
         output.layout_filter(layout_manager, namespace.clone());
     }
 
-    loop {
-        event_queue
-            .dispatch(&mut (), |event, object, _| {
-                panic!(
-                    "[callop] Encountered an orphan event: {}@{}: {}",
-                    event.interface,
-                    object.as_ref().id(),
-                    event.name
-                );
-            })
-            .unwrap();
+    if layout_manager.is_some() {
+        loop {
+            event_queue
+                .dispatch(&mut (), |event, object, _| {
+                    panic!(
+                        "[callop] Encountered an orphan event: {}@{}: {}",
+                        event.interface,
+                        object.as_ref().id(),
+                        event.name
+                    );
+                })
+                .unwrap();
+        }
     }
 }

@@ -135,6 +135,8 @@ impl Output {
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
                             view_padding = self.view_padding;
+                            println!("windows count: {}", view_count);
+                            println!("{:#?}", tag.layout);
                             tag.update(&mut windows, view_count, self.dimension)
                         }
                         None => DEFAULT.update(&mut windows, view_count, self.dimension),
@@ -169,7 +171,9 @@ impl Output {
                 "view_padding" => {
                     view_padding = value - view_padding;
                     self.view_padding = value;
-                    self.reload = false;
+                    if windows.len() > 0 {
+                        self.reload = false;
+                    }
                 }
                 _ => {
                     if let Some(tag) = self.tags[self.focused].as_mut() {
@@ -193,7 +197,9 @@ impl Output {
                     if (self.view_padding as i32) + delta >= 0 {
                         self.view_padding += delta;
                         view_padding = delta;
-                        self.reload = false;
+                        if windows.len() > 0 {
+                            self.reload = false;
+                        }
                     }
                 }
                 "xoffset" => {
