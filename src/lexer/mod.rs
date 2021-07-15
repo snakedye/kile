@@ -48,12 +48,12 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
             }
         }
         _ => {
-            let tags = match name.as_ref() {
-                "focused" => output_handle.focused..output_handle.focused + 1,
-                "all" => 0..32,
+            let tags: Result<std::ops::Range<usize>, ()> = match name.as_ref() {
+                "focused" => Ok(output_handle.focused..output_handle.focused + 1),
+                "all" => Ok(0..32),
                 _ => match name.parse::<usize>() {
-                    Ok(int) => int - 1..int,
-                    Err(_) => 33..34,
+                    Ok(int) => Ok(int - 1..int),
+                    Err(_) => Err(()),
                 },
             };
             let mut main_index = 0;
@@ -72,31 +72,30 @@ pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
                 main_factor = factor;
                 main_index = index;
             }
-            for i in tags {
-                if i > 32 {
-                    break;
-                }
-                let tag = output_handle.tags[i].as_mut();
-                match tag {
-                    Some(tag) => {
-                        tag.layout = main_layout.clone();
-                        tag.parameters.main_index = main_index;
-                        tag.parameters.main_amount = main_amount;
-                        tag.parameters.main_factor = main_factor;
-                    }
-                    None => {
-                        output_handle.tags[i] = Some({
-                            Tag {
-                                layout: main_layout.clone(),
-                                parameters: {
-                                    Parameters {
-                                        main_index,
-                                        main_amount,
-                                        main_factor,
-                                    }
-                                },
-                            }
-                        })
+            if let Ok(tags) = tags {
+                for i in tags {
+                    let tag = output_handle.tags[i].as_mut();
+                    match tag {
+                        Some(tag) => {
+                            tag.layout = main_layout.clone();
+                            tag.parameters.main_index = main_index;
+                            tag.parameters.main_amount = main_amount;
+                            tag.parameters.main_factor = main_factor;
+                        }
+                        None => {
+                            output_handle.tags[i] = Some({
+                                Tag {
+                                    layout: main_layout.clone(),
+                                    parameters: {
+                                        Parameters {
+                                            main_index,
+                                            main_amount,
+                                            main_factor,
+                                        }
+                                    },
+                                }
+                            })
+                        }
                     }
                 }
             }
