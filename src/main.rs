@@ -3,7 +3,7 @@ mod layout;
 mod lexer;
 mod wayland;
 
-use crate::wayland::river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2;
+use crate::wayland::river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3;
 use client::{Globals, Output};
 use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
@@ -41,9 +41,9 @@ fn main() {
         &attached_display,
         wayland_client::global_filter!(
             [
-                RiverLayoutManagerV2,
+                RiverLayoutManagerV3,
                 1,
-                |layout_manager: Main<RiverLayoutManagerV2>, mut globals: DispatchData| {
+                |layout_manager: Main<RiverLayoutManagerV3>, mut globals: DispatchData| {
                     globals.get::<Globals>().unwrap().layout_manager = Some(layout_manager);
                 }
             ],

@@ -1,25 +1,28 @@
 use crate::layout::*;
 
 #[derive(Copy, Clone, Debug)]
-enum Expression<'s> {
+pub enum Expression<'s> {
     Some(&'s str),
     None,
 }
 
 #[derive(Copy, Clone, Debug)]
-struct Tape<'s> {
+pub struct Tape<'s> {
     current: Expression<'s>,
     next: Expression<'s>,
 }
 
 impl<'s> Tape<'s> {
-    fn new(current: Expression<'s>, next: Expression<'s>) -> Tape<'s> {
+    pub fn new(current: Expression<'s>, next: Expression<'s>) -> Tape<'s> {
         Tape { current, next }
+    }
+    pub fn drop(self) -> (&'s str, &'s str) {
+        (self.current.release(), self.next.release())
     }
 }
 
 impl<'s> Expression<'s> {
-    fn new(string: &'s str) -> Expression {
+    pub fn new(string: &'s str) -> Expression {
         Expression::Some(string)
     }
     fn len(&self) -> usize {
@@ -29,7 +32,7 @@ impl<'s> Expression<'s> {
         }
     }
     // Splits an expression in 2 at the index of a character
-    fn split_ounce(self, pattern: char) -> Tape<'s> {
+    pub fn split_ounce(self, pattern: char) -> Tape<'s> {
         let (mut paren, mut brace) = (0, 0);
         if let Expression::Some(s) = self {
             for (i, c) in s.to_string().chars().enumerate() {

@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use wayland_scanner::{generate_code, Side};
 
 pub fn main() {
-    generate("river_layout_v2");
+    generate("river_layout_v3");
     match Command::new("scdoc").spawn() {
         Ok(_) => {
             let input = File::open(Path::new("./doc/kile.1.scd")).unwrap();

@@ -1,8 +1,8 @@
 use super::layout::Layout;
 use super::lexer;
 use crate::wayland::{
-    river_layout_v2::river_layout_manager_v2::RiverLayoutManagerV2,
-    river_layout_v2::river_layout_v2::Event,
+    river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3,
+    river_layout_v3::river_layout_v3::Event,
 };
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
@@ -10,7 +10,7 @@ use wayland_client::Main;
 // Holds all the globals necessary to operate the client
 pub struct Globals {
     pub outputs: Vec<Output>,
-    pub layout_manager: Option<Main<RiverLayoutManagerV2>>,
+    pub layout_manager: Option<Main<RiverLayoutManagerV3>>,
 }
 
 // Parameters necessary to generate a layout
@@ -99,12 +99,12 @@ impl Output {
     }
     pub fn layout_filter(
         mut self,
-        layout_manager: Option<&Main<RiverLayoutManagerV2>>,
+        layout_manager: Option<&Main<RiverLayoutManagerV3>>,
         namespace: String,
     ) {
         let layout = layout_manager
-            .expect("Compositor doesn't implement river_layout_v2")
-            .get_layout(&self.output, namespace);
+            .expect("Compositor doesn't implement river_layout_v3")
+            .get_layout(&self.output, namespace.clone());
         let mut outer_padding = 0;
         let mut view_padding = 0;
         // A vector holding the geometry of all the windows from the most recent layout demand
@@ -146,118 +146,103 @@ impl Output {
                         area.apply_padding(view_padding);
                     }
                     layout.push_view_dimensions(
-                        serial,
+                        serial as i32,
                         area.x as i32,
-                        area.y as i32,
+                        area.y,
                         area.w,
                         area.h,
                     )
                 }
-                layout.commit(serial);
+                layout.commit(namespace.clone(), serial);
             }
-            Event::AdvertiseView {
-                tags: _,
-                app_id: _,
-                serial: _,
-            } => {}
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
             }
-            Event::AdvertiseDone { serial: _ } => {}
-            Event::SetIntValue { name, value } => match name.as_ref() {
-                "outer_padding" => outer_padding = value,
-                "view_padding" => {
-                    view_padding = value - view_padding;
-                    self.view_padding = value;
-                    if windows.len() > 0 {
-                        self.reload = false;
-                    }
-                }
-                _ => {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if value >= 0 {
-                            match name.as_ref() {
-                                "main_amount" => tag.parameters.main_amount = value as u32,
-                                "main_index" => tag.parameters.main_index = value as u32,
-                                _ => {}
+            // All String events are delegated to the lexer
+            Event::UserCommand { command } => {
+                let (command, value) = lexer::format(command.as_str());
+                if let Some(tag) = self.tags[self.focused].as_mut() {
+                    match command {
+                        "outer_padding" => {
+                            if let Ok(value) = value.parse::<i32>() {
+                                outer_padding = value;
                             }
                         }
-                    }
-                }
-            },
-            Event::ModIntValue { name, delta } => match name.as_ref() {
-                "outer_padding" => {
-                    if outer_padding as i32 >= delta {
-                        outer_padding += delta;
-                    }
-                }
-                "view_padding" => {
-                    if (self.view_padding as i32) + delta >= 0 {
-                        self.view_padding += delta;
-                        view_padding = delta;
-                        if windows.len() > 0 {
-                            self.reload = false;
+                        "view_padding" => {
+                            if let Ok(value) = value.parse::<i32>() {
+                                view_padding = value - view_padding;
+                                self.view_padding = value;
+                                if windows.len() > 0 {
+                                    self.reload = false;
+                                }
+                            }
                         }
-                    }
-                }
-                "xoffset" => {
-                    if delta < 0 {
-                        self.dimension.x = 0;
-                    } else {
-                        self.dimension.x = delta.abs() as u32;
-                    }
-                    self.dimension.w -= delta.abs() as u32;
-                    self.resize = true;
-                }
-                "yoffset" => {
-                    if delta < 0 {
-                        self.dimension.y = 0;
-                    } else {
-                        self.dimension.y = delta.abs() as u32;
-                    }
-                    self.dimension.h -= delta.abs() as u32;
-                    self.resize = true;
-                }
-                _ => {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        match name.as_ref() {
-                            "main_amount" => {
+                        "main_factor" => {
+                            if let Ok(value) = value.parse::<f64>() {
+                                if value > 0.0 && value < 1.0 {
+                                    tag.parameters.main_factor = value
+                                }
+                            }
+                        }
+                        "mod_main_factor" => {
+                            if let Ok(delta) = value.parse::<f64>() {
+                                if delta <= tag.parameters.main_factor {
+                                    tag.parameters.main_factor += delta;
+                                }
+                            }
+                        }
+                        "main_amount" => {
+                            if let Ok(value) = value.parse::<u32>() {
+                                tag.parameters.main_amount = value
+                            }
+                        }
+                        "mod_main_amount" => {
+                            if let Ok(delta) = value.parse::<i32>() {
                                 if (tag.parameters.main_amount as i32) + delta >= 0 {
                                     tag.parameters.main_amount =
                                         ((tag.parameters.main_amount as i32) + delta) as u32
                                 }
                             }
-                            "main_index" => {
+                        }
+                        "main_index" => {
+                            if let Ok(value) = value.parse::<u32>() {
+                                tag.parameters.main_index = value;
+                            }
+                        }
+                        "mod_main_index" => {
+                            if let Ok(delta) = value.parse::<i32>() {
                                 if (tag.parameters.main_index as i32) + delta >= 0 {
                                     tag.parameters.main_index =
                                         ((tag.parameters.main_index as i32) + delta) as u32
                                 }
                             }
-                            _ => {}
                         }
-                    }
-                }
-            },
-            Event::SetFixedValue { name, value } => {
-                if name == "main_factor" {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if value > 0.0 && value < 1.0 {
-                            tag.parameters.main_factor = value
+                        "xoffset" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if delta < 0 {
+                                    self.dimension.x = 0;
+                                } else {
+                                    self.dimension.x = delta.abs() as u32;
+                                }
+                                self.dimension.w -= delta.abs() as u32;
+                                self.resize = true;
+                            }
                         }
+                        "yoffset" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if delta < 0 {
+                                    self.dimension.y = 0;
+                                } else {
+                                    self.dimension.y = delta.abs() as u32;
+                                }
+                                self.dimension.h -= delta.abs() as u32;
+                                self.resize = true;
+                            }
+                        }
+                        _ => lexer::main(&mut self, command, value)
                     }
                 }
             }
-            Event::ModFixedValue { name, delta } => {
-                if name == "main_factor" {
-                    if let Some(tag) = self.tags[self.focused].as_mut() {
-                        if delta <= tag.parameters.main_factor {
-                            tag.parameters.main_factor += delta;
-                        }
-                    }
-                }
-            }
-            // All String events are delegated to the lexer
-            Event::SetStringValue { name, value } => lexer::main(&mut self, name, value),
         });
     }
 }

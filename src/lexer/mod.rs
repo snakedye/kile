@@ -1,12 +1,18 @@
 pub mod lexer;
 
+pub use lexer::*;
 use crate::client::*;
 use crate::layout::*;
 
+pub fn format<'s>(string: &'s str) -> (&'s str, &'s str) {
+    let exp = lexer::Expression::new(string.as_ref()).split_ounce(' ');
+    exp.drop()
+}
+
 // Handles string events
-pub fn main<'s>(output_handle: &mut Output, name: String, value: String) {
+pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
     let mut command = value.split_whitespace();
-    match name.as_ref() {
+    match name {
         "dimension" => {
             let mut arguments = value.split_whitespace();
             output_handle.dimension = {
