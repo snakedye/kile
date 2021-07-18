@@ -239,7 +239,7 @@ impl Output {
                                 self.resize = true;
                             }
                         }
-                        _ => lexer::main(&mut self, command, value)
+                        _ => lexer::main(&mut self, command, value),
                     }
                 }
             }

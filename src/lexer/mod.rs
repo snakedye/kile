@@ -1,8 +1,8 @@
 pub mod lexer;
 
-pub use lexer::*;
 use crate::client::*;
 use crate::layout::*;
+pub use lexer::*;
 
 pub fn format<'s>(string: &'s str) -> (&'s str, &'s str) {
     let exp = lexer::Expression::new(string.as_ref()).split_ounce(' ');

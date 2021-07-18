@@ -125,7 +125,11 @@ impl Area {
                     }
                 };
                 area.generate(parameters, frame_amount, &*outer, &mut frame, true, factor);
-                if parent && parameters.main_amount < client_count && parameters.main_amount > 0 && parameters.main_index < frame_amount {
+                if parent
+                    && parameters.main_amount < client_count
+                    && parameters.main_amount > 0
+                    && parameters.main_index < frame_amount
+                {
                     frame_amount -= 1;
                     client_count -= parameters.main_amount;
                     frame.remove(parameters.main_index as usize).generate(
