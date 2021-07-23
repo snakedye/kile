@@ -11,7 +11,7 @@ kile - a tiling a layout generator for river
 Through a lisp like syntax, users can define new dynamic layouts from existing ones. 
 
 Note: *kile* could work on any Wayland compositor 
-that implements *river-layout-v2*.
+that implements *river-layout-v3*.
 
 
 # ARGUMENTS
