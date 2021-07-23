@@ -176,6 +176,22 @@ impl Output {
                             }
                         }
                     }
+                    "mod_outer_padding" => {
+                        if let Ok(delta) = value.parse::<i32>() {
+                            outer_padding += delta;
+                        }
+                    }
+                    "mod_view_padding" => {
+                        if let Ok(delta) = value.parse::<i32>() {
+                            if (self.view_padding as i32) + delta >= 0 {
+                                self.view_padding += delta;
+                                view_padding = delta;
+                                if windows.len() > 0 {
+                                    self.reload = false;
+                                }
+                            }
+                        }
+                    }
                     "main_factor" => {
                         if let Some(tag) = self.tags[self.focused].as_mut() {
                             if let Ok(value) = value.parse::<f64>() {
