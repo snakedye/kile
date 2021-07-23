@@ -28,7 +28,7 @@ On launch, the default layout is *Full*.
 
 To configure kile you need to modify or set theses layout values using *riverctl*.
 
-## LAYOUT VALUES
+## LAYOUT COMMANDS
 
 *main_amount* _(int)_
 	An arbitrary positive integer indicating the amount of main views.
@@ -81,9 +81,9 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
 
-## LAYOUTS
+# LAYOUTS
 
-The base layouts are the following.
+kile only ships with the following layouts.
 
 	- "f" | "ful" | "full"
 
@@ -93,12 +93,23 @@ The base layouts are the following.
 
 	- "h" | "hor" | "horizontal"
 
-If you wish to combine theses layouts the syntax is similar s-expressions.
+Instead of manually implementating all variations of each dynamic layout involving splits or stacking,
+kile let's the user declare his own layout from existing ones through an s-expression like syntax.
+
+Complete examples are provided in the layout file in contrib/.
 
 ## RECURSIVE
 
-*Recursive* layouts are contained within braces "{}".
-	format: *{ layout : layout layout ... }* 
+This layout is the core of every nested layout. It essentially let's you define a layout of layouts 
+or in other words the disposition of layouts within one. Since it is itself a layout, fields can be a recursive layouts.
+
+The layout generated follow these rules.
+
+	- views at the top of the stack will be displayed in the main area.
+	- when no inner layout is defined, no window geometry will be generated from this layout.
+
+
+format: *{ layout : layout layout ... }* 
 
 *examples:*
 	- { v: h h }
@@ -107,13 +118,19 @@ If you wish to combine theses layouts the syntax is similar s-expressions.
 
 ## ASSISTED
 
-*Assisted* layouts are contained within parentheses "()".
-	format: *( layout main_amount main_factor main_index )* 
+This layout provides custom layout variables to a specific layout.
+
+When this layout is not nested in another, it also serves to set the layout values for the tag.
+
+
+format: *( layout main_amount main_factor main_index )* 
+
 
 *examples:*
 	- ( deck 0 0.6 0 )
 	- ( { v: h h } 1 0.6 0 )
 
 
+# SEE ALSO
 
 *riverctl*(1), *rivertile*(7)
