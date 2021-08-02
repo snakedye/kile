@@ -32,7 +32,7 @@ fn main() {
         }
     }
 
-    let mut globals = Globals::new();
+    let mut globals = Globals::new(namespace);
     let display = Display::connect_to_env().unwrap();
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
@@ -54,7 +54,7 @@ fn main() {
                     output.quick_assign(move |_, _, _| {});
                     let output = Output::new(output);
                     if let Some(globals) = globals.get::<Globals>() {
-                        globals.outputs.push(output);
+                        output.layout_filter(globals.layout_manager.as_ref(), globals.namespace.clone());
                     }
                 }
             ]
@@ -65,12 +65,7 @@ fn main() {
         .sync_roundtrip(&mut globals, |_, _, _| unreachable!())
         .unwrap();
 
-    let layout_manager = globals.layout_manager.as_ref();
-    for output in globals.outputs {
-        output.layout_filter(layout_manager, namespace.clone());
-    }
-
-    if layout_manager.is_some() {
+    if globals.layout_manager.is_some() {
         loop {
             event_queue
                 .dispatch(&mut (), |event, object, _| {

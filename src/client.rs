@@ -9,7 +9,7 @@ use wayland_client::Main;
 
 // Holds all the globals necessary to operate the client
 pub struct Globals {
-    pub outputs: Vec<Output>,
+    pub namespace: String,
     pub layout_manager: Option<Main<RiverLayoutManagerV3>>,
 }
 
@@ -67,11 +67,11 @@ static DEFAULT: Tag = {
 };
 
 impl Globals {
-    pub fn new() -> Globals {
+    pub fn new(namespace: String) -> Globals {
         {
             Globals {
+                namespace,
                 layout_manager: None,
-                outputs: Vec::new(),
             }
         }
     }
