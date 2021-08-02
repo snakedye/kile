@@ -61,22 +61,16 @@ fn main() {
         ),
     );
 
-    event_queue
-        .sync_roundtrip(&mut globals, |_, _, _| unreachable!())
-        .unwrap();
-
-    if globals.layout_manager.is_some() {
-        loop {
-            event_queue
-                .dispatch(&mut (), |event, object, _| {
-                    panic!(
-                        "[callop] Encountered an orphan event: {}@{}: {}",
-                        event.interface,
-                        object.as_ref().id(),
-                        event.name
-                    );
-                })
-                .unwrap();
-        }
+    loop {
+        event_queue
+            .dispatch(&mut globals, |event, object, _| {
+                panic!(
+                    "[callop] Encountered an orphan event: {}@{}: {}",
+                    event.interface,
+                    object.as_ref().id(),
+                    event.name
+                );
+            })
+            .unwrap();
     }
 }
