@@ -30,20 +30,20 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 ## LAYOUT COMMANDS
 
-*main_amount* _(int)_
+*(mod_)main_amount* _(int)_
 	An arbitrary positive integer indicating the amount of main views.
 
-*main_factor* _(fixed)_
+*(mod_)main_factor* _(fixed)_
 	A floating point numger indicating the relative size of the area reserved for main views.
 	Note that layouts commonly expect values between 0.1 and 0.9.
 
-*main_index* _(int)_
+*(mod_)main_index* _(int)_
 	An arbitrary positive integer indicating the index of the main area in a layout.
 
-*view_padding* _(int)_
+*(mod_)view_padding* _(int)_
 	The padding in pixels of the each window within the layout.
 
-*outer_padding* _(int)_
+*(mod_)outer_padding* _(int)_
 	The padding in pixels between the layout and the edges of the output.
 
 *xoffset* _(int)_
