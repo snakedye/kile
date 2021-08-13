@@ -40,6 +40,7 @@ pub struct Output {
 
 // The configuration of a Tag
 pub struct Tag {
+    pub name: String,
     pub parameters: Parameters,
     pub layout: Layout,
 }
@@ -51,20 +52,6 @@ pub struct Area {
     pub w: u32,
     pub h: u32,
 }
-
-// A generic default configuration used when a Tag isn't defined
-static DEFAULT: Tag = {
-    Tag {
-        parameters: {
-            Parameters {
-                main_amount: 1,
-                main_index: 0,
-                main_factor: 0.55,
-            }
-        },
-        layout: Layout::Full,
-    }
-};
 
 impl Globals {
     pub fn new(namespace: String) -> Globals {
@@ -102,11 +89,26 @@ impl Output {
         layout_manager: Option<&Main<RiverLayoutManagerV3>>,
         namespace: String,
     ) {
+        // A generic default configuration used when a Tag isn't defined
+        let default: Tag = {
+            Tag {
+                name: String::from("kile"),
+                parameters: {
+                    Parameters {
+                        main_amount: 1,
+                        main_index: 0,
+                        main_factor: 0.55,
+                    }
+                },
+                layout: Layout::Full,
+            }
+        };
         let layout = layout_manager
             .expect("Compositor doesn't implement river_layout_v3")
             .get_layout(&self.output, namespace.clone());
-        let mut outer_padding = 0;
         let mut view_padding = 0;
+        let mut outer_padding = 0;
+        let mut layout_name = "kile".to_owned();
         // A vector holding the geometry of all the windows from the most recent layout demand
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
@@ -134,10 +136,11 @@ impl Output {
                     self.focused = tag(tags) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
+                            layout_name = tag.name.clone();
                             view_padding = self.view_padding;
                             tag.update(&mut windows, view_count, self.dimension)
                         }
-                        None => DEFAULT.update(&mut windows, view_count, self.dimension),
+                        None => default.update(&mut windows, view_count, self.dimension),
                     };
                 }
                 self.reload = true;
@@ -153,7 +156,7 @@ impl Output {
                         serial,
                     )
                 }
-                layout.commit(namespace.clone(), serial);
+                layout.commit(layout_name.clone(), serial);
             }
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
@@ -264,6 +267,44 @@ impl Output {
                             }
                             self.dimension.h -= delta.abs() as u32;
                             self.resize = true;
+                        }
+                    }
+                    "dimension" => {
+                        let mut arguments = value.split_whitespace();
+                        self.dimension = {
+                            self.resize = true;
+                            Area {
+                                x: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                y: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                w: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                h: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
+                            }
+                        }
+                    }
+                    "resize" => {
+                        self.resize = if let Ok(ans) = value.parse::<bool>() {
+                            ans
+                        } else {
+                            false
+                        }
+                    }
+                    "smart_padding" => {
+                        if let Ok(ans) = value.parse::<bool>() {
+                            self.smart_padding = ans;
+                        }
+                    }
+                    "clear" => {
+                        match value {
+                            "all" => self.tags = Default::default(),
+                            "focused" => self.tags[self.focused] = None,
+                            _ => match value.parse::<usize>() {
+                                Ok(int) => {
+                                    if int > 0 && int < 33 {
+                                        self.tags[int - 1] = None
+                                    }
+                                }
+                                Err(_) => {}
+                            },
                         }
                     }
                     _ => lexer::main(&mut self, command, value),

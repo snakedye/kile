@@ -33,7 +33,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 *(mod_)main_amount* _(int)_
 	An arbitrary positive integer indicating the amount of main views.
 
-*(mod_)main_factor* _(fixed)_
+*(mod_)main_factor* _(float)_
 	A floating point numger indicating the relative size of the area reserved for main views.
 	Note that layouts commonly expect values between 0.1 and 0.9.
 
@@ -56,30 +56,33 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	Positive integers create an offset from 
 	the top of screen and negatives from the bottom.
 
-*dimension* _(string)_
+*dimension* _(uint)_ _(uint)_ _(uint)_ _(uint)_
 	A custom dimension of the output.
 
-	format: "_(uint)_ _(uint)_ _(uint)_ _(uint)_"
+	format: 
 
 *resize* _(string)_
-	Declare if the output can or cannot be resized.
+	Declare if the output's geometry relative to kile can or cannot be resized.
 
 	Possible values are "true" or "false".
 
-*smart_padding* _(string)_
+*smart_padding* _(bool)_
 	Enables or disables smart padding.
 
 	Possible values are "true" or "false".
 
-*focused*, *all* or *1..32* _(string)_
+*focused*, *all* or *1..32* _(string)_ _(layout)_
 	The configuration of a tag. _0..32_ means all values between 1 and 32 inclusively.
 	*focused* will set the _layout_ of the focused tag, *all*, all tags and for numbers
-	between *1 and 32*, the _layout_ of the corresponding tag.
+	between *1 and 32*.
+
+	_string_ the name of the layout, must be a single word. This will be useful once river-toplevel-v1 is implementated. 
+	_layout_ the layout definition of the corresponding tag. See #LAYOUTS.
 
 *clear* _(string)_
 	Clear the configuration of the given tag(s)
 
-	Possible values *all*, *focused* and an _int_ between *1 and 32* inclusively.
+	Possible values *all*, *focused* and an _uint_ between *1 and 32* inclusively.
 
 # LAYOUTS
 
@@ -105,6 +108,7 @@ or in other words the disposition of layouts within one. Since it is itself a la
 
 The layout generated follow these rules.
 
+	- views are spead evenly accross all "slave" areas.
 	- views at the top of the stack will be displayed in the main area.
 	- when no inner layout is defined, no window geometry will be generated from this layout.
 
@@ -120,7 +124,7 @@ format: *{ layout : layout layout ... }*
 
 This layout provides custom layout variables to a specific layout.
 
-When this layout is not nested in another, it also serves to set the layout values for the tag.
+When this layout is not nested in another, it also serves to set the layout parameters of the tag.
 
 
 format: *( layout main_amount main_factor main_index )* 
