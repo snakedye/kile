@@ -21,8 +21,11 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
     let mut main_index = 0;
     let mut main_amount = 1;
     let mut main_factor = 0.6;
-    let layout_data = lexer::Expression::new(value).split_ounce('\n').drop();
-    println!("{:?}", layout_data);
+    let layout_data = if let Some(data) = value.split_once('\n') {
+        data
+    } else {
+        lexer::Expression::new(value).split_ounce(' ').drop()
+    };
     let mut main_layout = lexer::layout(layout_data.1);
     if let Layout::Assisted {
         layout,
