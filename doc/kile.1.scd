@@ -76,7 +76,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	*focused* will set the _layout_ of the focused tag, *all*, all tags and for numbers
 	between *1 and 32*.
 
-	_string_ the name of the layout, must be a single word. This will be useful once river-toplevel-v1 is implementated. 
+	_string_ the name of the layout, seperated from the layout by a new line. This will be useful once river-toplevel-v1 is implementated. 
 	_layout_ the layout definition of the corresponding tag. See #LAYOUTS.
 
 *clear* _(string)_
