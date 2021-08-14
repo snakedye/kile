@@ -45,6 +45,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
             match tag {
                 Some(tag) => {
                     tag.layout = main_layout.clone();
+                    tag.name = layout_data.0.to_owned();
                     tag.parameters.main_index = main_index;
                     tag.parameters.main_amount = main_amount;
                     tag.parameters.main_factor = main_factor;
