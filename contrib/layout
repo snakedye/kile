@@ -2,8 +2,8 @@
 # This file can be sourced in your init
 
 # Horizontal split layout with stacking on the last area
+# This layout doesn't have a name descriptor because it's used in others
 read -r -d '' HORIZONTAL << EOM
-horizontal
 (
   { hor:
     ver

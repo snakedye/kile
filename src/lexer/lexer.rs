@@ -25,7 +25,7 @@ impl<'s> Expression<'s> {
     pub fn new(string: &'s str) -> Expression {
         Expression::Some(string)
     }
-    fn len(&self) -> usize {
+    fn _len(&self) -> usize {
         match self {
             Expression::Some(s) => s.len(),
             Expression::None => 0,
@@ -79,7 +79,7 @@ impl<'s> Expression<'s> {
     }
     // Iterates over all expressions delimited by a character
     // and excutes a function on each one of them
-    fn filter(&self, pattern: char, mut f: impl FnMut(Expression) -> Result<(), &'static str>) {
+    fn filter(&self, pattern: char, mut f: impl FnMut(Expression) -> Result<(), String>) {
         let tape = self.split_ounce(pattern);
         match f(tape.current) {
             Ok(_) => {
@@ -89,7 +89,7 @@ impl<'s> Expression<'s> {
             }
             Err(m) => {
                 if !m.is_empty() {
-                    println!("{}", m)
+                    eprintln!("{}", m)
                 }
             }
         }
@@ -121,11 +121,6 @@ pub fn layout<'s>(name: &str) -> Layout {
                             inner: {
                                 let mut vec = Vec::new();
                                 tape.next.filter(' ', |s| {
-                                    if s.len() == s.clamp('{', '}').len() + 2
-                                        || s.len() == s.clamp('(', ')').len() + 2
-                                    {
-                                        return Err("");
-                                    }
                                     vec.push(layout(s.release()));
                                     Ok(())
                                 });
@@ -145,19 +140,19 @@ pub fn layout<'s>(name: &str) -> Layout {
                                     Ok(main_amount) => {
                                         var.0 = main_amount;
                                     }
-                                    Err(_) => return Err("Invalid main amount"),
+                                    Err(e) => return Err(format!("Invalid main amount: {}", e)),
                                 },
                                 2 => match s.release().parse::<f64>() {
                                     Ok(main_factor) => {
                                         var.1 = main_factor;
                                     }
-                                    Err(_) => return Err("Invalid main factor"),
+                                    Err(e) => return Err(format!("Invalid main factor: {}", e)),
                                 },
                                 3 => match s.release().parse::<u32>() {
                                     Ok(main_index) => {
                                         var.2 = main_index;
                                     }
-                                    Err(_) => return Err("Invalid main index"),
+                                    Err(e) => return Err(format!("Invalid main index: {}", e)),
                                 },
                                 _ => {}
                             }
