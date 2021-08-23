@@ -25,7 +25,7 @@ impl<'s> Expression<'s> {
     pub fn new(string: &'s str) -> Expression {
         Expression::Some(string)
     }
-    fn _len(&self) -> usize {
+    fn len(&self) -> usize {
         match self {
             Expression::Some(s) => s.len(),
             Expression::None => 0,
@@ -114,13 +114,14 @@ pub fn layout<'s>(name: &str) -> Layout {
                 match char {
                     '{' => {
                         // Turns "{ a : b }" into this: current: a, next: b
-                        let tape = Expression::new(name).clamp('{', '}').split_ounce(':');
+                        let outer = Expression::new(name).clamp('{', ':');
+                        let inner = Expression::new(&name[outer.len() - 1..]).clamp(':', '}');
 
                         Layout::Recursive {
-                            outer: { Box::new(layout(tape.current.release())) },
+                            outer: { Box::new(layout(outer.release())) },
                             inner: {
                                 let mut vec = Vec::new();
-                                tape.next.filter(' ', |s| {
+                                inner.filter(' ', |s| {
                                     vec.push(layout(s.release()));
                                     Ok(())
                                 });
