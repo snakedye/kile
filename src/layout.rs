@@ -126,8 +126,8 @@ impl Area {
                 };
                 area.generate(parameters, frame_amount, &*outer, &mut frame, true, factor);
                 if parent
-                    && parameters.main_amount < client_count
                     && parameters.main_amount > 0
+                    && parameters.main_amount <= client_count
                     && parameters.main_index < frame_amount
                 {
                     frame_amount -= 1;
@@ -147,7 +147,7 @@ impl Area {
                         client_count -= 1;
                         count += 1;
                     }
-                    if master && parameters.main_amount > 0 && i >= parameters.main_index as usize {
+                    if frame_amount as usize != inner.len() && i >= parameters.main_index as usize {
                         i += 1
                     }
                     rect.generate(parameters, count, &inner[i], list, false, false)
