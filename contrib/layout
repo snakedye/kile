@@ -1,81 +1,55 @@
 #!/bin/sh
 # This file can be sourced in your init
 
-# Horizontal split layout with stacking on the last area
-# This layout doesn't have a name descriptor because it's used in others
+# This layout doesn't have a name because it's used in others
 read -r -d '' HORIZONTAL << EOM
 (
-  { hor:
+  ( hor:
     ver
-    (
-      { ver: full deck }
-      1 0.5
-    )
-  } 1 0.63
+    (( ver: full deck ) 1 0.5)
+  ) 1 0.62
 )
 EOM
 
-# The classic centered master layout
-# https://media.discordapp.net/attachments/769673106842845194/780095998239834142/unknown.png
-# Bran - BlingCorp
-read -r -d '' CENTERED << EOM
-centered
+read -r -d '' TRIPLE << EOM
 (
-  { ver:
-    hor $HORIZONTAL hor
-  } 1 0.5 1
+  ( hor:
+  	hor
+    deck
+  ) 2 0.65
 )
 EOM
 
-# A partial implementation of the dwindle layout
-# After 3 splits windows are stacked
-read -r -d '' DWINDLE << EOM
-dwindle
+# An example for conditional layouts
+read -r -d '' MOSAIC << EOM
+mosaic
 (
-  { ver: hor $HORIZONTAL
-  } 1 0.55
+  (3 > ( v:
+  	$HORIZONTAL
+    ((h: f d) 1 0.62)
+  ) ? ((v: h h) 1)) 3 0.6
 )
 EOM
 
-# A layout meant for grouping a shit ton of windows
-read -r -d '' GROUP << EOM
-group
-(
-  { ver:
-    { hor: deck deck }
-    $HORIZONTAL 
-    { hor: deck deck }
-  } 1 0.45 1
-)
-EOM
-
-# Looks like the ordinary master and stack layout when main_count is one
-# but when increased, the additional windows in the main area will be 
-# vertically aligned below the main window.
 read -r -d '' STACK << EOM
 stack
 (
-  { ver:
-    (
-      { hor: full ver }
-      1 0.6 0
-    )
-    hor
-  } 1 0.65 0
+  ( ver:
+    $TRIPLE
+    $TRIPLE
+  )
+  1 0.57
 )
 EOM
 
-# Like STACK except the main and slave areas are inverted
-read -r -d '' RSTACK << EOM
-rstack
+read -r -d '' CENTERED << EOM
+centered
 (
-  { ver:
-    hor
-    (
-      { hor: full ver }
-      1 0.60 0
-    )
-  } 1 0.65 1
+  ( ver:
+  	$TRIPLE
+    (( hor: full deck ) 1 0.63)
+  	$TRIPLE
+  ) 1 0.47 1
 )
 EOM
 
@@ -84,29 +58,10 @@ EOM
 # Below the the top window in the slave area windows are stacked on
 # top of each others like a deck of cards.
 # Inspired by Stacktile - https://git.sr.ht/~leon_plickat/stacktile
-read -r -d '' DECK << EOM
+read -r -d '' STACKTILE << EOM
 stacktile
-(
-  { ver:
-    hor
-    (
-      { hor: full deck }
-      1 0.65 0
-    )
-  } 1 0.65 0
-)
-EOM
-
-# Like DECK except the main and slave areas are inverted
-read -r -d '' RDECK << EOM
-reverse_stacktile
-(
-  { ver:
-    (
-      { hor: full deck }
-      1 0.65 0
-    )
-    hor
-  } 1 0.65 1
+( ver:
+  (( h: full deck ) 1 0.62)
+  (( h: full deck ) 1 0.62)
 )
 EOM
