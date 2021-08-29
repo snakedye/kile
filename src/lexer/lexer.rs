@@ -25,25 +25,40 @@ impl<'s> Expression<'s> {
     pub fn new(string: &'s str) -> Expression {
         Expression::Some(string)
     }
-    fn len(&self) -> usize {
+    fn is_some(&self) -> bool {
         match self {
-            Expression::Some(s) => s.len(),
-            Expression::None => 0,
+            Expression::None => false,
+            _ => true
         }
     }
     // Splits an expression in 2 at the index of a character
     pub fn split_ounce(self, pattern: char) -> Tape<'s> {
-        let (mut paren, mut brace) = (0, 0);
+        let mut paren = 0;
         if let Expression::Some(s) = self {
             for (i, c) in s.to_string().chars().enumerate() {
                 match c {
                     '(' => paren += 1,
                     ')' => paren -= 1,
-                    '{' => brace += 1,
-                    '}' => brace -= 1,
                     _ => {}
                 }
-                if c == pattern && brace == 0 && paren == 0 {
+                if c == pattern && paren == 0 {
+                    return Tape::new(
+                        Expression::Some(s[0..i].trim()),
+                        if !&s[i + 1..].is_empty() {
+                            Expression::new(s[i + 1..].trim())
+                        } else {
+                            Expression::None
+                        },
+                    );
+                }
+            }
+        }
+        Tape::new(self, Expression::None)
+    }
+    fn split_for(self, mut f: impl FnMut(char) -> bool) -> Tape<'s> {
+        if let Expression::Some(s) = self {
+            for (i, c) in s.to_string().chars().enumerate() {
+                if f(c) {
                     return Tape::new(
                         Expression::Some(s[0..i].trim()),
                         if !&s[i + 1..].is_empty() {
@@ -112,59 +127,95 @@ pub fn layout<'s>(name: &str) -> Layout {
         _ => {
             if let Some(char) = name.chars().next() {
                 match char {
-                    '{' => {
-                        // Turns "{ a : b }" into this: current: a, next: b
-                        let outer = Expression::new(name).clamp('{', ':');
-                        let inner = Expression::new(&name[outer.len() - 1..]).clamp(':', '}');
-
-                        Layout::Recursive {
-                            outer: { Box::new(layout(outer.release())) },
-                            inner: {
-                                let mut vec = Vec::new();
-                                inner.filter(' ', |s| {
-                                    vec.push(layout(s.release()));
-                                    Ok(())
-                                });
-                                vec
-                            },
-                        }
-                    }
                     '(' => {
-                        let mut i = 0;
-                        let mut var: (u32, f64, u32) = (0, 0.6, 0);
-                        let tape = Expression::new(name).clamp('(', ')').split_ounce(' ');
-                        // Dispatches layout values to the field corresponding to an index
-                        tape.next.filter(' ', |s| {
-                            i += 1;
-                            match i {
-                                1 => match s.release().parse::<u32>() {
-                                    Ok(main_amount) => {
-                                        var.0 = main_amount;
-                                    }
-                                    Err(e) => return Err(format!("Invalid main amount: {}", e)),
+                        let mut condition = None;
+                        // Turns "{ a : b }" into this: current: a, next: b
+                        let exp = Expression::new(name).clamp('(',')');
+                        let mut tape = exp.split_ounce(':');
+                        if tape.next.is_some() {
+                            Layout::Recursive {
+                                outer: { Box::new(layout(tape.current.release())) },
+                                inner: {
+                                    let mut vec = Vec::new();
+                                    tape.next.filter(' ', |s| {
+                                        vec.push(layout(s.release()));
+                                        Ok(())
+                                    });
+                                    vec
                                 },
-                                2 => match s.release().parse::<f64>() {
-                                    Ok(main_factor) => {
-                                        var.1 = main_factor;
-                                    }
-                                    Err(e) => return Err(format!("Invalid main factor: {}", e)),
-                                },
-                                3 => match s.release().parse::<u32>() {
-                                    Ok(main_index) => {
-                                        var.2 = main_index;
-                                    }
-                                    Err(e) => return Err(format!("Invalid main index: {}", e)),
-                                },
-                                _ => {}
                             }
-                            Ok(())
-                        });
+                        } else if {
+                            let mut paren = 0;
+                            tape = exp.split_for(|c| {
+                                match c {
+                                    '(' => paren += 1,
+                                    ')' => paren -= 1,
+                                    '>' => if paren == 0 {
+                                        condition = Some(Condition::Greater);
+                                        return true;
+                                    }
+                                    '=' => if paren == 0 {
+                                        condition = Some(Condition::Equal);
+                                        return true;
+                                    }
+                                    '<' => if paren == 0 {
+                                        condition = Some(Condition::Less);
+                                        return true;
+                                    }
+                                    _ => {}
+                                }
+                                false
+                            });
+                            tape.next.is_some()
+                        } {
+                            if let Ok(amount) = tape.current.release().parse::<u32>() {
+                                let layouts = tape.next.split_ounce('?');
+                                Layout::Conditional {
+                                    amount,
+                                    condition: condition.unwrap(),
+                                    regular: Box::new(layout(layouts.current.release())),
+                                    invalid: Box::new(layout(layouts.next.release())),
+                                }
+                            } else {
+                                Layout::Full
+                            }
+                        } else {
+                            let mut i = 0;
+                            let mut var: (u32, f64, u32) = (0, 0.6, 0);
+                            let tape = Expression::new(name).clamp('(', ')').split_ounce(' ');
+                            // Dispatches layout values to the field corresponding to an index
+                            tape.next.filter(' ', |s| {
+                                i += 1;
+                                match i {
+                                    1 => match s.release().parse::<u32>() {
+                                        Ok(main_amount) => {
+                                            var.0 = main_amount;
+                                        }
+                                        Err(e) => return Err(format!("Invalid main amount: {}", e)),
+                                    },
+                                    2 => match s.release().parse::<f64>() {
+                                        Ok(main_factor) => {
+                                            var.1 = main_factor;
+                                        }
+                                        Err(e) => return Err(format!("Invalid main factor: {}", e)),
+                                    },
+                                    3 => match s.release().parse::<u32>() {
+                                        Ok(main_index) => {
+                                            var.2 = main_index;
+                                        }
+                                        Err(e) => return Err(format!("Invalid main index: {}", e)),
+                                    },
+                                    _ => {}
+                                }
+                                Ok(())
+                            });
 
-                        Layout::Assisted {
-                            layout: Box::new(layout(tape.current.release())),
-                            amount: var.0,
-                            factor: var.1,
-                            index: var.2,
+                            Layout::Parameters {
+                                layout: Box::new(layout(tape.current.release())),
+                                amount: var.0,
+                                factor: var.1,
+                                index: var.2,
+                            }
                         }
                     }
                     _ => Layout::Full,

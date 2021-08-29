@@ -27,7 +27,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
         lexer::Expression::new(value).split_ounce(' ').drop()
     };
     let mut main_layout = lexer::layout(&layout_data.1.replace("\t", " "));
-    if let Layout::Assisted {
+    if let Layout::Parameters {
         layout,
         amount,
         factor,
