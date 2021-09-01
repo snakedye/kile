@@ -34,7 +34,7 @@ EOM
 read -r -d '' STACK << EOM
 stack
 (
-  ( ver:
+  ( v:
     $TRIPLE
     $TRIPLE ) 1 0.57
 )
@@ -43,17 +43,14 @@ EOM
 read -r -d '' CENTERED << EOM
 centered
 (
-  ( ver:
+  ( v:
   	$TRIPLE
-    (( hor: full deck ) 1 0.63)
-  	$TRIPLE ) 1 0.47 1
+    (( h: f d ) 1 0.63)
+  	$TRIPLE
+  ) 1 0.47 1
 )
 EOM
 
-# Splits the output area vertically in 2 areas.
-# The main area has a count of one and a horizontal layout.
-# Below the the top window in the slave area windows are stacked on
-# top of each others like a deck of cards.
 # Inspired by Stacktile - https://git.sr.ht/~leon_plickat/stacktile
 read -r -d '' STACKTILE << EOM
 stacktile
