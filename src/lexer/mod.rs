@@ -18,7 +18,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
             Err(e) => {
                 eprintln!("{}", e);
                 Err(())
-            },
+            }
         },
     };
     let data = if let Some(data) = value.split_once('\n') {

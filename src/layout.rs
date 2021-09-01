@@ -12,7 +12,7 @@ impl Condition {
         match self {
             Condition::Equal => limit == amount,
             Condition::Greater => amount > limit,
-            Condition::Less => amount < limit
+            Condition::Less => amount < limit,
         }
     }
 }
@@ -195,7 +195,7 @@ impl Area {
                 amount,
                 regular,
                 invalid,
-                condition
+                condition,
             } => {
                 if condition.is_true(*amount, view_amount) {
                     area.generate(&parameters, view_amount, &*regular, list, true, true);

@@ -297,20 +297,18 @@ impl Output {
                             self.smart_padding = ans;
                         }
                     }
-                    "clear" => {
-                        match value {
-                            "all" => self.tags = Default::default(),
-                            "focused" => self.tags[self.focused] = None,
-                            _ => match value.parse::<usize>() {
-                                Ok(int) => {
-                                    if int > 0 && int < 33 {
-                                        self.tags[int - 1] = None
-                                    }
+                    "clear" => match value {
+                        "all" => self.tags = Default::default(),
+                        "focused" => self.tags[self.focused] = None,
+                        _ => match value.parse::<usize>() {
+                            Ok(int) => {
+                                if int > 0 && int < 33 {
+                                    self.tags[int - 1] = None
                                 }
-                                Err(_) => {}
-                            },
-                        }
-                    }
+                            }
+                            Err(_) => {}
+                        },
+                    },
                     _ => lexer::main(&mut self, command, value),
                 }
             }

@@ -3,11 +3,11 @@ mod layout;
 mod lexer;
 mod wayland;
 
-use std::env;
+use crate::wayland::river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3;
 use client::{Globals, Output};
+use std::env;
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::{Display, GlobalManager, Main};
-use crate::wayland::river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3;
 
 fn main() {
     let mut args = env::args();
@@ -54,7 +54,10 @@ fn main() {
                     output.quick_assign(move |_, _, _| {});
                     let output = Output::new(output);
                     if let Some(globals) = globals.get::<Globals>() {
-                        output.layout_filter(globals.layout_manager.as_ref(), globals.namespace.clone());
+                        output.layout_filter(
+                            globals.layout_manager.as_ref(),
+                            globals.namespace.clone(),
+                        );
                     }
                 }
             ]

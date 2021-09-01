@@ -28,7 +28,7 @@ impl<'s> Expression<'s> {
     fn is_some(&self) -> bool {
         match self {
             Expression::None => false,
-            _ => true
+            _ => true,
         }
     }
     // Splits an expression in 2 at the index of a character
@@ -130,7 +130,7 @@ pub fn layout<'s>(name: &str) -> Layout {
                     '(' => {
                         let mut condition = None;
                         // Turns "{ a : b }" into this: current: a, next: b
-                        let exp = Expression::new(name).clamp('(',')');
+                        let exp = Expression::new(name).clamp('(', ')');
                         let mut tape = exp.split_ounce(':');
                         if tape.next.is_some() {
                             Layout::Recursive {
@@ -150,17 +150,23 @@ pub fn layout<'s>(name: &str) -> Layout {
                                 match c {
                                     '(' => paren += 1,
                                     ')' => paren -= 1,
-                                    '>' => if paren == 0 {
-                                        condition = Some(Condition::Greater);
-                                        return true;
+                                    '>' => {
+                                        if paren == 0 {
+                                            condition = Some(Condition::Greater);
+                                            return true;
+                                        }
                                     }
-                                    '=' => if paren == 0 {
-                                        condition = Some(Condition::Equal);
-                                        return true;
+                                    '=' => {
+                                        if paren == 0 {
+                                            condition = Some(Condition::Equal);
+                                            return true;
+                                        }
                                     }
-                                    '<' => if paren == 0 {
-                                        condition = Some(Condition::Less);
-                                        return true;
+                                    '<' => {
+                                        if paren == 0 {
+                                            condition = Some(Condition::Less);
+                                            return true;
+                                        }
                                     }
                                     _ => {}
                                 }
@@ -191,13 +197,17 @@ pub fn layout<'s>(name: &str) -> Layout {
                                         Ok(main_amount) => {
                                             var.0 = main_amount;
                                         }
-                                        Err(e) => return Err(format!("Invalid main amount: {}", e)),
+                                        Err(e) => {
+                                            return Err(format!("Invalid main amount: {}", e))
+                                        }
                                     },
                                     2 => match s.release().parse::<f64>() {
                                         Ok(main_factor) => {
                                             var.1 = main_factor;
                                         }
-                                        Err(e) => return Err(format!("Invalid main factor: {}", e)),
+                                        Err(e) => {
+                                            return Err(format!("Invalid main factor: {}", e))
+                                        }
                                     },
                                     3 => match s.release().parse::<u32>() {
                                         Ok(main_index) => {
