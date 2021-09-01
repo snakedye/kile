@@ -16,7 +16,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
         _ => match name.parse::<usize>() {
             Ok(int) => Ok(int - 1..int),
             Err(e) => {
-                eprintln!("{}", e);
+                eprintln!("{} : {}", e, name);
                 Err(())
             }
         },
