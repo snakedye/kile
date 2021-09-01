@@ -129,7 +129,6 @@ pub fn layout<'s>(name: &str) -> Layout {
                 match char {
                     '(' => {
                         let mut condition = None;
-                        // Turns "{ a : b }" into this: current: a, next: b
                         let exp = Expression::new(name).clamp('(', ')');
                         let mut tape = exp.split_ounce(':');
                         if tape.next.is_some() {
@@ -187,8 +186,8 @@ pub fn layout<'s>(name: &str) -> Layout {
                             }
                         } else {
                             let mut i = 0;
+                            let tape = exp.split_ounce(' ');
                             let mut var: (u32, f64, u32) = (0, 0.6, 0);
-                            let tape = Expression::new(name).clamp('(', ')').split_ounce(' ');
                             // Dispatches layout values to the field corresponding to an index
                             tape.next.filter(' ', |s| {
                                 i += 1;
