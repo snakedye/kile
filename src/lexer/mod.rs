@@ -15,55 +15,76 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
         "all" => Ok(0..32),
         _ => match name.parse::<usize>() {
             Ok(int) => Ok(int - 1..int),
-            Err(_) => Err(()),
+            Err(e) => {
+                eprintln!("{}", e);
+                Err(())
+            },
         },
     };
-    let mut main_index = 0;
-    let mut main_amount = 1;
-    let mut main_factor = 0.6;
-    let layout_data = if let Some(data) = value.split_once('\n') {
+    let data = if let Some(data) = value.split_once('\n') {
         data
     } else {
         lexer::Expression::new(value).split_ounce(' ').drop()
     };
-    let mut main_layout = lexer::layout(&layout_data.1.replace("\t", " "));
-    if let Layout::Parameters {
-        layout,
-        amount,
-        factor,
-        index,
-    } = main_layout
-    {
-        main_layout = *layout;
-        main_amount = amount;
-        main_factor = factor;
-        main_index = index;
-    }
+    let layout = lexer::layout(&data.1.replace("\t", " "));
     if let Ok(tags) = tags {
-        for i in tags {
-            let tag = output_handle.tags[i].as_mut();
-            match tag {
-                Some(tag) => {
-                    tag.layout = main_layout.clone();
-                    tag.name = layout_data.0.to_owned();
-                    tag.parameters.main_index = main_index;
-                    tag.parameters.main_amount = main_amount;
-                    tag.parameters.main_factor = main_factor;
+        if let Layout::Parameters {
+            layout,
+            amount,
+            factor,
+            index,
+        } = layout
+        {
+            for i in tags {
+                let tag = output_handle.tags[i].as_mut();
+                match tag {
+                    Some(tag) => {
+                        tag.layout = layout.as_ref().clone();
+                        tag.name = data.0.to_owned();
+                    }
+                    None => {
+                        output_handle.tags[i] = Some({
+                            Tag {
+                                name: data.0.to_owned(),
+                                layout: layout.as_ref().clone(),
+                                parameters: {
+                                    Parameters {
+                                        main_index: index,
+                                        main_amount: amount,
+                                        main_factor: factor,
+                                    }
+                                },
+                            }
+                        })
+                    }
                 }
-                None => {
-                    output_handle.tags[i] = Some({
-                        Tag {
-                            name: layout_data.0.to_owned(),
-                            layout: main_layout.clone(),
-                            parameters: {
-                                Parameters {
-                                    main_index,
-                                    main_amount,
-                                    main_factor,
-                                }
-                            },
-                        }
-                    })
+            }
+        } else {
+            for i in tags {
+                let tag = output_handle.tags[i].as_mut();
+                match tag {
+                    Some(tag) => {
+                        tag.layout = layout.clone();
+                        tag.name = data.0.to_owned();
+                        tag.parameters.main_index = 0;
+                        tag.parameters.main_amount = 1;
+                        tag.parameters.main_factor = 0.6;
+                    }
+                    None => {
+                        output_handle.tags[i] = Some({
+                            Tag {
+                                name: data.0.to_owned(),
+                                layout: layout.clone(),
+                                parameters: {
+                                    Parameters {
+                                        main_index: 0,
+                                        main_amount: 1,
+                                        main_factor: 0.6,
+                                    }
+                                },
+                            }
+                        })
+                    }
                 }
             }
         }

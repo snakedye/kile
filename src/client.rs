@@ -108,7 +108,6 @@ impl Output {
             .get_layout(&self.output, namespace.clone());
         let mut view_padding = 0;
         let mut outer_padding = 0;
-        let mut layout_name = "kile".to_owned();
         // A vector holding the geometry of all the windows from the most recent layout demand
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
@@ -119,7 +118,7 @@ impl Output {
                 serial,
                 tags,
             } => {
-                if self.reload {
+                let layout_name = if self.reload {
                     if !self.resize {
                         self.dimension = {
                             Area {
@@ -136,13 +135,18 @@ impl Output {
                     self.focused = tag(tags) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
-                            layout_name = tag.name.clone();
                             view_padding = self.view_padding;
-                            tag.update(&mut windows, view_count, self.dimension)
+                            tag.update(&mut windows, view_count, self.dimension);
+                            tag.name.as_str()
                         }
-                        None => default.update(&mut windows, view_count, self.dimension),
-                    };
-                }
+                        None => {
+                            default.update(&mut windows, view_count, self.dimension);
+                            default.name.as_str()
+                        }
+                    }
+                } else {
+                    "no reload"
+                };
                 self.reload = true;
                 for area in &mut windows {
                     if !self.smart_padding || view_count > 1 {
@@ -156,7 +160,7 @@ impl Output {
                         serial,
                     )
                 }
-                layout.commit(layout_name.clone(), serial);
+                layout.commit(layout_name.to_owned(), serial);
             }
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
@@ -270,14 +274,14 @@ impl Output {
                         }
                     }
                     "dimension" => {
-                        let mut arguments = value.split_whitespace();
+                        let mut fields = value.split_whitespace();
                         self.dimension = {
                             self.resize = true;
                             Area {
-                                x: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                y: arguments.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                w: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                h: arguments.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                w: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                h: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
                             }
                         }
                     }

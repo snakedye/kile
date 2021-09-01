@@ -36,9 +36,7 @@ stack
 (
   ( ver:
     $TRIPLE
-    $TRIPLE
-  )
-  1 0.57
+    $TRIPLE ) 1 0.57
 )
 EOM
 
@@ -48,8 +46,7 @@ centered
   ( ver:
   	$TRIPLE
     (( hor: full deck ) 1 0.63)
-  	$TRIPLE
-  ) 1 0.47 1
+  	$TRIPLE ) 1 0.47 1
 )
 EOM
 
