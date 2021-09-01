@@ -179,8 +179,8 @@ pub fn layout<'s>(name: &str) -> Layout {
                                 Layout::Conditional {
                                     amount,
                                     condition: condition.unwrap(),
-                                    regular: Box::new(layout(layouts.current.release())),
-                                    invalid: Box::new(layout(layouts.next.release())),
+                                    a: Box::new(layout(layouts.current.release())),
+                                    b: Box::new(layout(layouts.next.release())),
                                 }
                             } else {
                                 Layout::Full

@@ -29,8 +29,8 @@ pub enum Layout {
     },
     Conditional {
         amount: u32,
-        regular: Box<Layout>,
-        invalid: Box<Layout>,
+        a: Box<Layout>,
+        b: Box<Layout>,
         condition: Condition,
     },
     Parameters {
@@ -192,15 +192,15 @@ impl Area {
                 area.generate(&parameters, view_amount, &*layout, list, true, true);
             }
             Layout::Conditional {
+                a,
+                b,
                 amount,
-                regular,
-                invalid,
                 condition,
             } => {
                 if condition.is_true(*amount, view_amount) {
-                    area.generate(&parameters, view_amount, &*regular, list, true, true);
+                    area.generate(&parameters, view_amount, &*a, list, true, true);
                 } else {
-                    area.generate(&parameters, view_amount, &*invalid, list, true, true);
+                    area.generate(&parameters, view_amount, &*b, list, true, true);
                 }
             }
         }
