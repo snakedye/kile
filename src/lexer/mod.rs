@@ -41,6 +41,9 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                     Some(tag) => {
                         tag.layout = layout.as_ref().clone();
                         tag.name = data.0.to_owned();
+                        tag.parameters.main_index = index;
+                        tag.parameters.main_amount = amount;
+                        tag.parameters.main_factor = factor;
                     }
                     None => {
                         output_handle.tags[i] = Some({
@@ -66,9 +69,6 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                     Some(tag) => {
                         tag.layout = layout.clone();
                         tag.name = data.0.to_owned();
-                        tag.parameters.main_index = 0;
-                        tag.parameters.main_amount = 1;
-                        tag.parameters.main_factor = 0.6;
                     }
                     None => {
                         output_handle.tags[i] = Some({
