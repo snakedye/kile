@@ -202,9 +202,7 @@ impl Output {
                     "main_factor" => {
                         if let Some(tag) = self.tags[self.focused].as_mut() {
                             if let Ok(value) = value.parse::<f64>() {
-                                if value > 0.0 && value < 1.0 {
-                                    tag.parameters.main_factor = value
-                                }
+                                tag.parameters.main_factor = value.clamp(0.0, 1.0);
                             }
                         }
                     }

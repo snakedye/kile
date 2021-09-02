@@ -64,7 +64,7 @@ impl Area {
 
         match layout {
             Layout::Full => {
-                for _i in 0..view_amount {
+                for _ in 0..view_amount {
                     list.push(area);
                 }
             }
