@@ -37,7 +37,7 @@ pub enum Layout {
         layout: Box<Layout>,
         amount: u32,
         index: u32,
-        factor: f64,
+        ratio: f64,
     },
 }
 
@@ -57,10 +57,10 @@ impl Area {
         layout: &Layout,
         list: &mut Vec<Area>,
         parent: bool,
-        factor: bool,
+        ratio: bool,
     ) {
         let mut area = self;
-        let master = parent && factor && view_amount > 1 && parameters.main_index < view_amount;
+        let master = parent && ratio && view_amount > 1 && parameters.main_index < view_amount;
 
         match layout {
             Layout::Full => {
@@ -83,7 +83,7 @@ impl Area {
                 let reste = area.h % view_amount;
                 let mut slave_height = area.h;
                 let main_height = if master {
-                    ((area.h as f64) * parameters.main_factor) as u32
+                    ((area.h as f64) * parameters.main_ratio) as u32
                 } else {
                     0
                 };
@@ -108,7 +108,7 @@ impl Area {
                 let reste = area.w % view_amount;
                 let mut slave_width = area.w;
                 let main_width = if master {
-                    ((area.w as f64) * parameters.main_factor) as u32
+                    ((area.w as f64) * parameters.main_ratio) as u32
                 } else {
                     0
                 };
@@ -147,7 +147,7 @@ impl Area {
                         view_amount
                     }
                 };
-                area.generate(parameters, frame_amount, &*outer, &mut frame, true, factor);
+                area.generate(parameters, frame_amount, &*outer, &mut frame, true, ratio);
                 if parent
                     && parameters.main_amount > 0
                     && parameters.main_amount <= view_amount
@@ -180,13 +180,13 @@ impl Area {
                 layout,
                 amount,
                 index,
-                factor,
+                ratio,
             } => {
                 let parameters = {
                     Parameters {
                         main_amount: *amount,
                         main_index: *index,
-                        main_factor: *factor,
+                        main_ratio: *ratio,
                     }
                 };
                 area.generate(&parameters, view_amount, &*layout, list, true, true);

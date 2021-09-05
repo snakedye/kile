@@ -201,11 +201,11 @@ pub fn layout<'s>(name: &str) -> Layout {
                                         }
                                     },
                                     2 => match s.release().parse::<f64>() {
-                                        Ok(main_factor) => {
-                                            var.1 = main_factor;
+                                        Ok(main_ratio) => {
+                                            var.1 = main_ratio;
                                         }
                                         Err(e) => {
-                                            return Err(format!("Invalid main factor: {}", e))
+                                            return Err(format!("Invalid main ratio: {}", e))
                                         }
                                     },
                                     3 => match s.release().parse::<u32>() {
@@ -222,7 +222,7 @@ pub fn layout<'s>(name: &str) -> Layout {
                             Layout::Parameters {
                                 layout: Box::new(layout(tape.current.release())),
                                 amount: var.0,
-                                factor: var.1,
+                                ratio: var.1,
                                 index: var.2,
                             }
                         }

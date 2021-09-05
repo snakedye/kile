@@ -31,7 +31,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
         if let Layout::Parameters {
             layout,
             amount,
-            factor,
+            ratio,
             index,
         } = layout
         {
@@ -43,7 +43,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                         tag.name = data.0.to_owned();
                         tag.parameters.main_index = index;
                         tag.parameters.main_amount = amount;
-                        tag.parameters.main_factor = factor;
+                        tag.parameters.main_ratio = ratio;
                     }
                     None => {
                         output_handle.tags[i] = Some({
@@ -54,7 +54,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                                     Parameters {
                                         main_index: index,
                                         main_amount: amount,
-                                        main_factor: factor,
+                                        main_ratio: ratio,
                                     }
                                 },
                             }
@@ -79,7 +79,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                                     Parameters {
                                         main_index: 0,
                                         main_amount: 1,
-                                        main_factor: 0.6,
+                                        main_ratio: 0.6,
                                     }
                                 },
                             }

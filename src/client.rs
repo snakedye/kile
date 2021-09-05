@@ -18,7 +18,7 @@ pub struct Globals {
 pub struct Parameters {
     pub main_amount: u32,
     pub main_index: u32,
-    pub main_factor: f64,
+    pub main_ratio: f64,
 }
 
 // The state of an Output
@@ -33,6 +33,7 @@ pub struct Output {
     // Dimensions of the output
     pub dimension: Area,
     pub view_padding: i32,
+    pub outer_padding: i32,
     pub smart_padding: bool,
     // The configuration of all Tags
     pub tags: [Option<Tag>; 32],
@@ -79,6 +80,7 @@ impl Output {
                 reload: true,
                 resize: false,
                 view_padding: 0,
+                outer_padding: 0,
                 smart_padding: false,
                 tags: Default::default(),
             }
@@ -97,7 +99,7 @@ impl Output {
                     Parameters {
                         main_amount: 1,
                         main_index: 0,
-                        main_factor: 0.55,
+                        main_ratio: 0.55,
                     }
                 },
                 layout: Layout::Full,
@@ -107,7 +109,6 @@ impl Output {
             .expect("Compositor doesn't implement river_layout_v3")
             .get_layout(&self.output, namespace.clone());
         let mut view_padding = 0;
-        let mut outer_padding = 0;
         // A vector holding the geometry of all the windows from the most recent layout demand
         let mut windows: Vec<Area> = Vec::new();
         layout.quick_assign(move |layout, event, _| match event {
@@ -129,7 +130,7 @@ impl Output {
                             }
                         };
                         if !self.smart_padding || view_count > 1 {
-                            self.dimension.apply_padding(outer_padding);
+                            self.dimension.apply_padding(self.outer_padding);
                         }
                     }
                     self.focused = tag(tags) as usize;
@@ -171,7 +172,7 @@ impl Output {
                 match command {
                     "outer_padding" => {
                         if let Ok(value) = value.parse::<i32>() {
-                            outer_padding = value;
+                            self.outer_padding = value;
                         }
                     }
                     "view_padding" => {
@@ -185,7 +186,7 @@ impl Output {
                     }
                     "mod_outer_padding" => {
                         if let Ok(delta) = value.parse::<i32>() {
-                            outer_padding += delta;
+                            self.outer_padding += delta;
                         }
                     }
                     "mod_view_padding" => {
@@ -199,18 +200,18 @@ impl Output {
                             }
                         }
                     }
-                    "main_factor" => {
+                    "main_ratio" => {
                         if let Some(tag) = self.tags[self.focused].as_mut() {
                             if let Ok(value) = value.parse::<f64>() {
-                                tag.parameters.main_factor = value.clamp(0.0, 1.0);
+                                tag.parameters.main_ratio = value.clamp(0.0, 1.0);
                             }
                         }
                     }
-                    "mod_main_factor" => {
+                    "mod_main_ratio" => {
                         if let Some(tag) = self.tags[self.focused].as_mut() {
                             if let Ok(delta) = value.parse::<f64>() {
-                                if delta <= tag.parameters.main_factor {
-                                    tag.parameters.main_factor += delta;
+                                if delta <= tag.parameters.main_ratio {
+                                    tag.parameters.main_ratio += delta;
                                 }
                             }
                         }
@@ -316,7 +317,7 @@ impl Output {
 
 impl Tag {
     fn update(&self, list: &mut Vec<Area>, view_amount: u32, area: Area) {
-        *list = Vec::new();
+        list.clear();
         let parent = match &self.layout {
             Layout::Recursive { outer: _, inner: _ } => true,
             _ => false,

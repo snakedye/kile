@@ -33,7 +33,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 *(mod_)main_amount* _(int)_
 	An arbitrary positive integer indicating the amount of main views.
 
-*(mod_)main_factor* _(float)_
+*(mod_)main_ratio* _(float)_
 	A floating point numger indicating the relative size of the area reserved for main views.
 	Note that layouts commonly expect values between 0.1 and 0.9.
 
@@ -110,7 +110,7 @@ The layout generated follow these rules.
 
 	- views are spead evenly accross all "slave" areas.
 	- views at the top of the stack will be displayed in the main area.
-	- when no inner layout is defined, no geometry will be generated from this layout.
+	- when no sub layout is defined, no geometry will be generated from this layout.
 
 
 format: *( layout : layout layout ... )* 
@@ -127,7 +127,7 @@ This layout provides custom layout parameters to a specific layout.
 When this layout is not nested in another, it also serves to set the layout parameters of the tag.
 
 
-format: *( layout main_amount main_factor main_index )* 
+format: *( layout main_amount main_ratio main_index )* 
 
 
 *examples:*
