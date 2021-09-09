@@ -23,6 +23,7 @@ pub struct Parameters {
 
 // The state of an Output
 pub struct Output {
+    pub name: String,
     pub output: Main<WlOutput>,
     // This is the index of the focused Tag
     pub focused: usize,
@@ -30,7 +31,11 @@ pub struct Output {
     pub reload: bool,
     // Defines if a the layout area should reajusted to the output dimension or not
     pub resize: bool,
-    // Dimensions of the output
+    // Geometry of the output
+    pub geometry: Area,
+    // Order the tags are sorted
+    pub ascend: bool,
+    // Dimensions of the layout area
     pub dimension: Area,
     pub view_padding: i32,
     pub outer_padding: i32,
@@ -66,10 +71,12 @@ impl Globals {
 }
 
 impl Output {
-    pub fn new(output: Main<WlOutput>) -> Output {
+    pub fn new(name: String, output: Main<WlOutput>, geometry: Area) -> Output {
         {
             Output {
+                name,
                 output,
+                geometry,
                 dimension: Area {
                     x: 0,
                     y: 0,
@@ -77,6 +84,7 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
+                ascend: true,
                 reload: true,
                 resize: false,
                 view_padding: 0,
@@ -133,7 +141,7 @@ impl Output {
                             self.dimension.apply_padding(self.outer_padding);
                         }
                     }
-                    self.focused = tag(tags) as usize;
+                    self.focused = tag(tags, self.ascend) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
                             view_padding = self.view_padding;
@@ -277,8 +285,8 @@ impl Output {
                         self.dimension = {
                             self.resize = true;
                             Area {
-                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap() - self.geometry.x,
+                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap() - self.geometry.y,
                                 w: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
                                 h: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
                             }
@@ -292,6 +300,16 @@ impl Output {
                         }
                     }
                     "smart_padding" => {
+                        if let Ok(ans) = value.parse::<bool>() {
+                            self.smart_padding = ans;
+                        }
+                    }
+                    "tag_order" => {
+                        match value {
+                            "ascend" => self.ascend = true,
+                            "descend" => self.ascend = false,
+                            _ => {}
+                        }
                         if let Ok(ans) = value.parse::<bool>() {
                             self.smart_padding = ans;
                         }
@@ -333,18 +351,20 @@ impl Tag {
     }
 }
 
-fn tag(tagmask: u32) -> u32 {
+fn tag(tagmask: u32, ascend: bool) -> u32 {
     let mut int = 0;
     let mut current: u32;
     while {
         current = 1 << int;
         current < tagmask
     } {
-        int += 1;
         if current != tagmask && (tagmask / current) % 2 != 0 {
-            int = tag(tagmask - current);
+            if ascend{
+                int = tag(tagmask - current, ascend);
+            }
             break;
         }
+        int += 1;
     }
     int
 }

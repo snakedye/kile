@@ -3,11 +3,14 @@ mod layout;
 mod lexer;
 mod wayland;
 
-use crate::wayland::river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3;
-use client::{Globals, Output};
 use std::env;
-use wayland_client::protocol::wl_output::WlOutput;
+use client::{Globals, Output, Area};
+use wayland_client::protocol::{
+    wl_output,
+    wl_output::WlOutput
+};
 use wayland_client::{Display, GlobalManager, Main};
+use crate::wayland::river_layout_v3::river_layout_manager_v3::RiverLayoutManagerV3;
 
 fn main() {
     let mut args = env::args();
@@ -50,15 +53,34 @@ fn main() {
             [
                 WlOutput,
                 3,
-                |output: Main<WlOutput>, mut globals: DispatchData| {
-                    output.quick_assign(move |_, _, _| {});
-                    let output = Output::new(output);
-                    if let Some(globals) = globals.get::<Globals>() {
-                        output.layout_filter(
-                            globals.layout_manager.as_ref(),
-                            globals.namespace.clone(),
-                        );
-                    }
+                |output: Main<WlOutput>, _globals: DispatchData| {
+                    output.quick_assign(move |output, event, mut globals| match event {
+                        wl_output::Event::Geometry {
+                            x,
+                            y,
+                            physical_width,
+                            physical_height,
+                            make,
+                            subpixel:_,
+                            model:_,
+                            transform:_
+                        }=> {
+                            let geometry = Area {
+                                x: x as u32,
+                                y: y as u32,
+                                w: physical_width as u32,
+                                h: physical_height as u32
+                            };
+                            let output = Output::new(make, output, geometry);
+                            if let Some(globals) = globals.get::<Globals>() {
+                                output.layout_filter(
+                                    globals.layout_manager.as_ref(),
+                                    globals.namespace.clone(),
+                                );
+                            }
+                        }
+                        _ => {}
+                    });
                 }
             ]
         ),

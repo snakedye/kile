@@ -61,15 +61,14 @@ To configure kile you need to modify or set theses layout values using *riverctl
 
 	format: 
 
-*resize* _(string)_
+*resize* _(bool)_
 	Declare if the output's geometry relative to kile can or cannot be resized.
-
-	Possible values are "true" or "false".
 
 *smart_padding* _(bool)_
 	Enables or disables smart padding.
 
-	Possible values are "true" or "false".
+*tag_order* _ascend/descend_
+	The order in which the tags are sorted. If it's *descend*ing, the lowest tag will have priority when multiple are focused and vice versa.
 
 *focused*, *all* or *1..32* _(string)_ _(layout)_
 	The configuration of a tag. _0..32_ means all values between 1 and 32 inclusively.
@@ -79,7 +78,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	_string_ the name of the layout, seperated from the layout by a new line. This will be useful once river-toplevel-v1 is implementated. 
 	_layout_ the layout definition of the corresponding tag. See #LAYOUTS.
 
-*clear* _(string)_
+*clear* _(tag)_
 	Clear the configuration of the given tag(s)
 
 	Possible values *all*, *focused* and an _uint_ between *1 and 32* inclusively.
