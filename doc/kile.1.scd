@@ -68,7 +68,7 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	Enables or disables smart padding.
 
 *tag_order* _ascend/descend_
-	The order in which the tags are sorted. If it's *descend*ing, the lowest tag will have priority when multiple are focused and vice versa.
+	The order in which the tags are sorted. If it's *descend*ing, the highest tag will have priority when multiple are focused and vice versa.
 
 *focused*, *all* or *1..32* _(string)_ _(layout)_
 	The configuration of a tag. _0..32_ means all values between 1 and 32 inclusively.

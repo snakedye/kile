@@ -34,7 +34,7 @@ pub struct Output {
     // Geometry of the output
     pub geometry: Area,
     // Order the tags are sorted
-    pub ascend: bool,
+    pub descend: bool,
     // Dimensions of the layout area
     pub dimension: Area,
     pub view_padding: i32,
@@ -84,7 +84,7 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
-                ascend: true,
+                descend: true,
                 reload: true,
                 resize: false,
                 view_padding: 0,
@@ -141,7 +141,7 @@ impl Output {
                             self.dimension.apply_padding(self.outer_padding);
                         }
                     }
-                    self.focused = tag(tags, self.ascend) as usize;
+                    self.focused = tag(tags, self.descend) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
                             view_padding = self.view_padding;
@@ -304,10 +304,10 @@ impl Output {
                             self.smart_padding = ans;
                         }
                     }
-                    "tag_order" => {
+                    "order" => {
                         match value {
-                            "ascend" => self.ascend = true,
-                            "descend" => self.ascend = false,
+                            "ascend" => self.descend = false,
+                            "descend" => self.descend = true,
                             _ => {}
                         }
                         if let Ok(ans) = value.parse::<bool>() {
@@ -351,7 +351,7 @@ impl Tag {
     }
 }
 
-fn tag(tagmask: u32, ascend: bool) -> u32 {
+fn tag(tagmask: u32, descend: bool) -> u32 {
     let mut int = 0;
     let mut current: u32;
     while {
@@ -359,8 +359,8 @@ fn tag(tagmask: u32, ascend: bool) -> u32 {
         current < tagmask
     } {
         if current != tagmask && (tagmask / current) % 2 != 0 {
-            if ascend{
-                int = tag(tagmask - current, ascend);
+            if descend {
+                int = tag(tagmask - current, descend);
             }
             break;
         }
