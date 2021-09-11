@@ -4,7 +4,7 @@ mod lexer;
 mod wayland;
 
 use std::env;
-use client::{Globals, Output, Area};
+use client::{Globals, Output};
 use wayland_client::protocol::{
     wl_output,
     wl_output::WlOutput
@@ -55,23 +55,8 @@ fn main() {
                 3,
                 |output: Main<WlOutput>, _globals: DispatchData| {
                     output.quick_assign(move |output, event, mut globals| match event {
-                        wl_output::Event::Geometry {
-                            x,
-                            y,
-                            physical_width,
-                            physical_height,
-                            make,
-                            subpixel:_,
-                            model:_,
-                            transform:_
-                        }=> {
-                            let geometry = Area {
-                                x: x as u32,
-                                y: y as u32,
-                                w: physical_width as u32,
-                                h: physical_height as u32
-                            };
-                            let output = Output::new(make, output, geometry);
+                        wl_output::Event::Done => {
+                            let output = Output::new(output);
                             if let Some(globals) = globals.get::<Globals>() {
                                 output.layout_filter(
                                     globals.layout_manager.as_ref(),

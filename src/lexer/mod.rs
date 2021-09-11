@@ -21,12 +21,12 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
             }
         },
     };
-    let data = if let Some(data) = value.split_once('\n') {
+    let (name, layout) = if let Some(data) = value.split_once('\n') {
         data
     } else {
         lexer::Expression::new(value).split_ounce(' ').drop()
     };
-    let layout = lexer::layout(&data.1.replace("\t", " "));
+    let layout = lexer::layout(&layout.replace("\t", " "));
     if let Ok(tags) = tags {
         if let Layout::Parameters {
             layout,
@@ -40,7 +40,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                 match tag {
                     Some(tag) => {
                         tag.layout = layout.as_ref().clone();
-                        tag.name = data.0.to_owned();
+                        tag.name = name.to_owned();
                         tag.parameters.main_index = index;
                         tag.parameters.main_amount = amount;
                         tag.parameters.main_ratio = ratio;
@@ -48,7 +48,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                     None => {
                         output_handle.tags[i] = Some({
                             Tag {
-                                name: data.0.to_owned(),
+                                name: name.to_owned(),
                                 layout: layout.as_ref().clone(),
                                 parameters: {
                                     Parameters {
@@ -68,12 +68,12 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                 match tag {
                     Some(tag) => {
                         tag.layout = layout.clone();
-                        tag.name = data.0.to_owned();
+                        tag.name = name.to_owned();
                     }
                     None => {
                         output_handle.tags[i] = Some({
                             Tag {
-                                name: data.0.to_owned(),
+                                name: name.to_owned(),
                                 layout: layout.clone(),
                                 parameters: {
                                     Parameters {

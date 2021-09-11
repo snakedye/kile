@@ -21,9 +21,14 @@ pub struct Parameters {
     pub main_ratio: f64,
 }
 
+#[derive(Copy, Clone)]
+pub enum Order {
+    Ascend,
+    Descend
+}
+
 // The state of an Output
 pub struct Output {
-    pub name: String,
     pub output: Main<WlOutput>,
     // This is the index of the focused Tag
     pub focused: usize,
@@ -31,10 +36,8 @@ pub struct Output {
     pub reload: bool,
     // Defines if a the layout area should reajusted to the output dimension or not
     pub resize: bool,
-    // Geometry of the output
-    pub geometry: Area,
     // Order the tags are sorted
-    pub descend: bool,
+    pub order: Order,
     // Dimensions of the layout area
     pub dimension: Area,
     pub view_padding: i32,
@@ -71,12 +74,10 @@ impl Globals {
 }
 
 impl Output {
-    pub fn new(name: String, output: Main<WlOutput>, geometry: Area) -> Output {
+    pub fn new(output: Main<WlOutput>) -> Output {
         {
             Output {
-                name,
                 output,
-                geometry,
                 dimension: Area {
                     x: 0,
                     y: 0,
@@ -84,12 +85,12 @@ impl Output {
                     h: 0,
                 },
                 focused: 0,
-                descend: true,
                 reload: true,
                 resize: false,
                 view_padding: 0,
                 outer_padding: 0,
                 smart_padding: false,
+                order: Order::Ascend,
                 tags: Default::default(),
             }
         }
@@ -100,7 +101,7 @@ impl Output {
         namespace: String,
     ) {
         // A generic default configuration used when a Tag isn't defined
-        let default: Tag = {
+        let mut default: Tag = {
             Tag {
                 name: String::from("kile"),
                 parameters: {
@@ -141,7 +142,7 @@ impl Output {
                             self.dimension.apply_padding(self.outer_padding);
                         }
                     }
-                    self.focused = tag(tags, self.descend) as usize;
+                    self.focused = tag(tags, &self.order) as usize;
                     match self.tags[self.focused].as_ref() {
                         Some(tag) => {
                             view_padding = self.view_padding;
@@ -285,8 +286,8 @@ impl Output {
                         self.dimension = {
                             self.resize = true;
                             Area {
-                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap() - self.geometry.x,
-                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap() - self.geometry.y,
+                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
+                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
                                 w: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
                                 h: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
                             }
@@ -306,13 +307,19 @@ impl Output {
                     }
                     "order" => {
                         match value {
-                            "ascend" => self.descend = false,
-                            "descend" => self.descend = true,
+                            "ascend" => self.order = Order::Ascend,
+                            "descend" => self.order = Order::Descend,
                             _ => {}
                         }
-                        if let Ok(ans) = value.parse::<bool>() {
-                            self.smart_padding = ans;
-                        }
+                    }
+                    "default" => {
+                        let (name, layout) = if let Some(data) = value.split_once('\n') {
+                            data
+                        } else {
+                            lexer::Expression::new(value).split_ounce(' ').drop()
+                        };
+                        default.name = name.to_owned();
+                        default.layout = lexer::layout(layout);
                     }
                     "clear" => match value {
                         "all" => self.tags = Default::default(),
@@ -351,7 +358,7 @@ impl Tag {
     }
 }
 
-fn tag(tagmask: u32, descend: bool) -> u32 {
+fn tag(tagmask: u32, order: &Order) -> u32 {
     let mut int = 0;
     let mut current: u32;
     while {
@@ -359,8 +366,8 @@ fn tag(tagmask: u32, descend: bool) -> u32 {
         current < tagmask
     } {
         if current != tagmask && (tagmask / current) % 2 != 0 {
-            if descend {
-                int = tag(tagmask - current, descend);
+            if let Order::Descend = order {
+                int = tag(tagmask - current, order);
             }
             break;
         }
