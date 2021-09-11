@@ -39,11 +39,11 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                 let tag = output_handle.tags[i].as_mut();
                 match tag {
                     Some(tag) => {
-                        tag.layout = layout.as_ref().clone();
                         tag.name = name.to_owned();
                         tag.parameters.main_index = index;
                         tag.parameters.main_amount = amount;
                         tag.parameters.main_ratio = ratio;
+                        tag.layout = layout.as_ref().clone();
                     }
                     None => {
                         output_handle.tags[i] = Some({
