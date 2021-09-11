@@ -286,10 +286,10 @@ impl Output {
                         self.dimension = {
                             self.resize = true;
                             Area {
-                                x: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                y: fields.next().unwrap_or("0").parse::<u32>().unwrap(),
-                                w: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
-                                h: fields.next().unwrap_or("500").parse::<u32>().unwrap(),
+                                x: fields.next().unwrap_or_default().parse::<u32>().unwrap_or(self.dimension.x),
+                                y: fields.next().unwrap_or_default().parse::<u32>().unwrap_or(self.dimension.y),
+                                w: fields.next().unwrap_or_default().parse::<u32>().unwrap_or(self.dimension.w),
+                                h: fields.next().unwrap_or_default().parse::<u32>().unwrap_or(self.dimension.h),
                             }
                         }
                     }
@@ -323,6 +323,7 @@ impl Output {
                     }
                     "clear" => match value {
                         "all" => self.tags = Default::default(),
+                        "default" => default.layout = Layout::Full,
                         "focused" => self.tags[self.focused] = None,
                         _ => match value.parse::<usize>() {
                             Ok(int) => {
