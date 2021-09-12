@@ -208,43 +208,31 @@ pub fn layout<'s>(name: &str) -> Layout {
                                 Layout::Full
                             }
                         } else {
-                            let mut i = 0;
                             let tape = exp.split_ounce(' ');
-                            let mut var: (u32, f64, u32) = (0, 0.6, 0);
-                            // Dispatches layout values to the field corresponding to an index
-                            tape.next.filter(' ', |s| {
-                                i += 1;
-                                match i {
-                                    1 => match s.release().parse::<u32>() {
-                                        Ok(main_amount) => {
-                                            var.0 = main_amount;
-                                        }
-                                        Err(e) => {
-                                            return Err(format!("Invalid main amount: {}", e))
-                                        }
-                                    },
-                                    2 => match s.release().parse::<f64>() {
-                                        Ok(main_ratio) => {
-                                            var.1 = main_ratio;
-                                        }
-                                        Err(e) => return Err(format!("Invalid main ratio: {}", e)),
-                                    },
-                                    3 => match s.release().parse::<u32>() {
-                                        Ok(main_index) => {
-                                            var.2 = main_index;
-                                        }
-                                        Err(e) => return Err(format!("Invalid main index: {}", e)),
-                                    },
-                                    _ => {}
-                                }
-                                Ok(())
-                            });
-
+                            let mut var = tape.next.release().split_whitespace();
                             Layout::Parameters {
                                 layout: Box::new(layout(tape.current.release())),
-                                amount: var.0,
-                                ratio: var.1,
-                                index: var.2,
+                                index: if let Ok(uint) =
+                                    var.next().unwrap_or_default().parse::<u32>()
+                                {
+                                    Some(uint)
+                                } else {
+                                    None
+                                },
+                                amount: if let Ok(uint) =
+                                    var.next().unwrap_or_default().parse::<u32>()
+                                {
+                                    Some(uint)
+                                } else {
+                                    None
+                                },
+                                ratio: if let Ok(float) =
+                                    var.next().unwrap_or_default().parse::<f64>()
+                                {
+                                    Some(float)
+                                } else {
+                                    None
+                                },
                             }
                         }
                     }

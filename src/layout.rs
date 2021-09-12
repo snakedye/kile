@@ -9,28 +9,28 @@ pub enum Condition {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Variant {
-    Amount( u32 ),
-    Index( u32 ),
-    Ratio( f64 )
+    Amount(u32),
+    Index(u32),
+    Ratio(f64),
 }
 
 impl Condition {
     fn is_true(&self, variant: &Variant, parameters: Parameters) -> bool {
         match self {
             Condition::Equal => match *variant {
-                Variant::Amount( uint ) => parameters.amount == uint,
-                Variant::Index( uint ) => parameters.index == uint,
-                Variant::Ratio( float ) => parameters.ratio == float
+                Variant::Amount(uint) => parameters.amount == uint,
+                Variant::Index(uint) => parameters.index == uint,
+                Variant::Ratio(float) => parameters.ratio == float,
             },
             Condition::Greater => match *variant {
-                Variant::Amount( uint ) => parameters.amount > uint,
-                Variant::Index( uint ) => parameters.index > uint,
-                Variant::Ratio( float ) => parameters.ratio > float
+                Variant::Amount(uint) => parameters.amount > uint,
+                Variant::Index(uint) => parameters.index > uint,
+                Variant::Ratio(float) => parameters.ratio > float,
             },
             Condition::Less => match *variant {
-                Variant::Amount( uint ) => parameters.amount < uint,
-                Variant::Index( uint ) => parameters.index < uint,
-                Variant::Ratio( float ) => parameters.ratio < float
+                Variant::Amount(uint) => parameters.amount < uint,
+                Variant::Index(uint) => parameters.index < uint,
+                Variant::Ratio(float) => parameters.ratio < float,
             },
         }
     }
@@ -53,10 +53,10 @@ pub enum Layout {
         condition: Condition,
     },
     Parameters {
+        index: Option<u32>,
+        ratio: Option<f64>,
+        amount: Option<u32>,
         layout: Box<Layout>,
-        amount: u32,
-        index: u32,
-        ratio: f64,
     },
 }
 
@@ -193,16 +193,16 @@ impl Area {
                 }
             }
             Layout::Parameters {
-                layout,
-                amount,
                 index,
                 ratio,
+                amount,
+                layout,
             } => {
                 let parameters = {
                     Parameters {
-                        amount: *amount,
-                        index: *index,
-                        ratio: *ratio,
+                        index: index.unwrap_or(parameters.index),
+                        ratio: ratio.unwrap_or(parameters.ratio),
+                        amount: amount.unwrap_or(parameters.amount),
                     }
                 };
                 area.generate(views, &*layout, &parameters, view_amount, true);
@@ -213,11 +213,14 @@ impl Area {
                 variant,
                 condition,
             } => {
-                if condition.is_true(variant, Parameters {
-                    amount: view_amount,
-                    ratio: parameters.ratio,
-                    index: parameters.index,
-                }) {
+                if condition.is_true(
+                    variant,
+                    Parameters {
+                        amount: view_amount,
+                        ratio: parameters.ratio,
+                        index: parameters.index,
+                    },
+                ) {
                     area.generate(views, &*a, &parameters, view_amount, true);
                 } else {
                     area.generate(views, &*b, &parameters, view_amount, true);

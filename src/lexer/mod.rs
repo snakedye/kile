@@ -29,10 +29,10 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
     let layout = lexer::layout(&layout.replace("\t", " "));
     if let Ok(tags) = tags {
         if let Layout::Parameters {
-            layout,
-            amount,
             ratio,
             index,
+            amount,
+            layout,
         } = layout
         {
             for i in tags {
@@ -40,9 +40,9 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                 match tag {
                     Some(tag) => {
                         tag.name = name.to_owned();
-                        tag.parameters.index = index;
-                        tag.parameters.amount = amount;
-                        tag.parameters.ratio = ratio;
+                        tag.parameters.index = index.unwrap_or(0);
+                        tag.parameters.amount = index.unwrap_or(1);
+                        tag.parameters.ratio = ratio.unwrap_or(0.6);
                         tag.layout = layout.as_ref().clone();
                     }
                     None => {
@@ -51,7 +51,11 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                                 name: name.to_owned(),
                                 layout: layout.as_ref().clone(),
                                 parameters: {
-                                    Parameters { index, amount, ratio, }
+                                    Parameters {
+                                        index: index.unwrap_or(0),
+                                        amount: amount.unwrap_or(1),
+                                        ratio: ratio.unwrap_or(0.6),
+                                    }
                                 },
                             }
                         })
