@@ -179,6 +179,28 @@ impl Output {
             Event::UserCommand { command } => {
                 let (command, value) = lexer::format(command.as_str());
                 match command {
+                    "padding" => {
+                        if let Ok(value) = value.parse::<i32>() {
+                            self.outer_padding = value;
+                            view_padding = value - view_padding;
+                            self.view_padding = value;
+                            if !views.is_empty() {
+                                self.reload = false;
+                            }
+                        }
+                    }
+                    "mod_padding" => {
+                        if let Ok(delta) = value.parse::<i32>() {
+                            self.outer_padding += delta;
+                            if (self.view_padding as i32) + delta >= 0 {
+                                self.view_padding += delta;
+                                view_padding = delta;
+                                if !views.is_empty() {
+                                    self.reload = false;
+                                }
+                            }
+                        }
+                    }
                     "outer_padding" => {
                         if let Ok(value) = value.parse::<i32>() {
                             self.outer_padding = value;

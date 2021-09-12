@@ -212,13 +212,6 @@ pub fn layout<'s>(name: &str) -> Layout {
                             let mut var = tape.next.release().split_whitespace();
                             Layout::Parameters {
                                 layout: Box::new(layout(tape.current.release())),
-                                index: if let Ok(uint) =
-                                    var.next().unwrap_or_default().parse::<u32>()
-                                {
-                                    Some(uint)
-                                } else {
-                                    None
-                                },
                                 amount: if let Ok(uint) =
                                     var.next().unwrap_or_default().parse::<u32>()
                                 {
@@ -230,6 +223,13 @@ pub fn layout<'s>(name: &str) -> Layout {
                                     var.next().unwrap_or_default().parse::<f64>()
                                 {
                                     Some(float)
+                                } else {
+                                    None
+                                },
+                                index: if let Ok(uint) =
+                                    var.next().unwrap_or_default().parse::<u32>()
+                                {
+                                    Some(uint)
                                 } else {
                                     None
                                 },

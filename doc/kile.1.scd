@@ -96,12 +96,12 @@ kile only ships with the following layouts.
 Instead of manually implementating all variations of each dynamic layout involving splits or stacking,
 kile let's the user declare his own layout from existing ones through an s-expression like syntax.
 
-Complete examples are provided in the layout file in contrib/.
+Examples are provided in the layout file in contrib/.
 
 ## RECURSIVE
 
 This layout is the core of every nested layout. It essentially let's you define a layout of layouts 
-or in other words the disposition of layouts within one. Since it is itself a layout, _sublayouts_ can aslo be recursive layouts.
+or in other words the disposition of layouts within one. Since it is itself a layout, the _outer_ and _sublayouts_ can aslo be recursive layouts.
 
 
 Any layout on the left side of _:_ is an _outer_ layout. _Outer_ meaning it will generate a layout of areas where _sublayouts_, those on the right side of the _:_
@@ -126,14 +126,12 @@ format: *( layout : layout layout ... )*
 
 ## PARAMETERS 
 
-This layout provides custom layout parameters to a specific layout.
+This layout provides custom layout parameters to a specific layout. If a parameter isn't specified, the one from its parent from its will be used.
 
 When this layout is not nested in another, it also serves to set the layout parameters of the tag.
 Note that not all parameters need to be defined, if you want to escape one, just insert an invalid character.
 
 format: *( layout main_amount main_ratio main_index )* 
-
-The default parameters are 1 for the _main_amount_, 0.6 the _main_ratio_ and 0 for the _main_index_.
 
 
 *examples:*

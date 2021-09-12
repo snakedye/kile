@@ -41,7 +41,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                     Some(tag) => {
                         tag.name = name.to_owned();
                         tag.parameters.index = index.unwrap_or(0);
-                        tag.parameters.amount = index.unwrap_or(1);
+                        tag.parameters.amount = amount.unwrap_or(1);
                         tag.parameters.ratio = ratio.unwrap_or(0.6);
                         tag.layout = layout.as_ref().clone();
                     }
