@@ -173,13 +173,36 @@ pub fn layout<'s>(name: &str) -> Layout {
                             });
                             tape.next.is_some()
                         } {
-                            if let Ok(amount) = tape.current.release().parse::<u32>() {
-                                let layouts = tape.next.split_ounce('?');
+                            let variant = tape.current.release();
+                            if let Ok(uint) = variant.parse::<u32>() {
+                                let mut layouts = tape.next.split_ounce('?');
+                                if layouts.next.is_some() {
+                                    Layout::Conditional {
+                                        variant: Variant::Amount(uint),
+                                        condition: condition.unwrap(),
+                                        a: Box::new(layout(layouts.current.release())),
+                                        b: Box::new(layout(layouts.next.release())),
+                                    }
+                                } else if {
+                                    layouts = tape.next.split_ounce('!');
+                                    layouts.next.is_some()
+                                } {
+                                    Layout::Conditional {
+                                        variant: Variant::Index(uint),
+                                        condition: condition.unwrap(),
+                                        a: Box::new(layout(layouts.current.release())),
+                                        b: Box::new(layout(layouts.next.release())),
+                                    }
+                                } else {
+                                    Layout::Full
+                                }
+                            } else if let Ok(float) = variant.parse::<f64>() {
+                                let (a, b) = tape.next.split_ounce('%').drop();
                                 Layout::Conditional {
-                                    amount,
+                                    variant: Variant::Ratio(float),
                                     condition: condition.unwrap(),
-                                    a: Box::new(layout(layouts.current.release())),
-                                    b: Box::new(layout(layouts.next.release())),
+                                    a: Box::new(layout(a)),
+                                    b: Box::new(layout(b)),
                                 }
                             } else {
                                 Layout::Full
@@ -204,9 +227,7 @@ pub fn layout<'s>(name: &str) -> Layout {
                                         Ok(main_ratio) => {
                                             var.1 = main_ratio;
                                         }
-                                        Err(e) => {
-                                            return Err(format!("Invalid main ratio: {}", e))
-                                        }
+                                        Err(e) => return Err(format!("Invalid main ratio: {}", e)),
                                     },
                                     3 => match s.release().parse::<u32>() {
                                         Ok(main_index) => {

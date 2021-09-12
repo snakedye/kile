@@ -7,12 +7,31 @@ pub enum Condition {
     Less,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum Variant {
+    Amount( u32 ),
+    Index( u32 ),
+    Ratio( f64 )
+}
+
 impl Condition {
-    fn is_true(&self, limit: u32, amount: u32) -> bool {
+    fn is_true(&self, variant: &Variant, parameters: &Parameters) -> bool {
         match self {
-            Condition::Equal => limit == amount,
-            Condition::Greater => amount > limit,
-            Condition::Less => amount < limit,
+            Condition::Equal => match *variant {
+                Variant::Amount( uint ) => parameters.amount == uint,
+                Variant::Index( uint ) => parameters.index == uint,
+                Variant::Ratio( float ) => parameters.ratio == float
+            },
+            Condition::Greater => match *variant {
+                Variant::Amount( uint ) => parameters.amount > uint,
+                Variant::Index( uint ) => parameters.index > uint,
+                Variant::Ratio( float ) => parameters.ratio > float
+            },
+            Condition::Less => match *variant {
+                Variant::Amount( uint ) => parameters.amount < uint,
+                Variant::Index( uint ) => parameters.index < uint,
+                Variant::Ratio( float ) => parameters.ratio < float
+            },
         }
     }
 }
@@ -28,9 +47,9 @@ pub enum Layout {
         inner: Vec<Layout>,
     },
     Conditional {
-        amount: u32,
         a: Box<Layout>,
         b: Box<Layout>,
+        variant: Variant,
         condition: Condition,
     },
     Parameters {
@@ -52,29 +71,28 @@ impl Area {
     }
     pub fn generate(
         self,
+        views: &mut Vec<Area>,
+        layout: &Layout,
         parameters: &Parameters,
         mut view_amount: u32,
-        layout: &Layout,
-        list: &mut Vec<Area>,
-        parent: bool,
         ratio: bool,
     ) {
         let mut area = self;
-        let master = parent && ratio && view_amount > 1 && parameters.main_index < view_amount;
+        let master = ratio && view_amount > 1 && parameters.index < view_amount;
 
         match layout {
             Layout::Full => {
                 for _ in 0..view_amount {
-                    list.push(area);
+                    views.push(area);
                 }
             }
             Layout::Deck => {
                 let yoffset = ((self.h as f64 * 0.1) / (view_amount as f64 - 1.0)).floor() as u32;
                 let xoffset = ((self.w as f64 * 0.1) / (view_amount as f64 - 1.0)).floor() as u32;
-                for _i in 0..view_amount {
+                for _ in 0..view_amount {
                     area.w = self.w - (xoffset * (view_amount - 1));
                     area.h = self.h - (yoffset * (view_amount - 1));
-                    list.push(area);
+                    views.push(area);
                     area.x += xoffset;
                     area.y += yoffset;
                 }
@@ -83,13 +101,13 @@ impl Area {
                 let reste = area.h % view_amount;
                 let mut slave_height = area.h;
                 let main_height = if master {
-                    ((area.h as f64) * parameters.main_ratio) as u32
+                    ((area.h as f64) * parameters.ratio) as u32
                 } else {
                     0
                 };
                 slave_height -= main_height;
                 for i in 0..view_amount {
-                    area.h = if master && i == parameters.main_index {
+                    area.h = if master && i == parameters.index {
                         main_height
                     } else if master {
                         slave_height / (view_amount - 1)
@@ -100,7 +118,7 @@ impl Area {
                         area.h += reste;
                     }
 
-                    list.push(area);
+                    views.push(area);
                     area.y += area.h;
                 }
             }
@@ -108,13 +126,13 @@ impl Area {
                 let reste = area.w % view_amount;
                 let mut slave_width = area.w;
                 let main_width = if master {
-                    ((area.w as f64) * parameters.main_ratio) as u32
+                    ((area.w as f64) * parameters.ratio) as u32
                 } else {
                     0
                 };
                 slave_width -= main_width;
                 for i in 0..view_amount {
-                    area.w = if master && i == parameters.main_index {
+                    area.w = if master && i == parameters.index {
                         main_width
                     } else if master {
                         slave_width / (view_amount - 1)
@@ -125,7 +143,7 @@ impl Area {
                         area.w += reste;
                     }
 
-                    list.push(area);
+                    views.push(area);
                     area.x += area.w;
                 }
             }
@@ -133,34 +151,32 @@ impl Area {
                 let mut frame = Vec::new();
                 let frames_available = inner.len() as u32;
                 let mut frame_amount = {
-                    let main = parameters.main_amount >= 1
+                    let main = parameters.amount >= 1
                         && frames_available > 1
-                        && parameters.main_index < frames_available
-                        && view_amount > parameters.main_amount;
-                    if parameters.main_amount >= view_amount {
+                        && parameters.index < frames_available
+                        && view_amount > parameters.amount;
+                    if parameters.amount >= view_amount {
                         1
-                    } else if main && view_amount - parameters.main_amount < frames_available {
-                        1 + view_amount - parameters.main_amount
+                    } else if main && view_amount - parameters.amount < frames_available {
+                        1 + view_amount - parameters.amount
                     } else if view_amount > frames_available || main {
                         frames_available
                     } else {
                         view_amount
                     }
                 };
-                area.generate(parameters, frame_amount, &*outer, &mut frame, true, ratio);
-                if parent
-                    && parameters.main_amount > 0
-                    && parameters.main_amount <= view_amount
-                    && parameters.main_index < frame_amount
+                area.generate(&mut frame, &*outer, parameters, frame_amount, ratio);
+                if parameters.amount > 0
+                    && parameters.amount <= view_amount
+                    && parameters.index < frame_amount
                 {
                     frame_amount -= 1;
-                    view_amount -= parameters.main_amount;
-                    frame.remove(parameters.main_index as usize).generate(
+                    view_amount -= parameters.amount;
+                    frame.remove(parameters.index as usize).generate(
+                        views,
+                        &inner[parameters.index as usize],
                         parameters,
-                        parameters.main_amount,
-                        &inner[parameters.main_index as usize],
-                        list,
-                        false,
+                        parameters.amount,
                         false,
                     );
                 }
@@ -170,10 +186,10 @@ impl Area {
                         view_amount -= 1;
                         count += 1;
                     }
-                    if frame_amount as usize != inner.len() && i >= parameters.main_index as usize {
+                    if frame_amount as usize != inner.len() && i >= parameters.index as usize {
                         i += 1
                     }
-                    rect.generate(parameters, count, &inner[i], list, false, false)
+                    rect.generate(views, &inner[i], parameters, count, false);
                 }
             }
             Layout::Parameters {
@@ -184,23 +200,23 @@ impl Area {
             } => {
                 let parameters = {
                     Parameters {
-                        main_amount: *amount,
-                        main_index: *index,
-                        main_ratio: *ratio,
+                        amount: *amount,
+                        index: *index,
+                        ratio: *ratio,
                     }
                 };
-                area.generate(&parameters, view_amount, &*layout, list, true, true);
+                area.generate(views, &*layout, &parameters, view_amount, true);
             }
             Layout::Conditional {
                 a,
                 b,
-                amount,
+                variant,
                 condition,
             } => {
-                if condition.is_true(*amount, view_amount) {
-                    area.generate(&parameters, view_amount, &*a, list, true, true);
+                if condition.is_true(variant, &parameters) {
+                    area.generate(views, &*a, &parameters, view_amount, true);
                 } else {
-                    area.generate(&parameters, view_amount, &*b, list, true, true);
+                    area.generate(views, &*b, &parameters, view_amount, true);
                 }
             }
         }

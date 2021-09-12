@@ -40,9 +40,9 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                 match tag {
                     Some(tag) => {
                         tag.name = name.to_owned();
-                        tag.parameters.main_index = index;
-                        tag.parameters.main_amount = amount;
-                        tag.parameters.main_ratio = ratio;
+                        tag.parameters.index = index;
+                        tag.parameters.amount = amount;
+                        tag.parameters.ratio = ratio;
                         tag.layout = layout.as_ref().clone();
                     }
                     None => {
@@ -51,11 +51,7 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                                 name: name.to_owned(),
                                 layout: layout.as_ref().clone(),
                                 parameters: {
-                                    Parameters {
-                                        main_index: index,
-                                        main_amount: amount,
-                                        main_ratio: ratio,
-                                    }
+                                    Parameters { index, amount, ratio, }
                                 },
                             }
                         })
@@ -77,9 +73,9 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
                                 layout: layout.clone(),
                                 parameters: {
                                     Parameters {
-                                        main_index: 0,
-                                        main_amount: 1,
-                                        main_ratio: 0.6,
+                                        index: 0,
+                                        amount: 1,
+                                        ratio: 0.6,
                                     }
                                 },
                             }

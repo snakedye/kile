@@ -76,18 +76,18 @@ To configure kile you need to modify or set theses layout values using *riverctl
 	between *1 and 32*.
 
 	_string_ the name of the layout, seperated from the layout by a new line. This will be useful once river-toplevel-v1 is implementated. 
-	_layout_ the layout definition of the corresponding tag. See #LAYOUTS.
+	_layout_ the layout definition of the corresponding tag. See *LAYOUTS*.
 
 *clear* _(tag)_
 	Clear the configuration of the given tag(s)
 
-	Possible values *all*, *focused* and an _uint_ between *1 and 32* inclusively.
+	Possible values *all*, *default*, *focused* and an _uint_ between *1 and 32* inclusively.
 
 # LAYOUTS
 
 kile only ships with the following layouts.
 
-	- "f" | "ful" | "full"
+	- "f" | "ful" | "full" 
 
 	- "d" | "dec" | "deck"
 
@@ -103,39 +103,49 @@ Complete examples are provided in the layout file in contrib/.
 ## RECURSIVE
 
 This layout is the core of every nested layout. It essentially let's you define a layout of layouts 
-or in other words the disposition of layouts within one. Since it is itself a layout, fields can be a recursive layouts.
+or in other words the disposition of layouts within one. Since it is itself a layout, _sublayouts_ can aslo be recursive layouts.
+
+
+Any layout on the left side of _:_ is an _outer_ layout. _Outer_ meaning it will generate a layout of areas where _sublayouts_, those on the right side of the _:_
+will be generated. The order these areas are generated is from left to right for the default provided by *kile*. A custom layout can manipulate the ordering of areas.
+
 
 The layout generated follow these rules.
 
-	- views are spead evenly accross all "slave" areas.
 	- views at the top of the stack will be displayed in the main area.
-	- when no sub layout is defined, no geometry will be generated from this layout.
+	- views are spead evenly accross all other areas ie those that aren't main.
+	- when no _sublayout_ is defined, no geometry will be generated from this layout.
+	- this layout will *always* create as much areas as necessary to inhabit the amount of views assigned to its area.
+	- the area generated at _main_index_ will have _main_amount_ of views/areas unless _main_amount_ is 0.
 
 
 format: *( layout : layout layout ... )* 
 
 *examples:*
-	- ( v: h h )
-	- ( d: h ( v: full dec ) )
-	- ( ( ver: h h ) : ver ful )
+	- (v: h h)
+	- (d: h (v: full dec))
+	- ((ver: h h) : ver ful)
 
 ## PARAMETERS 
 
 This layout provides custom layout parameters to a specific layout.
 
 When this layout is not nested in another, it also serves to set the layout parameters of the tag.
-
+Note that not all parameters need to be defined but if that is the case the order need to stay the same.
+You can for example omit to define the _main_ratio_ and _main_index_ and you can't define only the _main_ratio_, it'll be an error.
 
 format: *( layout main_amount main_ratio main_index )* 
 
+The default parameters are 1 for the _main_amount_, 0.6 the _main_ratio_ and 0 for the _main_index_.
+
 
 *examples:*
-	- ( deck 0 0.6 0 )
-	- ( ( v: h h ) 1 0.6 0 )
+	- (vertical 2)
+	- ((v: h h) 1 0.6 0)
 
 ## CONDITIONAL
 
-Let's you determine which layout to generate in an area depending on the amount of views occupying it. 
+Let's you determine which layout to generate in an area depending on the value of certain parameters. 
 
 
 The accepted comparison symbols are
@@ -144,19 +154,21 @@ The accepted comparison symbols are
 	- **<** (lower than)
 
 
-The layout on the left hand side of the _?_ symbol will be generated when the condition is met
-and the layout on the right hand side will be generated when the condition isn't. 
+Symbols associated to parameters
+	- **?** : the amount of views/areas in that area
+	- **!** : the index of the main in that layout
+	- **%** : the ratio of the main area relative others
 
 
-format: *( view_amount *_<|>|=_* layout ? layout )* 
+format: *( view_amount *_<|>|=_* layout *_!|?|%_* layout )* 
+
+The layout between the _operator_ and the _parameter_ symbol will be generated if the condition is true.
+In the case it's false the layout on the right side of the _parameter_ symbol will be generated.
 
 
 *examples*
-	- ( 2 > h ? v )
-
-
-If the amount of views in that area is superior to 2, the layout in that area will be horizontal.
-If the amount of views in that area is inferior or equal to 2, the layout in that area will be vertical.
+	- (2 > h ? v)
+	- (0.6 > (v: h h) % f)
 
 
 # SEE ALSO
