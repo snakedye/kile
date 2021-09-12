@@ -15,7 +15,7 @@ pub enum Variant {
 }
 
 impl Condition {
-    fn is_true(&self, variant: &Variant, parameters: &Parameters) -> bool {
+    fn is_true(&self, variant: &Variant, parameters: Parameters) -> bool {
         match self {
             Condition::Equal => match *variant {
                 Variant::Amount( uint ) => parameters.amount == uint,
@@ -213,7 +213,11 @@ impl Area {
                 variant,
                 condition,
             } => {
-                if condition.is_true(variant, &parameters) {
+                if condition.is_true(variant, Parameters {
+                    amount: view_amount,
+                    ratio: parameters.ratio,
+                    index: parameters.index,
+                }) {
                     area.generate(views, &*a, &parameters, view_amount, true);
                 } else {
                     area.generate(views, &*b, &parameters, view_amount, true);
