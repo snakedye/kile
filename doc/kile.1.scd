@@ -129,8 +129,7 @@ format: *( layout : layout layout ... )*
 This layout provides custom layout parameters to a specific layout.
 
 When this layout is not nested in another, it also serves to set the layout parameters of the tag.
-Note that not all parameters need to be defined but if that is the case the order need to stay the same.
-You can for example omit to define the _main_ratio_ and _main_index_ and you can't define only the _main_ratio_, it'll be an error.
+Note that not all parameters need to be defined, if you want to escape one, just insert an invalid character.
 
 format: *( layout main_amount main_ratio main_index )* 
 
