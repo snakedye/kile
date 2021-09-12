@@ -59,8 +59,6 @@ To configure kile you need to modify or set theses layout values using *riverctl
 *dimension* _(uint)_ _(uint)_ _(uint)_ _(uint)_
 	A custom dimension of the output.
 
-	format: 
-
 *resize* _(bool)_
 	Declare if the output's geometry relative to kile can or cannot be resized.
 
