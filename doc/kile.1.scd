@@ -126,7 +126,7 @@ format: *( layout : layout layout ... )*
 
 ## PARAMETERS 
 
-This layout provides custom layout parameters to a specific layout. If a parameter isn't specified, the one from its parent from its will be used.
+This layout provides custom layout parameters to a specific layout. If a parameter isn't specified, the layout will inherit the one from his parent.
 
 When this layout is not nested in another, it also serves to set the layout parameters of the tag.
 Note that not all parameters need to be defined, if you want to escape one, just insert an invalid character.
