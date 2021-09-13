@@ -9,17 +9,10 @@ HOR="
     v
     ((v: f d) 1 0.5 0)) 1 0.62 0)"
 
-# An example for conditional layouts
-MOSAIC="mosaic
-(3 >
-	((v:
-    	$HOR
-        ((h: f d) 1 0.62)) 3 _ 0) ? ((v : h h) 1))"
-
 STACK="stack
-(v:
+((v:
     $ROW
-    $ROW)"
+    $ROW) 1)"
 
 CENTERED="centered
 ((v:
