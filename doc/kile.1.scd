@@ -101,18 +101,14 @@ Examples are provided in the layout file in contrib/.
 ## RECURSIVE
 
 This layout is the core of every nested layout. It essentially let's you define a layout of layouts 
-or in other words the disposition of layouts within one. Since it is itself a layout, the _outer_ and _sublayouts_ can aslo be recursive layouts.
-
-
-Any layout on the left side of _:_ is an _outer_ layout. _Outer_ meaning it will generate a layout of areas where _sublayouts_, those on the right side of the _:_
-will be generated. The order these areas are generated is from left to right for the default provided by *kile*. A custom layout can manipulate the ordering of areas.
-
+or in other words the disposition of layouts within one. The _:_ symbol is the delimiter between a layout and it's _sublayouts_.
 
 The layout generated follow these rules.
 
 	- views at the top of the stack will be displayed in the main area.
-	- views are spead evenly accross all other areas ie those that aren't main.
+	- views are spread evenly accross all other areas ie those that aren't main.
 	- when no _sublayout_ is defined, no geometry will be generated from this layout.
+	- all predefined layouts which aren't expressions will generate areas attributed to views.
 	- this layout will *always* create as much areas as necessary to inhabit the amount of views assigned to its area.
 	- the area generated at _main_index_ will have _main_amount_ of views/areas unless _main_amount_ is 0.
 
@@ -151,7 +147,7 @@ The accepted comparison symbols are
 
 Symbols associated to parameters
 	- **?** : the amount of views/areas in that area
-	- **!** : the index of the main in that layout
+	- **!** : the index of the main area in that layout
 	- **%** : the ratio of the main area relative others
 
 
