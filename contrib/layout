@@ -1,25 +1,19 @@
 #!/bin/sh
 # This file can be sourced in your init
 
-# This layout doesn't have a name because it's used in others
 ROW="((h: h d) 2 0.65 0)"
 
-HOR="
-((h:
-    v (
-        (v: f d) 1 0.5 0
-    )
-) 1 0.62 0)"
+PILE="((h: f d) 1 0.62 0)"
 
-CENTERED="centered
-((v:
-  	h (
-    	(h: f d) 1 0.63 0
+JUMP="(2 >
+	$ROW
+    	? (h 1 0.65 0)
+)"
+
+HOR="((h:
+	v (
+		(v: f d) 1 0.5 0
 	)
-  	h
-) 1 0.47 1)"
+) 1 0.63 0)"
 
-# Inspired by Stacktile - https://git.sr.ht/~leon_plickat/stacktile
-LAYOUTA="((h: f d) 1 0.62 0)"
-STACKTILE="stacktile
-(v: $LAYOUTA $LAYOUTA)"
+# Feel free to add more below :)
