@@ -1,13 +1,12 @@
 #!/bin/sh
-# This file can be sourced in your init
 
+# These are fairly simple layout that serves as
+# both example of what can be done and also bulding blocks for your own layouts
 ROW="((h: h d) 2 0.65 0)"
-
-PILE="((h: f d) 1 0.62 0)"
 
 JUMP="(2 >
 	$ROW
-    	? (h 1 0.65 0)
+    ? (h 1 0.65 0)
 )"
 
 HOR="((h:
@@ -16,4 +15,7 @@ HOR="((h:
 	)
 ) 1 0.63 0)"
 
+# If you wish to add more layout, please follow the indenting style.
+# Since the syntax isn't really a lisp, I took inspiration from infix-lsp
+# https://github.com/elkowar/infix-lisp
 # Feel free to add more below :)

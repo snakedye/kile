@@ -184,9 +184,6 @@ impl Output {
                             self.outer_padding = value;
                             view_padding = value - view_padding;
                             self.view_padding = value;
-                            if !views.is_empty() {
-                                self.reload = false;
-                            }
                         }
                     }
                     "mod_padding" => {
@@ -195,9 +192,6 @@ impl Output {
                             if (self.view_padding as i32) + delta >= 0 {
                                 self.view_padding += delta;
                                 view_padding = delta;
-                                if !views.is_empty() {
-                                    self.reload = false;
-                                }
                             }
                         }
                     }

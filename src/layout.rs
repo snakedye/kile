@@ -221,9 +221,9 @@ impl Area {
                         index: parameters.index,
                     },
                 ) {
-                    area.generate(views, &*a, &parameters, view_amount, true);
+                    area.generate(views, &*a, &parameters, view_amount, ratio);
                 } else {
-                    area.generate(views, &*b, &parameters, view_amount, true);
+                    area.generate(views, &*b, &parameters, view_amount, ratio);
                 }
             }
         }
