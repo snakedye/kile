@@ -1,106 +1,38 @@
 use crate::layout::*;
 
-#[derive(Copy, Clone, Debug)]
-pub enum Expression<'s> {
-    Some(&'s str),
-    None,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Tape<'s> {
-    current: Expression<'s>,
-    next: Expression<'s>,
-}
-
-impl<'s> Tape<'s> {
-    pub fn new(current: Expression<'s>, next: Expression<'s>) -> Tape<'s> {
-        Tape { current, next }
-    }
-    pub fn drop(self) -> (&'s str, &'s str) {
-        (self.current.release(), self.next.release())
-    }
-}
-
-impl<'s> Expression<'s> {
-    pub fn new(string: &'s str) -> Expression {
-        Expression::Some(string)
-    }
-    fn is_some(&self) -> bool {
-        match self {
-            Expression::None => false,
-            _ => true,
+pub fn split_ounce<'s>(exp: &'s str, pattern: char) -> Option<(&'s str, &'s str)> {
+    let mut paren = 0;
+    for (i, c) in exp.to_string().chars().enumerate() {
+        match c {
+            '(' => paren += 1,
+            ')' => paren -= 1,
+            _ => {}
         }
-    }
-    // Splits an expression in 2 at the index of a character
-    pub fn split_ounce(self, pattern: char) -> Tape<'s> {
-        let mut paren = 0;
-        if let Expression::Some(s) = self {
-            for (i, c) in s.to_string().chars().enumerate() {
-                match c {
-                    '(' => paren += 1,
-                    ')' => paren -= 1,
-                    _ => {}
-                }
-                if c == pattern && paren == 0 {
-                    return Tape::new(
-                        Expression::Some(s[0..i].trim()),
-                        if !&s[i + 1..].is_empty() {
-                            Expression::new(s[i + 1..].trim())
-                        } else {
-                            Expression::None
-                        },
-                    );
-                }
+        if c == pattern && paren == 0 {
+            if !&exp[i + 1..].is_empty() {
+                return Some((exp[0..i].trim(), exp[i + 1..].trim()));
             }
         }
-        Tape::new(self, Expression::None)
     }
-    fn split_for(self, mut f: impl FnMut(char) -> bool) -> Tape<'s> {
-        if let Expression::Some(s) = self {
-            for (i, c) in s.to_string().chars().enumerate() {
-                if f(c) {
-                    return Tape::new(
-                        Expression::Some(s[0..i].trim()),
-                        if !&s[i + 1..].is_empty() {
-                            Expression::new(s[i + 1..].trim())
-                        } else {
-                            Expression::None
-                        },
-                    );
-                }
-            }
+    None
+}
+
+// Captures a string slice contained within specific patterns
+fn clamp<'s>(exp: &'s str) -> Option<&'s str> {
+    if let Some(start) = exp.find('(') {
+        if let Some(end) = exp.rfind(')') {
+            return Some(&exp[start + 1..end].trim());
         }
-        Tape::new(self, Expression::None)
     }
-    // Captures a string slice contained within specific patterns
-    fn clamp(&self, opening: char, closing: char) -> Expression<'s> {
-        let (mut start, mut brace) = (0, 0);
-        if let Expression::Some(s) = self {
-            for (i, c) in s.to_string().chars().enumerate() {
-                if c == opening {
-                    if brace == 0 {
-                        start = i;
-                    }
-                    brace += 1;
-                } else if c == closing {
-                    brace -= 1;
-                    if brace == 0 {
-                        return Expression::new(s[start + 1..i].trim());
-                    }
-                }
-            }
-        }
-        Expression::None
-    }
-    // Iterates over all expressions delimited by a character
-    // and excutes a function on each one of them
-    fn filter(&self, pattern: char, mut f: impl FnMut(Expression) -> Result<(), String>) {
-        let tape = self.split_ounce(pattern);
-        match f(tape.current) {
+    None
+}
+// Iterates over all expressions delimited by a character
+// and excutes a function on each one of them
+fn filter<'s>(exp: &'s str, pattern: char, mut f: impl FnMut(&'s str) -> Result<(), String>) {
+    if let Some((head, tail)) = split_ounce(exp, pattern) {
+        match f(head) {
             Ok(_) => {
-                if let Expression::Some(_) = tape.next {
-                    tape.next.filter(pattern, f);
-                }
+                filter(tail, pattern, f);
             }
             Err(m) => {
                 if !m.is_empty() {
@@ -108,135 +40,117 @@ impl<'s> Expression<'s> {
                 }
             }
         }
-    }
-    fn release(self) -> &'s str {
-        if let Expression::Some(s) = self {
-            s
-        } else {
-            ""
+    } else {
+        match f(exp) {
+            Err(m) => {
+                if !m.is_empty() {
+                    eprintln!("{}", m)
+                }
+            }
+            _ => {}
         }
     }
 }
 
-pub fn layout<'s>(name: &str) -> Layout {
+pub fn parse<'s>(name: &str) -> Layout {
     match name {
         "f" | "ful" | "full" => Layout::Full,
         "d" | "dec" | "deck" => Layout::Deck,
         "v" | "ver" | "vertical" => Layout::Vertical,
         "h" | "hor" | "horizontal" => Layout::Horizontal,
         _ => {
-            if let Some(char) = name.chars().next() {
-                match char {
-                    '(' => {
-                        let mut condition = None;
-                        let exp = Expression::new(name).clamp('(', ')');
-                        let mut tape = exp.split_ounce(':');
-                        if tape.next.is_some() {
-                            Layout::Recursive {
-                                outer: { Box::new(layout(tape.current.release())) },
-                                inner: {
-                                    let mut vec = Vec::new();
-                                    tape.next.filter(' ', |s| {
-                                        vec.push(layout(s.release()));
-                                        Ok(())
-                                    });
-                                    vec
-                                },
-                            }
-                        } else if {
-                            let mut paren = 0;
-                            tape = exp.split_for(|c| {
-                                match c {
-                                    '(' => paren += 1,
-                                    ')' => paren -= 1,
-                                    '>' => {
-                                        if paren == 0 {
-                                            condition = Some(Condition::Greater);
-                                            return true;
-                                        }
-                                    }
-                                    '=' => {
-                                        if paren == 0 {
-                                            condition = Some(Condition::Equal);
-                                            return true;
-                                        }
-                                    }
-                                    '<' => {
-                                        if paren == 0 {
-                                            condition = Some(Condition::Less);
-                                            return true;
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                                false
+            let mut condition = None;
+            let (mut value, mut layout) = (None, None);
+            if let Some(exp) = clamp(name) {
+                if let Some((outer, inner)) = split_ounce(exp, ':') {
+                    Layout::Recursive {
+                        outer: { Box::new(parse(outer)) },
+                        inner: if !inner.is_empty() {
+                            let mut vec = Vec::new();
+                            filter(inner, ' ', |s| {
+                                vec.push(parse(s));
+                                Ok(())
                             });
-                            tape.next.is_some()
-                        } {
-                            let variant = tape.current.release();
-                            if let Ok(uint) = variant.parse::<u32>() {
-                                let mut layouts = tape.next.split_ounce('?');
-                                if layouts.next.is_some() {
-                                    Layout::Conditional {
-                                        variant: Variant::Amount(uint),
-                                        condition: condition.unwrap(),
-                                        a: Box::new(layout(layouts.current.release())),
-                                        b: Box::new(layout(layouts.next.release())),
-                                    }
-                                } else if {
-                                    layouts = tape.next.split_ounce('!');
-                                    layouts.next.is_some()
-                                } {
-                                    Layout::Conditional {
-                                        variant: Variant::Index(uint),
-                                        condition: condition.unwrap(),
-                                        a: Box::new(layout(layouts.current.release())),
-                                        b: Box::new(layout(layouts.next.release())),
-                                    }
-                                } else {
-                                    Layout::Full
-                                }
-                            } else if let Ok(float) = variant.parse::<f64>() {
-                                let (a, b) = tape.next.split_ounce('%').drop();
-                                Layout::Conditional {
-                                    variant: Variant::Ratio(float),
-                                    condition: condition.unwrap(),
-                                    a: Box::new(layout(a)),
-                                    b: Box::new(layout(b)),
-                                }
-                            } else {
-                                Layout::Full
+                            vec
+                        } else {
+                            eprintln!("Unsufficent amount of sublayouts: {}", exp);
+                            vec![Layout::Full]
+                        },
+                    }
+                } else if {
+                    if let Some((v, l)) = split_ounce(exp, '>') {
+                        value = Some(v);
+                        layout = Some(l);
+                        condition = Some(Condition::Greater);
+                    } else if let Some((v, l)) = split_ounce(exp, '<') {
+                        value = Some(v);
+                        layout = Some(l);
+                        condition = Some(Condition::Less);
+                    } else if let Some((v, l)) = split_ounce(exp, '=') {
+                        value = Some(v);
+                        layout = Some(l);
+                        condition = Some(Condition::Equal);
+                    }
+                    condition.is_some()
+                } {
+                    if let Ok(uint) = value.unwrap().parse::<u32>() {
+                        if let Some((a, b)) = split_ounce(layout.unwrap(), '?') {
+                            Layout::Conditional {
+                                variant: Variant::Amount(uint),
+                                condition: condition.unwrap(),
+                                a: Box::new(parse(a)),
+                                b: Box::new(parse(b)),
+                            }
+                        } else if let Some((a, b)) = split_ounce(layout.unwrap(), '!') {
+                            Layout::Conditional {
+                                variant: Variant::Index(uint),
+                                condition: condition.unwrap(),
+                                a: Box::new(parse(a)),
+                                b: Box::new(parse(b)),
                             }
                         } else {
-                            let tape = exp.split_ounce(' ');
-                            let mut var = tape.next.release().split_whitespace();
-                            Layout::Parameters {
-                                layout: Box::new(layout(tape.current.release())),
-                                amount: if let Ok(uint) =
-                                    var.next().unwrap_or_default().parse::<u32>()
-                                {
-                                    Some(uint)
-                                } else {
-                                    None
-                                },
-                                ratio: if let Ok(float) =
-                                    var.next().unwrap_or_default().parse::<f64>()
-                                {
-                                    Some(float)
-                                } else {
-                                    None
-                                },
-                                index: if let Ok(uint) =
-                                    var.next().unwrap_or_default().parse::<u32>()
-                                {
-                                    Some(uint)
-                                } else {
-                                    None
-                                },
-                            }
+                            Layout::Full
                         }
+                    } else if let Ok(float) = value.unwrap().parse::<f64>() {
+                        if let Some((a, b)) = split_ounce(layout.unwrap(), '%') {
+                            Layout::Conditional {
+                                variant: Variant::Ratio(float),
+                                condition: condition.unwrap(),
+                                a: Box::new(parse(a)),
+                                b: Box::new(parse(b)),
+                            }
+                        } else {
+                            Layout::Full
+                        }
+                    } else {
+                        Layout::Full
                     }
-                    _ => Layout::Full,
+                } else {
+                    if let Some((layout, parameters)) = split_ounce(exp, ' ') {
+                        let mut var = parameters.split_whitespace();
+                        Layout::Parameters {
+                            layout: Box::new(parse(layout)),
+                            amount: if let Ok(uint) = var.next().unwrap_or_default().parse::<u32>()
+                            {
+                                Some(uint)
+                            } else {
+                                None
+                            },
+                            ratio: if let Ok(float) = var.next().unwrap_or_default().parse::<f64>()
+                            {
+                                Some(float)
+                            } else {
+                                None
+                            },
+                            index: if let Ok(uint) = var.next().unwrap_or_default().parse::<u32>() {
+                                Some(uint)
+                            } else {
+                                None
+                            },
+                        }
+                    } else {
+                        Layout::Full
+                    }
                 }
             } else {
                 Layout::Full

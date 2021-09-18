@@ -166,7 +166,8 @@ impl Area {
                     }
                 };
                 area.generate(&mut frame, &*outer, parameters, frame_amount, ratio);
-                if parameters.amount > 0
+                if frame_amount > 1
+                	&& parameters.amount > 0
                     && parameters.amount <= view_amount
                     && parameters.index < frame_amount
                 {

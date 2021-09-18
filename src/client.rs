@@ -7,7 +7,6 @@ use crate::wayland::{
 use wayland_client::protocol::wl_output::WlOutput;
 use wayland_client::Main;
 
-// Holds all the globals necessary to operate the client
 pub struct Globals {
     pub namespace: String,
     pub layout_manager: Option<Main<RiverLayoutManagerV3>>,
@@ -177,192 +176,195 @@ impl Output {
             }
             // All String events are delegated to the lexer
             Event::UserCommand { command } => {
-                let (command, value) = lexer::format(command.as_str());
-                match command {
-                    "padding" => {
-                        if let Ok(value) = value.parse::<i32>() {
-                            self.outer_padding = value;
-                            view_padding = value - view_padding;
-                            self.view_padding = value;
-                        }
-                    }
-                    "mod_padding" => {
-                        if let Ok(delta) = value.parse::<i32>() {
-                            self.outer_padding += delta;
-                            if (self.view_padding as i32) + delta >= 0 {
-                                self.view_padding += delta;
-                                view_padding = delta;
+                if let Some((command, value)) = command.split_once(' ') {
+                    match command {
+                        "padding" => {
+                            if let Ok(value) = value.parse::<i32>() {
+                                self.outer_padding = value;
+                                view_padding = value - view_padding;
+                                self.view_padding = value;
                             }
                         }
-                    }
-                    "outer_padding" => {
-                        if let Ok(value) = value.parse::<i32>() {
-                            self.outer_padding = value;
-                        }
-                    }
-                    "view_padding" => {
-                        if let Ok(value) = value.parse::<i32>() {
-                            view_padding = value - view_padding;
-                            self.view_padding = value;
-                            if !views.is_empty() {
-                                self.reload = false;
+                        "mod_padding" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                self.outer_padding += delta;
+                                if (self.view_padding as i32) + delta >= 0 {
+                                    self.view_padding += delta;
+                                    view_padding = delta;
+                                }
                             }
                         }
-                    }
-                    "mod_outer_padding" => {
-                        if let Ok(delta) = value.parse::<i32>() {
-                            self.outer_padding += delta;
+                        "outer_padding" => {
+                            if let Ok(value) = value.parse::<i32>() {
+                                self.outer_padding = value;
+                            }
                         }
-                    }
-                    "mod_view_padding" => {
-                        if let Ok(delta) = value.parse::<i32>() {
-                            if (self.view_padding as i32) + delta >= 0 {
-                                self.view_padding += delta;
-                                view_padding = delta;
+                        "view_padding" => {
+                            if let Ok(value) = value.parse::<i32>() {
+                                view_padding = value - view_padding;
+                                self.view_padding = value;
                                 if !views.is_empty() {
                                     self.reload = false;
                                 }
                             }
                         }
-                    }
-                    "main_ratio" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
-                            if let Ok(value) = value.parse::<f64>() {
-                                tag.parameters.ratio = value.clamp(0.0, 1.0);
-                            }
-                        }
-                    }
-                    "mod_main_ratio" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
-                            if let Ok(delta) = value.parse::<f64>() {
-                                if delta <= tag.parameters.ratio {
-                                    tag.parameters.ratio += delta;
-                                }
-                            }
-                        }
-                    }
-                    "main_amount" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
-                            if let Ok(value) = value.parse::<u32>() {
-                                tag.parameters.amount = value
-                            }
-                        }
-                    }
-                    "mod_main_amount" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
+                        "mod_outer_padding" => {
                             if let Ok(delta) = value.parse::<i32>() {
-                                if (tag.parameters.amount as i32) + delta >= 0 {
-                                    tag.parameters.amount =
-                                        ((tag.parameters.amount as i32) + delta) as u32
-                                }
+                                self.outer_padding += delta;
                             }
                         }
-                    }
-                    "main_index" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
-                            if let Ok(value) = value.parse::<u32>() {
-                                tag.parameters.index = value;
-                            }
-                        }
-                    }
-                    "mod_main_index" => {
-                        if let Some(tag) = self.tags[self.focused].as_mut() {
+                        "mod_view_padding" => {
                             if let Ok(delta) = value.parse::<i32>() {
-                                if (tag.parameters.index as i32) + delta >= 0 {
-                                    tag.parameters.index =
-                                        ((tag.parameters.index as i32) + delta) as u32
+                                if (self.view_padding as i32) + delta >= 0 {
+                                    self.view_padding += delta;
+                                    view_padding = delta;
+                                    if !views.is_empty() {
+                                        self.reload = false;
+                                    }
                                 }
                             }
                         }
-                    }
-                    "xoffset" => {
-                        if let Ok(delta) = value.parse::<i32>() {
-                            if delta < 0 {
-                                self.dimension.x = 0;
-                            } else {
-                                self.dimension.x = delta.abs() as u32;
-                            }
-                            self.dimension.w -= delta.abs() as u32;
-                            self.resize = true;
-                        }
-                    }
-                    "yoffset" => {
-                        if let Ok(delta) = value.parse::<i32>() {
-                            if delta < 0 {
-                                self.dimension.y = 0;
-                            } else {
-                                self.dimension.y = delta.abs() as u32;
-                            }
-                            self.dimension.h -= delta.abs() as u32;
-                            self.resize = true;
-                        }
-                    }
-                    "dimension" => {
-                        let mut fields = value.split_whitespace();
-                        self.dimension = {
-                            self.resize = true;
-                            Area {
-                                x: fields
-                                    .next()
-                                    .unwrap_or_default()
-                                    .parse::<u32>()
-                                    .unwrap_or(self.dimension.x),
-                                y: fields
-                                    .next()
-                                    .unwrap_or_default()
-                                    .parse::<u32>()
-                                    .unwrap_or(self.dimension.y),
-                                w: fields
-                                    .next()
-                                    .unwrap_or_default()
-                                    .parse::<u32>()
-                                    .unwrap_or(self.dimension.w),
-                                h: fields
-                                    .next()
-                                    .unwrap_or_default()
-                                    .parse::<u32>()
-                                    .unwrap_or(self.dimension.h),
-                            }
-                        }
-                    }
-                    "resize" => {
-                        if let Ok(ans) = value.parse::<bool>() {
-                            self.resize = ans;
-                        }
-                    }
-                    "smart_padding" => {
-                        if let Ok(ans) = value.parse::<bool>() {
-                            self.smart_padding = ans;
-                        }
-                    }
-                    "order" => match value {
-                        "ascend" => self.order = Order::Ascend,
-                        "descend" => self.order = Order::Descend,
-                        _ => {}
-                    },
-                    "default" => {
-                        let (name, layout) = if let Some(data) = value.split_once('\n') {
-                            data
-                        } else {
-                            lexer::Expression::new(value).split_ounce(' ').drop()
-                        };
-                        default.name = name.to_owned();
-                        default.layout = lexer::layout(layout);
-                    }
-                    "clear" => match value {
-                        "all" => self.tags = Default::default(),
-                        "default" => default.layout = Layout::Full,
-                        "focused" => self.tags[self.focused] = None,
-                        _ => match value.parse::<usize>() {
-                            Ok(int) => {
-                                if int > 0 && int < 33 {
-                                    self.tags[int - 1] = None
+                        "main_ratio" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(value) = value.parse::<f64>() {
+                                    tag.parameters.ratio = value.clamp(0.0, 1.0);
                                 }
                             }
-                            Err(_) => {}
+                        }
+                        "mod_main_ratio" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(delta) = value.parse::<f64>() {
+                                    if delta <= tag.parameters.ratio {
+                                        tag.parameters.ratio += delta;
+                                    }
+                                }
+                            }
+                        }
+                        "main_amount" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(value) = value.parse::<u32>() {
+                                    tag.parameters.amount = value
+                                }
+                            }
+                        }
+                        "mod_main_amount" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(delta) = value.parse::<i32>() {
+                                    if (tag.parameters.amount as i32) + delta >= 0 {
+                                        tag.parameters.amount =
+                                            ((tag.parameters.amount as i32) + delta) as u32
+                                    }
+                                }
+                            }
+                        }
+                        "main_index" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(value) = value.parse::<u32>() {
+                                    tag.parameters.index = value;
+                                }
+                            }
+                        }
+                        "mod_main_index" => {
+                            if let Some(tag) = self.tags[self.focused].as_mut() {
+                                if let Ok(delta) = value.parse::<i32>() {
+                                    if (tag.parameters.index as i32) + delta >= 0 {
+                                        tag.parameters.index =
+                                            ((tag.parameters.index as i32) + delta) as u32
+                                    }
+                                }
+                            }
+                        }
+                        "xoffset" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if delta < 0 {
+                                    self.dimension.x = 0;
+                                } else {
+                                    self.dimension.x = delta.abs() as u32;
+                                }
+                                self.dimension.w -= delta.abs() as u32;
+                                self.resize = true;
+                            }
+                        }
+                        "yoffset" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if delta < 0 {
+                                    self.dimension.y = 0;
+                                } else {
+                                    self.dimension.y = delta.abs() as u32;
+                                }
+                                self.dimension.h -= delta.abs() as u32;
+                                self.resize = true;
+                            }
+                        }
+                        "dimension" => {
+                            let mut fields = value.split_whitespace();
+                            self.dimension = {
+                                self.resize = true;
+                                Area {
+                                    x: fields
+                                        .next()
+                                        .unwrap_or_default()
+                                        .parse::<u32>()
+                                        .unwrap_or(self.dimension.x),
+                                    y: fields
+                                        .next()
+                                        .unwrap_or_default()
+                                        .parse::<u32>()
+                                        .unwrap_or(self.dimension.y),
+                                    w: fields
+                                        .next()
+                                        .unwrap_or_default()
+                                        .parse::<u32>()
+                                        .unwrap_or(self.dimension.w),
+                                    h: fields
+                                        .next()
+                                        .unwrap_or_default()
+                                        .parse::<u32>()
+                                        .unwrap_or(self.dimension.h),
+                                }
+                            }
+                        }
+                        "resize" => {
+                            if let Ok(ans) = value.parse::<bool>() {
+                                self.resize = ans;
+                            }
+                        }
+                        "smart_padding" => {
+                            if let Ok(ans) = value.parse::<bool>() {
+                                self.smart_padding = ans;
+                            }
+                        }
+                        "order" => match value {
+                            "ascend" => self.order = Order::Ascend,
+                            "descend" => self.order = Order::Descend,
+                            _ => {}
                         },
-                    },
-                    _ => lexer::main(&mut self, command, value),
+                        "default" => {
+                            let (name, layout) = if let Some(data) = value.split_once('\n') {
+                                data
+                            } else if let Some(data) = lexer::split_ounce(value, ' ') {
+                                data
+                            } else {
+                                ("kile", value)
+                            };
+                            default.name = name.to_owned();
+                            default.layout = lexer::parse(layout);
+                        }
+                        "clear" => match value {
+                            "all" => self.tags = Default::default(),
+                            "default" => default.layout = Layout::Full,
+                            "focused" => self.tags[self.focused] = None,
+                            _ => match value.parse::<usize>() {
+                                Ok(int) => {
+                                    if int > 0 && int < 33 {
+                                        self.tags[int - 1] = None
+                                    }
+                                }
+                                Err(_) => {}
+                            },
+                        },
+                        _ => lexer::main(&mut self, command, value),
+                    }
                 }
             }
         });

@@ -4,11 +4,6 @@ use crate::client::*;
 use crate::layout::*;
 pub use lexer::*;
 
-pub fn format<'s>(string: &'s str) -> (&'s str, &'s str) {
-    let exp = lexer::Expression::new(string).split_ounce(' ');
-    exp.drop()
-}
-
 pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
     let tags: Result<std::ops::Range<usize>, ()> = match name.as_ref() {
         "focused" => Ok(output_handle.focused..output_handle.focused + 1),
@@ -23,10 +18,12 @@ pub fn main<'s>(output_handle: &mut Output, name: &'s str, value: &'s str) {
     };
     let (name, layout) = if let Some(data) = value.split_once('\n') {
         data
+    } else if let Some(data) = lexer::split_ounce(value, ' ') {
+        data
     } else {
-        lexer::Expression::new(value).split_ounce(' ').drop()
+        ("kile", value)
     };
-    let layout = lexer::layout(&layout.replace("\t", " "));
+    let layout = lexer::parse(&layout.replace("\t", " "));
     if let Ok(tags) = tags {
         if let Layout::Parameters {
             ratio,
