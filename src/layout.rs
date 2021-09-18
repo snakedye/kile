@@ -166,20 +166,21 @@ impl Area {
                     }
                 };
                 area.generate(&mut frame, &*outer, parameters, frame_amount, ratio);
-                if frame_amount > 1
-                	&& parameters.amount > 0
+                if parameters.amount > 0
                     && parameters.amount <= view_amount
                     && parameters.index < frame_amount
                 {
                     frame_amount -= 1;
-                    view_amount -= parameters.amount;
                     frame.remove(parameters.index as usize).generate(
                         views,
                         &inner[parameters.index as usize],
                         parameters,
-                        parameters.amount,
+                        if frame_amount == 0 {
+                            view_amount
+                        } else { parameters.amount },
                         false,
                     );
+                    view_amount -= parameters.amount;
                 }
                 for (mut i, rect) in frame.iter_mut().enumerate() {
                     let mut count = view_amount / frame_amount;
