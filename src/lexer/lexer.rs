@@ -73,7 +73,7 @@ pub fn parse<'s>(name: &str) -> Layout {
                             });
                             vec
                         } else {
-                            eprintln!("Unsufficent amount of sublayouts: {}", exp);
+                            eprintln!("Unsufficient amount of sublayouts: {}", exp);
                             vec![Layout::Full]
                         },
                     }

@@ -105,9 +105,9 @@ impl Output {
                 name: "kile".to_owned(),
                 parameters: {
                     Parameters {
-                        amount: 1,
                         index: 0,
-                        ratio: 0.55,
+                        amount: 1,
+                        ratio: 0.6,
                     }
                 },
                 layout: Layout::Full,
@@ -240,6 +240,18 @@ impl Output {
                                 }
                             }
                         }
+                        "default_main_ratio" => {
+                            if let Ok(value) = value.parse::<f64>() {
+                                default.parameters.ratio = value.clamp(0.0, 1.0);
+                            }
+                        }
+                        "mod_default__main_ratio" => {
+                            if let Ok(delta) = value.parse::<f64>() {
+                                if delta <= default.parameters.ratio {
+                                    default.parameters.ratio += delta;
+                                }
+                            }
+                        }
                         "main_amount" => {
                             if let Some(tag) = self.tags[self.focused].as_mut() {
                                 if let Ok(value) = value.parse::<u32>() {
@@ -257,6 +269,19 @@ impl Output {
                                 }
                             }
                         }
+                        "default_main_amount" => {
+                            if let Ok(value) = value.parse::<u32>() {
+                                default.parameters.amount = value;
+                            }
+                        }
+                        "mod_default_main_amount" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if (default.parameters.amount as i32) + delta >= 0 {
+                                    default.parameters.amount =
+                                        ((default.parameters.amount as i32) + delta) as u32
+                                }
+                            }
+                        }
                         "main_index" => {
                             if let Some(tag) = self.tags[self.focused].as_mut() {
                                 if let Ok(value) = value.parse::<u32>() {
@@ -271,6 +296,19 @@ impl Output {
                                         tag.parameters.index =
                                             ((tag.parameters.index as i32) + delta) as u32
                                     }
+                                }
+                            }
+                        }
+                        "default_main_index" => {
+                            if let Ok(value) = value.parse::<u32>() {
+                                default.parameters.index = value;
+                            }
+                        }
+                        "mod_default_main_index" => {
+                            if let Ok(delta) = value.parse::<i32>() {
+                                if (default.parameters.index as i32) + delta >= 0 {
+                                    default.parameters.index =
+                                        ((default.parameters.index as i32) + delta) as u32
                                 }
                             }
                         }
