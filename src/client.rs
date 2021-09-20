@@ -173,6 +173,7 @@ impl Output {
             }
             Event::NamespaceInUse => {
                 println!("Namespace already in use.");
+                layout.destroy();
             }
             // All String events are delegated to the lexer
             Event::UserCommand { command } => {
